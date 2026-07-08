@@ -1,1 +1,98 @@
-[]
+{
+  "schema_version": "1.0",
+  "name": "Functional Role Assignments",
+  "description": "Schema and contract placeholder for future card-to-functional-role assignments in The Workshop Knowledge Engine.",
+  "scope": {
+    "includes": [
+      "The data contract for assigning functional role IDs to cards",
+      "Validation expectations for future assignment records",
+      "Allowed confidence values and source types",
+      "An empty assignments array reserved for future curated records"
+    ],
+    "excludes": [
+      "Actual card-to-role assignments",
+      "Project-specific role weights",
+      "Strategic recommendations",
+      "Analysis conclusions",
+      "Synergy maps",
+      "Power rankings or importance scores",
+      "Simulation inputs or outputs"
+    ]
+  },
+  "assignment_model": {
+    "record_type": "card_functional_role_assignment",
+    "role_vocabulary_source": "workshop/knowledge/role_taxonomy.json",
+    "card_identity_source": "workshop/card-data/cards.json",
+    "description": "Each future assignment record describes functional roles a card can perform in deck construction terms. Records are functional, not evaluative, and may include multiple roles for a single card.",
+    "future_record_shape": {
+      "card_name": "string",
+      "canonical_card_name": "string",
+      "original_decklist_name": "string, optional",
+      "card_source_ref": {
+        "source": "string",
+        "id": "string"
+      },
+      "roles": [
+        "role_id"
+      ],
+      "primary_roles": [
+        "role_id"
+      ],
+      "secondary_roles": [
+        "role_id"
+      ],
+      "confidence": "low | medium | high",
+      "source_type": "human_curated | taxonomy_inference | project_override",
+      "source_note": "string",
+      "evidence": [
+        "string"
+      ],
+      "assigned_at": "ISO 8601 timestamp"
+    }
+  },
+  "allowed_confidence_values": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "allowed_source_types": [
+    "human_curated",
+    "taxonomy_inference",
+    "project_override"
+  ],
+  "required_assignment_fields": [
+    "card_name",
+    "canonical_card_name",
+    "card_source_ref",
+    "roles",
+    "primary_roles",
+    "secondary_roles",
+    "confidence",
+    "source_type",
+    "source_note",
+    "evidence",
+    "assigned_at"
+  ],
+  "optional_assignment_fields": [
+    "original_decklist_name"
+  ],
+  "validation_rules": [
+    "assignments must be an array.",
+    "role IDs in roles, primary_roles, and secondary_roles must exist in workshop/knowledge/role_taxonomy.json.",
+    "roles must contain one or more role IDs for each future assignment record.",
+    "primary_roles must be a subset of roles.",
+    "secondary_roles must be a subset of roles.",
+    "primary_roles and secondary_roles should not overlap.",
+    "a card may have multiple roles.",
+    "confidence must be one of: low, medium, high.",
+    "source_type must be one of: human_curated, taxonomy_inference, project_override.",
+    "card_source_ref should identify the canonical card fact source record, such as a Scryfall ID.",
+    "assignments are functional, not evaluative.",
+    "assignments must not include recommendations.",
+    "assignments must not include analysis conclusions.",
+    "assignments must not include synergy maps.",
+    "assignments must not include power ranking or importance scores.",
+    "project-specific weighting belongs later in project_override_schema.json or project-level knowledge."
+  ],
+  "assignments": []
+}
