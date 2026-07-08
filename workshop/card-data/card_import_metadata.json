@@ -75,5 +75,65 @@
     "It does not contain card knowledge, functional roles, tags, synergies, analysis, or recommendations.",
     "Exact-name matching was used against Scryfall; unmatched names were not guessed or substituted."
   ],
-  "imported_at": "2026-07-08T21:41:07Z"
+  "imported_at": "2026-07-08T21:41:07Z",
+  "alias_resolution_investigation": {
+    "investigated_at": "2026-07-08T22:07:00Z",
+    "method": "Queried Scryfall search results for the expected canonical card names with include:extras and unique:prints, then required exact string containment of the unresolved decklist name in Scryfall-provided fields such as flavor_name. No fuzzy matching or manual substitution was used.",
+    "unresolved_names_checked": [
+      "Bridge of Khazad-dûm",
+      "Egg Hammer",
+      "Hope's Aero Magic",
+      "Shadowbringers"
+    ],
+    "findings": [
+      {
+        "original_decklist_name": "Bridge of Khazad-dûm",
+        "expected_canonical_name": "Ensnaring Bridge",
+        "scryfall_supported": true,
+        "evidence_field": "flavor_name",
+        "evidence_value": "Bridge of Khazad-dûm",
+        "canonical_card_name": "Ensnaring Bridge",
+        "scryfall_id": "1b251eca-06c2-4609-aaed-a88711ef6a45",
+        "set": "ltc",
+        "collector_number": "350",
+        "resolution_status": "scryfall_verified_alias"
+      },
+      {
+        "original_decklist_name": "Egg Hammer",
+        "expected_canonical_name": "Myr Battlesphere",
+        "scryfall_supported": true,
+        "evidence_field": "flavor_name",
+        "evidence_value": "Egg Hammer",
+        "canonical_card_name": "Myr Battlesphere",
+        "scryfall_id": "0db4cf09-8cf0-4aa7-8bfe-fe600352032d",
+        "set": "sld",
+        "collector_number": "2097",
+        "resolution_status": "scryfall_verified_alias"
+      },
+      {
+        "original_decklist_name": "Hope's Aero Magic",
+        "expected_canonical_name": "Cyclonic Rift",
+        "scryfall_supported": true,
+        "evidence_field": "flavor_name",
+        "evidence_value": "Hope's Aero Magic",
+        "canonical_card_name": "Cyclonic Rift",
+        "scryfall_id": "45617b0f-fdac-4747-b2d3-d571b717008f",
+        "set": "sld",
+        "collector_number": "1869",
+        "resolution_status": "scryfall_verified_alias"
+      },
+      {
+        "original_decklist_name": "Shadowbringers",
+        "expected_canonical_name": "Dovin's Veto",
+        "scryfall_supported": true,
+        "evidence_field": "flavor_name",
+        "evidence_value": "Shadowbringers",
+        "canonical_card_name": "Dovin's Veto",
+        "scryfall_id": "ba332954-ed8c-48d7-8d85-971c7b71dccf",
+        "set": "fca",
+        "collector_number": "51",
+        "resolution_status": "scryfall_verified_alias"
+      }
+    ]
+  }
 }
