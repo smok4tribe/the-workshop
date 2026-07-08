@@ -15,9 +15,17 @@ Project-specific role weighting, role overrides, or context-sensitive interpreta
 ## Files
 
 - `role_taxonomy.json`: controlled functional role vocabulary grouped by category.
-- `functional_roles.json`: reserved for future card-to-role assignments; Task 10 does not assign roles to cards.
+- `functional_roles.json`: schema and contract placeholder for future card-to-role assignments.
 - `project_override_schema.json`: reserved for future project-specific role weighting or overrides.
 
 ## Task 10 Scope
 
 Task 10 starts the Card Knowledge layer by defining the functional role taxonomy. It does not assign roles to specific cards, add synergy maps, produce recommendations, perform analysis, run simulations, or modify Card Facts.
+
+## Functional Role Assignments
+
+`role_taxonomy.json` defines the controlled vocabulary of functional role IDs.
+
+`functional_roles.json` will contain future card-to-role assignments. Task 11 defines the assignment contract only, including required fields, allowed confidence values, allowed source types, and validation rules.
+
+No card roles are assigned yet. Future assignment work must preserve the Card Facts / Card Knowledge boundary: Card Facts remain canonical external data, while role assignments are curated Card Knowledge about what a card can do in deck construction terms.

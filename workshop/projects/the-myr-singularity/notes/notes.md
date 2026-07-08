@@ -25,3 +25,11 @@ Functional role taxonomy defined as project-independent Card Knowledge vocabular
 - Roles describe what cards can do in Commander deck construction terms.
 - No roles have been assigned to specific cards.
 - No synergies, analysis, recommendations, project-specific weights, or overrides have been added.
+
+## 2026-07-09 - Sprint 1 Functional Role Assignment Schema Checkpoint
+
+Functional Role Assignment schema defined.
+
+- No card roles have been assigned yet.
+- The schema defines the future data contract for card-to-role assignments.
+- Next natural phase: first-pass role assignment for The Myr Singularity.
