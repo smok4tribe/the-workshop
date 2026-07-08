@@ -1,3 +1,0 @@
-# Simulation Regression Checklist
-
-Placeholder.

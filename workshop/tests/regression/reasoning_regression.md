@@ -1,3 +1,0 @@
-# Reasoning Regression Checklist
-
-Placeholder.
