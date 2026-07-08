@@ -1,1 +1,20 @@
-{}
+{
+  "source_version": "workshop/projects/the-myr-singularity/versions/v1.0.json",
+  "project_id": "the-myr-singularity",
+  "version_id": "v1.0",
+  "import_scope": "unique card names from commander, main_deck, and sideboard",
+  "total_unique_cards": 106,
+  "status": "unresolved",
+  "needs_external_card_data": true,
+  "excluded_data": [
+    "mana costs",
+    "oracle text",
+    "types",
+    "colors",
+    "legality",
+    "price",
+    "tags",
+    "roles",
+    "synergies"
+  ]
+}
