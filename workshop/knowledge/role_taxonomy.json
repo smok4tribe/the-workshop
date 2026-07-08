@@ -1,1 +1,787 @@
-{}
+{
+  "schema_version": "1.0",
+  "name": "Functional Role Taxonomy",
+  "description": "Controlled project-independent Card Knowledge vocabulary for describing what cards can do in Commander deck construction terms.",
+  "scope": {
+    "includes": [
+      "Stable functional role identifiers",
+      "Role labels, categories, descriptions, typical signals, and notes",
+      "Vocabulary suitable for Commander analysis, including artifact and combo decks"
+    ],
+    "excludes": [
+      "Card-to-role assignments",
+      "Project-specific role weights",
+      "Strategic recommendations",
+      "Deck analysis",
+      "Synergy maps",
+      "Simulation inputs or outputs"
+    ]
+  },
+  "categories": [
+    {
+      "category_id": "mana_development",
+      "label": "Mana Development",
+      "description": "Roles that increase, accelerate, discount, fix, or otherwise improve access to mana."
+    },
+    {
+      "category_id": "card_advantage",
+      "label": "Card Advantage",
+      "description": "Roles that increase access to cards through draw, temporary access, or repeatable resource flow."
+    },
+    {
+      "category_id": "selection_and_tutoring",
+      "label": "Selection and Tutoring",
+      "description": "Roles that search, filter, order, or otherwise improve the quality and specificity of card access."
+    },
+    {
+      "category_id": "interaction",
+      "label": "Interaction",
+      "description": "Roles that answer opposing cards, strategies, or game actions."
+    },
+    {
+      "category_id": "protection_and_resilience",
+      "label": "Protection and Resilience",
+      "description": "Roles that help cards, boards, or game plans survive disruption."
+    },
+    {
+      "category_id": "recursion_and_recovery",
+      "label": "Recursion and Recovery",
+      "description": "Roles that return cards or resources from graveyards, exile, or other non-battlefield zones."
+    },
+    {
+      "category_id": "engine_and_scaling",
+      "label": "Engine and Scaling",
+      "description": "Roles that create repeatable value loops, amplify resources, or scale with board and game state."
+    },
+    {
+      "category_id": "combo_and_win_conditions",
+      "label": "Combo and Win Conditions",
+      "description": "Roles that participate in combo lines, convert resources into wins, or close games."
+    },
+    {
+      "category_id": "board_presence",
+      "label": "Board Presence",
+      "description": "Roles that add bodies, blockers, attackers, or board pressure."
+    },
+    {
+      "category_id": "utility_and_support",
+      "label": "Utility and Support",
+      "description": "Roles that enable plans, modify rules, or provide flexible non-primary support functions."
+    },
+    {
+      "category_id": "lands_and_mana_base",
+      "label": "Lands and Mana Base",
+      "description": "Roles specific to land-based color access, utility, fixing, and mana base structure."
+    }
+  ],
+  "roles": [
+    {
+      "role_id": "ramp",
+      "label": "Ramp",
+      "category": "mana_development",
+      "description": "Increases the amount of mana available in future turns beyond normal land drops.",
+      "typical_signals": [
+        "Creates additional mana-producing permanents",
+        "Adds lands to the battlefield",
+        "Produces repeatable extra mana"
+      ],
+      "notes": "General acceleration role; more specific mana roles may also apply later."
+    },
+    {
+      "role_id": "mana_rock",
+      "label": "Mana Rock",
+      "category": "mana_development",
+      "description": "Artifact-based mana source that can be used for acceleration or fixing.",
+      "typical_signals": [
+        "Artifact with a mana ability",
+        "Taps for mana",
+        "Converts mana into one or more colors"
+      ],
+      "notes": "Especially important for artifact decks and colorless-heavy Commander decks."
+    },
+    {
+      "role_id": "cost_reduction",
+      "label": "Cost Reduction",
+      "category": "mana_development",
+      "description": "Reduces costs to cast spells or activate abilities.",
+      "typical_signals": [
+        "Spells cost less to cast",
+        "Activated abilities cost less to activate",
+        "Discount applies to a card type, color, or strategy subset"
+      ],
+      "notes": "Tracks mana efficiency rather than mana production."
+    },
+    {
+      "role_id": "ritual_or_burst_mana",
+      "label": "Ritual or Burst Mana",
+      "category": "mana_development",
+      "description": "Provides a temporary increase in mana or resources, usually for a single turn or spell sequence.",
+      "typical_signals": [
+        "Adds multiple mana at once",
+        "Sacrifices or consumes a resource for mana",
+        "Creates temporary mana acceleration"
+      ],
+      "notes": "Useful for combo turns and explosive setup but not persistent ramp."
+    },
+    {
+      "role_id": "mana_fixing",
+      "label": "Mana Fixing",
+      "category": "mana_development",
+      "description": "Improves access to required colors or converts mana into more useful colors.",
+      "typical_signals": [
+        "Adds mana of any color",
+        "Filters one mana into another color",
+        "Chooses colors or supports multicolor casting"
+      ],
+      "notes": "May overlap with mana rocks or fixing lands once card assignments exist."
+    },
+    {
+      "role_id": "land_ramp",
+      "label": "Land Ramp",
+      "category": "mana_development",
+      "description": "Accelerates mana by finding or placing lands onto the battlefield.",
+      "typical_signals": [
+        "Searches library for lands",
+        "Puts lands onto the battlefield",
+        "Allows additional land deployment"
+      ],
+      "notes": "Distinct from land tutoring when the land directly increases battlefield mana."
+    },
+    {
+      "role_id": "utility_land_mana",
+      "label": "Utility Land Mana",
+      "category": "mana_development",
+      "description": "Land-based mana contribution with additional utility beyond basic color production.",
+      "typical_signals": [
+        "Land produces mana and has non-mana abilities",
+        "Land produces conditional or enhanced mana",
+        "Land supports a specific card type or strategy"
+      ],
+      "notes": "Bridges mana development and mana base utility."
+    },
+    {
+      "role_id": "repeatable_card_draw",
+      "label": "Repeatable Card Draw",
+      "category": "card_advantage",
+      "description": "Provides ongoing access to additional cards over multiple turns or repeated triggers.",
+      "typical_signals": [
+        "Draws cards from repeated triggers",
+        "Has an activated ability that draws cards",
+        "Creates recurring card access from a board state"
+      ],
+      "notes": "Represents sustained resource flow, not one-time draw."
+    },
+    {
+      "role_id": "burst_card_draw",
+      "label": "Burst Card Draw",
+      "category": "card_advantage",
+      "description": "Provides a one-time increase in cards drawn or cards put into hand.",
+      "typical_signals": [
+        "Draws multiple cards once",
+        "Refills hand",
+        "Draws cards on resolution"
+      ],
+      "notes": "May be efficient even when not repeatable."
+    },
+    {
+      "role_id": "impulse_or_selection",
+      "label": "Impulse or Selection",
+      "category": "card_advantage",
+      "description": "Provides temporary or constrained access to cards, often from the top of the library or exile.",
+      "typical_signals": [
+        "Exiles cards that may be played for a limited time",
+        "Looks at cards and allows one or more to be used",
+        "Provides card access with timing or type restrictions"
+      ],
+      "notes": "Counts as access to cards even when it does not put cards into hand."
+    },
+    {
+      "role_id": "graveyard_card_access",
+      "label": "Graveyard Card Access",
+      "category": "card_advantage",
+      "description": "Allows cards in graveyards to be played, cast, or otherwise used as available resources.",
+      "typical_signals": [
+        "Casts cards from a graveyard",
+        "Plays lands or spells from a graveyard",
+        "Treats the graveyard as an extension of available cards"
+      ],
+      "notes": "Differs from recursion when the card is used directly from the graveyard rather than returned."
+    },
+    {
+      "role_id": "tutor",
+      "label": "Tutor",
+      "category": "selection_and_tutoring",
+      "description": "Searches a library for a card or a broad class of cards.",
+      "typical_signals": [
+        "Searches library",
+        "Finds a card matching broad criteria",
+        "Puts the found card into hand, graveyard, battlefield, or on top of library"
+      ],
+      "notes": "Generic tutor role; more specific tutor roles may also apply."
+    },
+    {
+      "role_id": "artifact_tutor",
+      "label": "Artifact Tutor",
+      "category": "selection_and_tutoring",
+      "description": "Searches for artifacts or cards that specifically support artifact access.",
+      "typical_signals": [
+        "Searches library for an artifact card",
+        "Finds an artifact by mana value or subtype",
+        "Places an artifact into hand, graveyard, battlefield, or on top of library"
+      ],
+      "notes": "Important for artifact and combo decks."
+    },
+    {
+      "role_id": "land_tutor",
+      "label": "Land Tutor",
+      "category": "selection_and_tutoring",
+      "description": "Searches for land cards without necessarily accelerating battlefield mana.",
+      "typical_signals": [
+        "Searches library for a land",
+        "Finds a land with specific characteristics",
+        "Puts a land into hand or on top of library"
+      ],
+      "notes": "Use land_ramp when the primary function is acceleration onto the battlefield."
+    },
+    {
+      "role_id": "topdeck_manipulation",
+      "label": "Topdeck Manipulation",
+      "category": "selection_and_tutoring",
+      "description": "Changes, orders, reveals, or improves the top cards of the library.",
+      "typical_signals": [
+        "Looks at the top cards of a library",
+        "Reorders cards on top of a library",
+        "Places known cards on top of a library"
+      ],
+      "notes": "Supports draw quality, combo setup, and future card access."
+    },
+    {
+      "role_id": "card_filtering",
+      "label": "Card Filtering",
+      "category": "selection_and_tutoring",
+      "description": "Improves hand or draw quality by exchanging, discarding, surveilling, scrying, or selecting among cards.",
+      "typical_signals": [
+        "Scry, surveil, loot, or rummage effects",
+        "Draw then discard or discard then draw",
+        "Selects a subset of seen cards"
+      ],
+      "notes": "Selection quality role; not always net card advantage."
+    },
+    {
+      "role_id": "counterspell",
+      "label": "Counterspell",
+      "category": "interaction",
+      "description": "Counters spells, abilities, or specific game actions on the stack.",
+      "typical_signals": [
+        "Counters target spell",
+        "Counters activated or triggered abilities",
+        "Prevents a spell from resolving"
+      ],
+      "notes": "Includes conditional and narrow counters."
+    },
+    {
+      "role_id": "targeted_removal",
+      "label": "Targeted Removal",
+      "category": "interaction",
+      "description": "Removes, neutralizes, or answers one or a small number of specific permanents.",
+      "typical_signals": [
+        "Destroys target permanent",
+        "Exiles target permanent",
+        "Neutralizes a target with an aura, counter, or similar effect"
+      ],
+      "notes": "Does not imply broad sweeper functionality."
+    },
+    {
+      "role_id": "board_wipe",
+      "label": "Board Wipe",
+      "category": "interaction",
+      "description": "Removes or resets many permanents at once across one or more card types.",
+      "typical_signals": [
+        "Destroys all permanents of a type",
+        "Exiles or bounces multiple permanents",
+        "Applies a sweeping negative effect to the battlefield"
+      ],
+      "notes": "May be asymmetrical or conditional."
+    },
+    {
+      "role_id": "bounce",
+      "label": "Bounce",
+      "category": "interaction",
+      "description": "Returns spells or permanents to a player's hand or library as temporary interaction.",
+      "typical_signals": [
+        "Returns target permanent to hand",
+        "Returns multiple permanents to hand",
+        "Places a spell or permanent back into a library"
+      ],
+      "notes": "Can also protect own permanents, but this role tracks interactive tempo."
+    },
+    {
+      "role_id": "stax_or_hate_piece",
+      "label": "Stax or Hate Piece",
+      "category": "interaction",
+      "description": "Constrains, taxes, prevents, or punishes opposing game actions or resource use.",
+      "typical_signals": [
+        "Players cannot perform a game action",
+        "Spells or abilities cost more",
+        "Specific strategies are restricted or punished"
+      ],
+      "notes": "Role describes functional disruption, not a recommendation to include it."
+    },
+    {
+      "role_id": "graveyard_hate",
+      "label": "Graveyard Hate",
+      "category": "interaction",
+      "description": "Disrupts graveyard use by exiling cards, limiting graveyard access, or preventing recursion.",
+      "typical_signals": [
+        "Exiles cards from graveyards",
+        "Prevents cards from leaving graveyards",
+        "Replaces cards going to graveyards"
+      ],
+      "notes": "May be narrow, repeatable, or one-shot."
+    },
+    {
+      "role_id": "protection",
+      "label": "Protection",
+      "category": "protection_and_resilience",
+      "description": "Broadly protects cards, permanents, players, or game plans from opposing interaction.",
+      "typical_signals": [
+        "Prevents damage",
+        "Prevents targeting or destruction",
+        "Protects a board state or key permanent"
+      ],
+      "notes": "Generic protection role; more specific protection roles may also apply."
+    },
+    {
+      "role_id": "hexproof_or_shroud",
+      "label": "Hexproof or Shroud",
+      "category": "protection_and_resilience",
+      "description": "Prevents targeting through hexproof, shroud, ward-like targeting tax, or similar effects.",
+      "typical_signals": [
+        "Grants hexproof",
+        "Grants shroud",
+        "Makes targeting difficult or impossible"
+      ],
+      "notes": "Tracks targeting protection specifically."
+    },
+    {
+      "role_id": "indestructible_or_regeneration",
+      "label": "Indestructible or Regeneration",
+      "category": "protection_and_resilience",
+      "description": "Helps permanents survive destruction through indestructible, regeneration, or similar replacement effects.",
+      "typical_signals": [
+        "Grants indestructible",
+        "Regenerates a permanent",
+        "Prevents destruction from lethal damage or destroy effects"
+      ],
+      "notes": "Does not cover exile, sacrifice, or bounce resilience unless separately supported."
+    },
+    {
+      "role_id": "defensive_pillowfort",
+      "label": "Defensive Pillowfort",
+      "category": "protection_and_resilience",
+      "description": "Discourages or prevents attacks and damage against the player or planeswalkers.",
+      "typical_signals": [
+        "Taxes attackers",
+        "Prevents creatures from attacking",
+        "Reduces or prevents combat damage"
+      ],
+      "notes": "A defensive role rather than direct removal."
+    },
+    {
+      "role_id": "anti_wipe_protection",
+      "label": "Anti-Wipe Protection",
+      "category": "protection_and_resilience",
+      "description": "Protects a board from sweepers or enables recovery immediately around mass removal.",
+      "typical_signals": [
+        "Protects multiple permanents from destruction",
+        "Phases out a board",
+        "Returns a board after a wipe"
+      ],
+      "notes": "Specific resilience role for preserving developed boards."
+    },
+    {
+      "role_id": "artifact_recursion",
+      "label": "Artifact Recursion",
+      "category": "recursion_and_recovery",
+      "description": "Returns artifact cards from graveyard, exile, or other zones to hand, battlefield, or library.",
+      "typical_signals": [
+        "Returns artifact card from graveyard",
+        "Reanimates an artifact",
+        "Rebuys artifacts from non-battlefield zones"
+      ],
+      "notes": "Important for artifact decks and reusable combo pieces."
+    },
+    {
+      "role_id": "creature_recursion",
+      "label": "Creature Recursion",
+      "category": "recursion_and_recovery",
+      "description": "Returns creature cards from graveyard, exile, or other zones to hand, battlefield, or library.",
+      "typical_signals": [
+        "Returns creature card from graveyard",
+        "Reanimates a creature",
+        "Rebuys creatures from non-battlefield zones"
+      ],
+      "notes": "Specific to creature recovery."
+    },
+    {
+      "role_id": "graveyard_recursion",
+      "label": "Graveyard Recursion",
+      "category": "recursion_and_recovery",
+      "description": "Returns cards from the graveyard to useful zones without being limited to one permanent type.",
+      "typical_signals": [
+        "Returns cards from graveyard",
+        "Recasts or reuses cards from graveyard",
+        "Moves graveyard resources back to hand, battlefield, or library"
+      ],
+      "notes": "Broad graveyard recovery role."
+    },
+    {
+      "role_id": "permanent_recursion",
+      "label": "Permanent Recursion",
+      "category": "recursion_and_recovery",
+      "description": "Returns permanent cards or permanents of several types from non-battlefield zones.",
+      "typical_signals": [
+        "Returns target permanent card",
+        "Returns artifacts, creatures, enchantments, lands, or planeswalkers",
+        "Restores non-instant, non-sorcery resources"
+      ],
+      "notes": "Useful when recursion covers several permanent types."
+    },
+    {
+      "role_id": "token_engine",
+      "label": "Token Engine",
+      "category": "engine_and_scaling",
+      "description": "Creates tokens repeatedly or as part of a scalable value loop.",
+      "typical_signals": [
+        "Creates tokens from repeated triggers",
+        "Creates tokens from activated abilities",
+        "Scales token output with game actions"
+      ],
+      "notes": "Represents repeatable production rather than a single token effect."
+    },
+    {
+      "role_id": "artifact_engine",
+      "label": "Artifact Engine",
+      "category": "engine_and_scaling",
+      "description": "Generates repeatable value from artifacts entering, leaving, tapping, sacrificing, or being controlled.",
+      "typical_signals": [
+        "Rewards artifact casts or enters",
+        "Uses artifacts as recurring resources",
+        "Scales with artifact count or artifact actions"
+      ],
+      "notes": "Core vocabulary for artifact-centric Commander decks."
+    },
+    {
+      "role_id": "tap_untap_engine",
+      "label": "Tap-Untap Engine",
+      "category": "engine_and_scaling",
+      "description": "Creates value by tapping, untapping, or repeatedly reusing permanents.",
+      "typical_signals": [
+        "Untaps permanents repeatedly",
+        "Rewards tapping or untapping",
+        "Enables repeated activated abilities"
+      ],
+      "notes": "Can support mana engines, combo lines, and board scaling."
+    },
+    {
+      "role_id": "mana_engine",
+      "label": "Mana Engine",
+      "category": "engine_and_scaling",
+      "description": "Creates repeatable or scaling mana production beyond ordinary ramp.",
+      "typical_signals": [
+        "Produces mana based on board state",
+        "Loops mana production with other permanents",
+        "Turns repeated actions into mana"
+      ],
+      "notes": "Engine role for sustained or scalable mana generation."
+    },
+    {
+      "role_id": "payoff_engine",
+      "label": "Payoff Engine",
+      "category": "engine_and_scaling",
+      "description": "Provides repeatable rewards when the deck performs its intended actions.",
+      "typical_signals": [
+        "Triggers on casts, enters, deaths, or activations",
+        "Converts repeated actions into cards, tokens, damage, or mana",
+        "Scales with recurring game actions"
+      ],
+      "notes": "Describes repeatable payoff infrastructure, not final win status."
+    },
+    {
+      "role_id": "scaling_threat",
+      "label": "Scaling Threat",
+      "category": "engine_and_scaling",
+      "description": "Becomes more threatening as resources, permanents, counters, or actions accumulate.",
+      "typical_signals": [
+        "Power or toughness scales",
+        "Gains counters repeatedly",
+        "Threat level increases with artifacts, tokens, mana, or spells"
+      ],
+      "notes": "May also be a finisher if it commonly closes games."
+    },
+    {
+      "role_id": "combo_piece",
+      "label": "Combo Piece",
+      "category": "combo_and_win_conditions",
+      "description": "A required or near-required component of a deterministic or repeatable combo line.",
+      "typical_signals": [
+        "Combines with specific effects to produce a loop",
+        "Creates a repeated resource exchange",
+        "Is necessary for a defined combo sequence"
+      ],
+      "notes": "This taxonomy only defines the role; it does not map combo relationships."
+    },
+    {
+      "role_id": "combo_enabler",
+      "label": "Combo Enabler",
+      "category": "combo_and_win_conditions",
+      "description": "Makes combo lines easier to start, protect, repeat, or assemble without necessarily being the payoff.",
+      "typical_signals": [
+        "Reduces combo setup requirements",
+        "Provides untaps, cost changes, or access needed for loops",
+        "Allows combo pieces to be reused"
+      ],
+      "notes": "Can overlap with tutors, protection, or engines."
+    },
+    {
+      "role_id": "combo_payoff",
+      "label": "Combo Payoff",
+      "category": "combo_and_win_conditions",
+      "description": "Converts a combo loop or assembled engine into a decisive resource advantage or win.",
+      "typical_signals": [
+        "Turns a loop into damage, cards, tokens, or mana",
+        "Wins or nearly wins when repeated",
+        "Rewards the repeated action central to a combo"
+      ],
+      "notes": "Does not imply the card is useful only in combo contexts."
+    },
+    {
+      "role_id": "alternate_win_condition",
+      "label": "Alternate Win Condition",
+      "category": "combo_and_win_conditions",
+      "description": "Provides a way to win the game through explicit noncombat or nonstandard victory conditions.",
+      "typical_signals": [
+        "Says a player wins the game",
+        "Says opponents lose the game",
+        "Creates a specific victory condition outside normal damage"
+      ],
+      "notes": "Specific to explicit alternate win or loss conditions."
+    },
+    {
+      "role_id": "finisher",
+      "label": "Finisher",
+      "category": "combo_and_win_conditions",
+      "description": "Closes games through combat, damage, overwhelming board impact, or decisive resource conversion.",
+      "typical_signals": [
+        "Can deal lethal or near-lethal damage",
+        "Creates overwhelming board pressure",
+        "Converts developed resources into a game-ending state"
+      ],
+      "notes": "Describes endgame function, not a recommendation."
+    },
+    {
+      "role_id": "damage_payoff",
+      "label": "Damage Payoff",
+      "category": "combo_and_win_conditions",
+      "description": "Turns deck actions, board state, or resource loops into damage or life loss.",
+      "typical_signals": [
+        "Deals damage from triggers",
+        "Causes life loss from repeated actions",
+        "Scales damage with artifacts, tokens, spells, or sacrifices"
+      ],
+      "notes": "May be a combo payoff or general pressure tool."
+    },
+    {
+      "role_id": "creature_body",
+      "label": "Creature Body",
+      "category": "board_presence",
+      "description": "Provides a creature body for attacking, blocking, carrying equipment, or enabling creature-count effects.",
+      "typical_signals": [
+        "Is a creature",
+        "Creates a creature-like board resource",
+        "Contributes power and toughness to the battlefield"
+      ],
+      "notes": "Basic board presence role; does not imply strategic importance."
+    },
+    {
+      "role_id": "token_producer",
+      "label": "Token Producer",
+      "category": "board_presence",
+      "description": "Creates one or more tokens as a direct effect.",
+      "typical_signals": [
+        "Creates creature tokens",
+        "Creates artifact, treasure, clue, food, or other tokens",
+        "Adds multiple objects to the battlefield"
+      ],
+      "notes": "Use token_engine for repeatable or scaling token production."
+    },
+    {
+      "role_id": "evasive_threat",
+      "label": "Evasive Threat",
+      "category": "board_presence",
+      "description": "Applies combat pressure through evasion or difficult blocking patterns.",
+      "typical_signals": [
+        "Flying, menace, trample, unblockable, or similar evasion",
+        "Difficult to block profitably",
+        "Supports combat-based pressure"
+      ],
+      "notes": "Combat role only; does not imply the card is a finisher."
+    },
+    {
+      "role_id": "blocker",
+      "label": "Blocker",
+      "category": "board_presence",
+      "description": "Provides defensive combat presence that can absorb, deter, or trade with attacks.",
+      "typical_signals": [
+        "High toughness",
+        "Defensive keywords such as reach or vigilance",
+        "Creates bodies useful for blocking"
+      ],
+      "notes": "Defensive board role."
+    },
+    {
+      "role_id": "commander_support",
+      "label": "Commander Support",
+      "category": "board_presence",
+      "description": "Supports the commander through protection, enabling attacks, cost support, or commander-specific game actions.",
+      "typical_signals": [
+        "References commanders",
+        "Improves commander casting or survival",
+        "Enhances commander combat or activated abilities"
+      ],
+      "notes": "Project-independent role; project-specific commander weighting belongs elsewhere."
+    },
+    {
+      "role_id": "utility_piece",
+      "label": "Utility Piece",
+      "category": "utility_and_support",
+      "description": "Provides flexible support that does not fit cleanly into a more specific primary role.",
+      "typical_signals": [
+        "Multiple small modes",
+        "Niche activated or triggered ability",
+        "Flexible support effect"
+      ],
+      "notes": "Use more specific roles where possible during later assignment work."
+    },
+    {
+      "role_id": "rule_modifier",
+      "label": "Rule Modifier",
+      "category": "utility_and_support",
+      "description": "Changes how game rules, timing, casting, combat, or resource use work.",
+      "typical_signals": [
+        "Allows actions at unusual times",
+        "Changes casting permissions",
+        "Modifies hand size, draw rules, combat rules, or spell restrictions"
+      ],
+      "notes": "Neutral functional role; may help or hinder depending on deck context."
+    },
+    {
+      "role_id": "sacrifice_outlet",
+      "label": "Sacrifice Outlet",
+      "category": "utility_and_support",
+      "description": "Allows the controller to sacrifice permanents intentionally for cost, value, or combo purposes.",
+      "typical_signals": [
+        "Sacrifice a permanent as a cost",
+        "Sacrifice artifacts or creatures for an effect",
+        "Repeatable sacrifice ability"
+      ],
+      "notes": "Often supports recursion, death triggers, artifact engines, or combo lines."
+    },
+    {
+      "role_id": "enabler",
+      "label": "Enabler",
+      "category": "utility_and_support",
+      "description": "Makes another plan or class of cards function more reliably without being the payoff itself.",
+      "typical_signals": [
+        "Grants a needed ability",
+        "Changes timing or access for other cards",
+        "Reduces setup friction for a strategy"
+      ],
+      "notes": "Generic support role for enabling deck mechanics."
+    },
+    {
+      "role_id": "setup_piece",
+      "label": "Setup Piece",
+      "category": "utility_and_support",
+      "description": "Prepares future turns, engines, or combo sequences without immediately generating the main payoff.",
+      "typical_signals": [
+        "Places resources in useful zones",
+        "Sets up future card access or board state",
+        "Creates prerequisites for later turns"
+      ],
+      "notes": "Describes preparatory function, not card quality."
+    },
+    {
+      "role_id": "colored_source",
+      "label": "Colored Source",
+      "category": "lands_and_mana_base",
+      "description": "Land or mana-base element that provides colored mana.",
+      "typical_signals": [
+        "Produces one or more colors of mana",
+        "Fixes access to commander colors",
+        "Supports colored spell casting"
+      ],
+      "notes": "Mana base role for color access."
+    },
+    {
+      "role_id": "colorless_source",
+      "label": "Colorless Source",
+      "category": "lands_and_mana_base",
+      "description": "Land or mana-base element that provides colorless mana.",
+      "typical_signals": [
+        "Produces colorless mana",
+        "Supports colorless costs",
+        "Provides mana without color fixing"
+      ],
+      "notes": "Important where colorless costs or artifact synergies matter."
+    },
+    {
+      "role_id": "utility_land",
+      "label": "Utility Land",
+      "category": "lands_and_mana_base",
+      "description": "Land that provides meaningful non-mana function in addition to or instead of mana production.",
+      "typical_signals": [
+        "Has activated abilities beyond mana",
+        "Provides card selection, recursion, protection, tokens, or interaction",
+        "Supports a specific deck function from the land slot"
+      ],
+      "notes": "Describes land-slot utility, not project-specific value."
+    },
+    {
+      "role_id": "artifact_land",
+      "label": "Artifact Land",
+      "category": "lands_and_mana_base",
+      "description": "Land that is also an artifact or otherwise contributes directly to artifact count and artifact synergies.",
+      "typical_signals": [
+        "Card type includes artifact and land",
+        "Counts as an artifact from the mana base",
+        "Supports artifact-count effects"
+      ],
+      "notes": "Important for artifact decks because it bridges mana base and artifact density."
+    },
+    {
+      "role_id": "fetch_or_search_land",
+      "label": "Fetch or Search Land",
+      "category": "lands_and_mana_base",
+      "description": "Land that searches for, finds, or converts itself into another land.",
+      "typical_signals": [
+        "Sacrifices to search for a land",
+        "Finds a basic or typed land",
+        "Improves mana base access through land search"
+      ],
+      "notes": "May support fixing, shuffling, landfall, or graveyard count in later analysis."
+    },
+    {
+      "role_id": "fixing_land",
+      "label": "Fixing Land",
+      "category": "lands_and_mana_base",
+      "description": "Land that improves color access or converts mana into needed colors.",
+      "typical_signals": [
+        "Produces multiple colors",
+        "Filters mana into different colors",
+        "Enters with choices that determine color access"
+      ],
+      "notes": "Mana base-specific color fixing role."
+    }
+  ]
+}

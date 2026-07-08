@@ -17,3 +17,11 @@ Scryfall `flavor_name` aliases resolved:
 - Shadowbringers -> Dovin's Veto
 
 Next natural phase: Knowledge / Role Taxonomy.
+
+## 2026-07-09 - Sprint 1 Functional Role Taxonomy Checkpoint
+
+Functional role taxonomy defined as project-independent Card Knowledge vocabulary.
+
+- Roles describe what cards can do in Commander deck construction terms.
+- No roles have been assigned to specific cards.
+- No synergies, analysis, recommendations, project-specific weights, or overrides have been added.
