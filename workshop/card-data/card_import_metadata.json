@@ -16,5 +16,10 @@
     "tags",
     "roles",
     "synergies"
-  ]
+  ],
+  "canonical_source_name": "Scryfall",
+  "canonical_source_type": "external_canonical_card_data",
+  "canonical_source_status": "selected_not_imported",
+  "import_status": "not_started",
+  "next_step": "Import canonical facts in a later task"
 }
