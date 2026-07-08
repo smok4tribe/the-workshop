@@ -1,0 +1,112 @@
+Commander
+1 Urtet, Remnant of Memnarch
+
+Main Deck
+1 Academy Ruins
+1 Adarkar Wastes
+1 Aetherflux Reservoir
+1 Agatha's Soul Cauldron
+1 Alibou, Ancient Witness
+1 All Is Dust
+1 Ancient Den
+1 Arcane Denial
+1 Arcane Signet
+1 Basalt Monolith
+1 Bridge of Khazad-dûm
+1 Buried Ruin
+1 Cascading Cataracts
+1 Clock of Omens
+1 Cloud Key
+1 Command Tower
+1 Copper Myr
+1 Counterspell
+1 Darksteel Citadel
+1 Demonic Tutor
+1 Dispatch
+1 Egg Hammer
+1 Emry, Lurker of the Loch
+1 Etherium Sculptor
+1 Exotic Orchard
+1 Fabricate
+1 Fomori Vault
+1 Forest
+1 Forsaken Monument
+1 Foundry Inspector
+1 Glimmervoid
+1 Gold Myr
+1 Great Furnace
+1 Hope's Aero Magic
+1 Inventors' Fair
+1 Iron Myr
+1 Island
+1 Island
+1 Jhoira, Weatherlight Captain
+1 Kuldotha Forgemaster
+1 Lightning Greaves
+1 Moonsnare Prototype
+1 Mountain
+1 Muddle the Mixture
+1 Myr Convert
+1 Myr Galvanizer
+1 Myr Kinsmith
+1 Myr Retriever
+1 Myr Welder
+1 Mystic Forge
+1 Nevinyrral's Disk
+1 Organic Extinction
+1 Palladium Myr
+1 Plague Myr
+1 Plains
+1 Prismatic Lens
+1 Propaganda
+1 Relic of Legends
+1 Reliquary Tower
+1 Repurposing Bay
+1 Reshape
+1 Rhystic Study
+1 Sculpting Steel
+1 Seat of the Synod
+1 Sensei's Divining Top
+1 Shadowbringers
+1 Shimmer Myr
+1 Shivan Reef
+1 Silver Myr
+1 Skullclamp
+1 Slobad, Goblin Tinkerer
+1 Snow-Covered Island
+1 Sol Ring
+1 Spire of Industry
+1 Springleaf Drum
+1 Staff of Domination
+1 Steel Overseer
+1 Swamp
+1 Swiftfoot Boots
+1 Tarnished Citadel
+1 Tezzeret, Cruel Captain
+1 Tezzeret, Master of the Bridge
+1 The Mycosynth Gardens
+1 Thoughtcast
+1 Three Tree City
+1 Tree of Tales
+1 Ugin, the Ineffable
+1 Underground River
+1 Unwinding Clock
+1 Urza, Lord High Artificer
+1 Urza's Cave
+1 Urza's Incubator
+1 Urza's Mine
+1 Urza's Power Plant
+1 Urza's Tower
+1 Vault of Whispers
+1 Walking Ballista
+1 Whir of Invention
+1 Yavimaya Coast
+
+SIDEBOARD:
+1 Aetherize
+1 Darksteel Forge
+1 Ghostly Prison
+1 Meekstone
+1 Mistrise Village
+1 Neurok Stealthsuit
+1 Torpor Orb
