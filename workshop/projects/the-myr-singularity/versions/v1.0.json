@@ -1,1 +1,551 @@
-{}
+{
+  "project_id": "the-myr-singularity",
+  "version_id": "v1.0",
+  "source_file": "The Myr Singularity.txt",
+  "commander": {
+    "quantity": 1,
+    "name": "Urtet, Remnant of Memnarch",
+    "section": "commander"
+  },
+  "main_deck": [
+    {
+      "quantity": 1,
+      "name": "Academy Ruins",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Adarkar Wastes",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Aetherflux Reservoir",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Agatha's Soul Cauldron",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Alibou, Ancient Witness",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "All Is Dust",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Ancient Den",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Arcane Denial",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Arcane Signet",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Basalt Monolith",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Bridge of Khazad-dûm",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Buried Ruin",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Cascading Cataracts",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Clock of Omens",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Cloud Key",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Command Tower",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Copper Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Counterspell",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Darksteel Citadel",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Demonic Tutor",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Dispatch",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Egg Hammer",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Emry, Lurker of the Loch",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Etherium Sculptor",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Exotic Orchard",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Fabricate",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Fomori Vault",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Forest",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Forsaken Monument",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Foundry Inspector",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Glimmervoid",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Gold Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Great Furnace",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Hope's Aero Magic",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Inventors' Fair",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Iron Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Island",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Island",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Jhoira, Weatherlight Captain",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Kuldotha Forgemaster",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Lightning Greaves",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Moonsnare Prototype",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Mountain",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Muddle the Mixture",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Myr Convert",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Myr Galvanizer",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Myr Kinsmith",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Myr Retriever",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Myr Welder",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Mystic Forge",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Nevinyrral's Disk",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Organic Extinction",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Palladium Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Plague Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Plains",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Prismatic Lens",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Propaganda",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Relic of Legends",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Reliquary Tower",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Repurposing Bay",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Reshape",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Rhystic Study",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Sculpting Steel",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Seat of the Synod",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Sensei's Divining Top",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Shadowbringers",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Shimmer Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Shivan Reef",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Silver Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Skullclamp",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Slobad, Goblin Tinkerer",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Snow-Covered Island",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Sol Ring",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Spire of Industry",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Springleaf Drum",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Staff of Domination",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Steel Overseer",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Swamp",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Swiftfoot Boots",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Tarnished Citadel",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Tezzeret, Cruel Captain",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Tezzeret, Master of the Bridge",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "The Mycosynth Gardens",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Thoughtcast",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Three Tree City",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Tree of Tales",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Ugin, the Ineffable",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Underground River",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Unwinding Clock",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Urza, Lord High Artificer",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Urza's Cave",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Urza's Incubator",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Urza's Mine",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Urza's Power Plant",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Urza's Tower",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Vault of Whispers",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Walking Ballista",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Whir of Invention",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Yavimaya Coast",
+      "section": "main_deck"
+    }
+  ],
+  "sideboard": [
+    {
+      "quantity": 1,
+      "name": "Aetherize",
+      "section": "sideboard"
+    },
+    {
+      "quantity": 1,
+      "name": "Darksteel Forge",
+      "section": "sideboard"
+    },
+    {
+      "quantity": 1,
+      "name": "Ghostly Prison",
+      "section": "sideboard"
+    },
+    {
+      "quantity": 1,
+      "name": "Meekstone",
+      "section": "sideboard"
+    },
+    {
+      "quantity": 1,
+      "name": "Mistrise Village",
+      "section": "sideboard"
+    },
+    {
+      "quantity": 1,
+      "name": "Neurok Stealthsuit",
+      "section": "sideboard"
+    },
+    {
+      "quantity": 1,
+      "name": "Torpor Orb",
+      "section": "sideboard"
+    }
+  ],
+  "import_notes": [
+    "Imported commander, main deck, and SIDEBOARD sections from the source file only.",
+    "Primer text after the decklist was intentionally excluded from this structured version.",
+    "Card names and quantities were preserved exactly as provided; no legality or card-fact validation was performed.",
+    "SIDEBOARD cards remain separate from the main deck.",
+    "Walking Ballista remains in the main_deck as provided by the source file."
+  ]
+}
