@@ -1,4 +1,4 @@
-# RFC-012 — The Workshop Sprint 1 Kickoff
+# RFC-012 - The Workshop Sprint 1 Kickoff
 
 Source document currently lives in the ChatGPT project sources.
 
