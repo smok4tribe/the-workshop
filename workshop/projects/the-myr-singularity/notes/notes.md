@@ -11,7 +11,7 @@ Card Facts layer complete.
 
 Scryfall `flavor_name` aliases resolved:
 
-- Bridge of Khazad-dûm -> Ensnaring Bridge
+- Bridge of Khazad-dÃ»m -> Ensnaring Bridge
 - Egg Hammer -> Myr Battlesphere
 - Hope's Aero Magic -> Cyclonic Rift
 - Shadowbringers -> Dovin's Veto
