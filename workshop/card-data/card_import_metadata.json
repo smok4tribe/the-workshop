@@ -20,16 +20,11 @@
   "canonical_source_name": "Scryfall",
   "canonical_source_type": "external_canonical_card_data",
   "canonical_source_status": "imported",
-  "import_status": "completed_with_unmatched_cards",
+  "import_status": "completed",
   "next_step": "Resolve unmatched card names only if an exact canonical external source match is provided.",
-  "resolved_card_count": 102,
-  "unresolved_card_count": 4,
-  "unmatched_cards": [
-    "Bridge of Khazad-dûm",
-    "Egg Hammer",
-    "Hope's Aero Magic",
-    "Shadowbringers"
-  ],
+  "resolved_card_count": 106,
+  "unresolved_card_count": 0,
+  "unmatched_cards": [],
   "imported_fields": [
     "name",
     "normalized_name",
@@ -135,5 +130,54 @@
         "resolution_status": "scryfall_verified_alias"
       }
     ]
-  }
+  },
+  "alias_resolution_status": "applied",
+  "alias_resolved_card_count": 4,
+  "unresolved_after_alias_resolution": 0,
+  "applied_alias_mappings": [
+    {
+      "original_decklist_name": "Bridge of Khazad-dûm",
+      "canonical_card_name": "Ensnaring Bridge",
+      "alias_status": "resolved_via_scryfall_flavor_name",
+      "evidence_field": "flavor_name",
+      "evidence_value": "Bridge of Khazad-dûm",
+      "scryfall_id": "1b251eca-06c2-4609-aaed-a88711ef6a45",
+      "set": "ltc",
+      "collector_number": "350",
+      "applied_at": "2026-07-08T22:13:29Z"
+    },
+    {
+      "original_decklist_name": "Egg Hammer",
+      "canonical_card_name": "Myr Battlesphere",
+      "alias_status": "resolved_via_scryfall_flavor_name",
+      "evidence_field": "flavor_name",
+      "evidence_value": "Egg Hammer",
+      "scryfall_id": "0db4cf09-8cf0-4aa7-8bfe-fe600352032d",
+      "set": "sld",
+      "collector_number": "2097",
+      "applied_at": "2026-07-08T22:13:29Z"
+    },
+    {
+      "original_decklist_name": "Hope's Aero Magic",
+      "canonical_card_name": "Cyclonic Rift",
+      "alias_status": "resolved_via_scryfall_flavor_name",
+      "evidence_field": "flavor_name",
+      "evidence_value": "Hope's Aero Magic",
+      "scryfall_id": "45617b0f-fdac-4747-b2d3-d571b717008f",
+      "set": "sld",
+      "collector_number": "1869",
+      "applied_at": "2026-07-08T22:13:29Z"
+    },
+    {
+      "original_decklist_name": "Shadowbringers",
+      "canonical_card_name": "Dovin's Veto",
+      "alias_status": "resolved_via_scryfall_flavor_name",
+      "evidence_field": "flavor_name",
+      "evidence_value": "Shadowbringers",
+      "scryfall_id": "ba332954-ed8c-48d7-8d85-971c7b71dccf",
+      "set": "fca",
+      "collector_number": "51",
+      "applied_at": "2026-07-08T22:13:29Z"
+    }
+  ]
 }
