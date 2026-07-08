@@ -1,1 +1,534 @@
-{}
+{
+  "cards": [
+    {
+      "name": "Urtet, Remnant of Memnarch",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Academy Ruins",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Adarkar Wastes",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Aetherflux Reservoir",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Agatha's Soul Cauldron",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Alibou, Ancient Witness",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "All Is Dust",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Ancient Den",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Arcane Denial",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Arcane Signet",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Basalt Monolith",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Bridge of Khazad-dûm",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Buried Ruin",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Cascading Cataracts",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Clock of Omens",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Cloud Key",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Command Tower",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Copper Myr",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Counterspell",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Darksteel Citadel",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Demonic Tutor",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Dispatch",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Egg Hammer",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Emry, Lurker of the Loch",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Etherium Sculptor",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Exotic Orchard",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Fabricate",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Fomori Vault",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Forest",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Forsaken Monument",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Foundry Inspector",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Glimmervoid",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Gold Myr",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Great Furnace",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Hope's Aero Magic",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Inventors' Fair",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Iron Myr",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Island",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Jhoira, Weatherlight Captain",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Kuldotha Forgemaster",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Lightning Greaves",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Moonsnare Prototype",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Mountain",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Muddle the Mixture",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Myr Convert",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Myr Galvanizer",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Myr Kinsmith",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Myr Retriever",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Myr Welder",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Mystic Forge",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Nevinyrral's Disk",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Organic Extinction",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Palladium Myr",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Plague Myr",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Plains",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Prismatic Lens",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Propaganda",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Relic of Legends",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Reliquary Tower",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Repurposing Bay",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Reshape",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Rhystic Study",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Sculpting Steel",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Seat of the Synod",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Sensei's Divining Top",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Shadowbringers",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Shimmer Myr",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Shivan Reef",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Silver Myr",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Skullclamp",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Slobad, Goblin Tinkerer",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Snow-Covered Island",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Sol Ring",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Spire of Industry",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Springleaf Drum",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Staff of Domination",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Steel Overseer",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Swamp",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Swiftfoot Boots",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Tarnished Citadel",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Tezzeret, Cruel Captain",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Tezzeret, Master of the Bridge",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "The Mycosynth Gardens",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Thoughtcast",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Three Tree City",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Tree of Tales",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Ugin, the Ineffable",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Underground River",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Unwinding Clock",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Urza, Lord High Artificer",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Urza's Cave",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Urza's Incubator",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Urza's Mine",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Urza's Power Plant",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Urza's Tower",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Vault of Whispers",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Walking Ballista",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Whir of Invention",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Yavimaya Coast",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Aetherize",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Darksteel Forge",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Ghostly Prison",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Meekstone",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Mistrise Village",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Neurok Stealthsuit",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    },
+    {
+      "name": "Torpor Orb",
+      "source_status": "unresolved",
+      "needs_external_card_data": true
+    }
+  ]
+}
