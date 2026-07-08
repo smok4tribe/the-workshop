@@ -1,1 +1,22 @@
-{}
+{
+  "project_id": "the-myr-singularity",
+  "title": "Initial Sprint 1 Project Brief",
+  "commander": "Urtet, Remnant of Memnarch",
+  "deck_identity": "The Myr Singularity is an artifact combo-control engine disguised as a Myr tribal deck.",
+  "core_premise": "The deck uses Myr and artifact bodies as resources, not merely as attackers.",
+  "primary_goal": "Preserve the Myr identity while improving explosiveness, consistency, mana fixing, and resilience.",
+  "improvement_areas": [
+    "Explosiveness.",
+    "Consistency.",
+    "Mana fixing.",
+    "Resilience."
+  ],
+  "constraints": [
+    "Do not invent decklist content.",
+    "Do not invent card facts.",
+    "Do not create analysis.",
+    "Do not create recommendations.",
+    "Do not create decisions.",
+    "Do not implement code."
+  ]
+}
