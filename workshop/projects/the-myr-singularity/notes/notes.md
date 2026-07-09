@@ -71,11 +71,13 @@ Recommendation schema validator added at `workshop/tests/validation/validate_rec
 - Includes a per-candidate validation helper for future candidate records.
 - No recommendations were created and no deck, version, card-data, knowledge, or analysis files changed.
 
-## 2026-07-09 - Sprint 1 First Recommendation Candidates Checkpoint
+## 2026-07-09 - Sprint 1 First Internal Recommendation Candidates Checkpoint
 
-First recommendation candidate set populated in `recommendations/rec-001.json`.
+First internal recommendation candidate set populated in `recommendations/rec-001.json`.
 
 - Six candidates are proposed for Product Owner review.
+- Task 16B candidates are limited to internal/current-card-facts candidates only.
+- External add/swap candidates require a later Candidate Card Facts Intake task before outside cards can be referenced in `affected_cards`.
 - All candidates remain non-actionable and undecided.
 - No deck, version, card-data, Knowledge, analysis, decision, or report files changed.
 - Recommendation schema validator now supports schema-only and candidate-set modes.

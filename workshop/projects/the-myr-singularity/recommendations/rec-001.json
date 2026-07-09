@@ -20,12 +20,14 @@
       "Traceability requirements linking candidates to baseline analysis, project goals, card facts, and functional roles.",
       "The candidate lifecycle and its decision boundaries.",
       "A first proposed candidate set for Product Owner review.",
+      "Internal/current-card-facts candidates limited to cards already present in the current Card Facts layer.",
       "Validation expectations for recommendation candidate sets."
     ],
     "excludes": [
       "Accepted or rejected recommendation decisions.",
       "Actionable deck changes.",
       "Decklist changes or new deck versions.",
+      "External card additions or swaps whose Candidate Card Facts have not been imported.",
       "Project decision log entries.",
       "Simulation results.",
       "External popularity claims.",
@@ -37,6 +39,15 @@
     "candidate_set_status": "candidates_proposed",
     "candidate_status_required": "proposed",
     "candidate_is_actionable_required": false
+  },
+  "candidate_scope_limitation": {
+    "scope_type": "internal_current_card_facts_only",
+    "statement": "This candidate set is limited to internal/current-card-facts candidates: every affected card must already exist in workshop/card-data/cards.json.",
+    "limitations": [
+      "External card additions require a future Candidate Card Facts Intake task.",
+      "External candidate cards must be imported into Card Facts before they can be referenced in affected_cards.",
+      "This set intentionally does not propose outside-card add or swap candidates until those candidate cards have Card Facts records."
+    ]
   },
   "reference_conventions": {
     "pressure_point_id": "Format '<analysis_id>:pressure_point:<index>' where <index> is the zero-based position in the structural_pressure_points array of the referenced analysis file. Example: 'baseline_v1.0:pressure_point:0'.",
