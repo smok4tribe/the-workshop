@@ -41,3 +41,13 @@ First-pass Functional Role Assignments populated for The Myr Singularity.
 - 106/106 card records have one functional role assignment.
 - Assignments use the existing project-independent role taxonomy.
 - Assignments remain functional Card Knowledge, not recommendations, deck analysis, synergy maps, or project-specific weights.
+
+## 2026-07-09 - Sprint 1 Baseline Structural Analysis Checkpoint
+
+Baseline structural analysis created for deck version v1.0.
+
+- `analysis/baseline_v1.0.json` and `analysis/baseline_v1.0.md` populated from the brief, the v1.0 decklist, Card Facts, and Functional Role assignments.
+- Knowledge Layer validator passed 18/18 before analysis.
+- Analysis is structural only: role/category distributions, strengths, pressure points, and open questions.
+- No recommendations, no deck changes, no simulation, no power scoring.
+- Next natural phase: recommendation analysis as a separate task.
