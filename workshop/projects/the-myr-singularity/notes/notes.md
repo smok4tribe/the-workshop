@@ -81,3 +81,13 @@ First internal recommendation candidate set populated in `recommendations/rec-00
 - All candidates remain non-actionable and undecided.
 - No deck, version, card-data, Knowledge, analysis, decision, or report files changed.
 - Recommendation schema validator now supports schema-only and candidate-set modes.
+
+## 2026-07-09 - Sprint 1 Candidate Card Facts Intake Checkpoint
+
+Candidate Card Facts intake created for six external cards.
+
+- Candidate facts were imported into `card-data/candidate_cards.json`.
+- Import metadata was recorded in `card-data/candidate_card_import_metadata.json`.
+- No recommendation candidates were created.
+- No deck changes were made.
+- Future external recommendation candidates can be built in a later task after validator support is updated.

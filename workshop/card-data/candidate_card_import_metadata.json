@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "source": "scryfall",
+  "source_method": "Exact-name Scryfall API lookups using /cards/named?exact=<card name> with JSON responses from api.scryfall.com.",
+  "imported_at": "2026-07-09T14:23:21Z",
+  "imported_card_count": 6,
+  "unresolved_card_count": 0,
+  "unresolved_cards": [],
+  "candidate_card_names": [
+    "City of Brass",
+    "Mana Confluence",
+    "Urza's Saga",
+    "Krark-Clan Ironworks",
+    "Mana Echoes",
+    "Tezzeret the Seeker"
+  ],
+  "boundary_statement": "These records are Card Facts only. No recommendations are created, no deck changes are authorized, and future recommendation candidates may reference these facts only after validator support exists.",
+  "exact_scryfall_lookup_method_used": {
+    "endpoint": "https://api.scryfall.com/cards/named",
+    "parameter": "exact",
+    "requested_names": [
+      "City of Brass",
+      "Mana Confluence",
+      "Urza's Saga",
+      "Krark-Clan Ironworks",
+      "Mana Echoes",
+      "Tezzeret the Seeker"
+    ],
+    "resolved_names": [
+      "City of Brass",
+      "Mana Confluence",
+      "Urza's Saga",
+      "Krark-Clan Ironworks",
+      "Mana Echoes",
+      "Tezzeret the Seeker"
+    ]
+  },
+  "warnings": [],
+  "notes": [
+    "This intake layer is separate from workshop/card-data/cards.json.",
+    "The existing 106-card deck Card Facts layer was not modified.",
+    "Candidate facts are facts_only and are not deck recommendations."
+  ]
+}
