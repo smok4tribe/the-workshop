@@ -33,3 +33,11 @@ Functional Role Assignment schema defined.
 - No card roles have been assigned yet.
 - The schema defines the future data contract for card-to-role assignments.
 - Next natural phase: first-pass role assignment for The Myr Singularity.
+
+## 2026-07-09 - Sprint 1 First-Pass Functional Role Assignment Checkpoint
+
+First-pass Functional Role Assignments populated for The Myr Singularity.
+
+- 106/106 card records have one functional role assignment.
+- Assignments use the existing project-independent role taxonomy.
+- Assignments remain functional Card Knowledge, not recommendations, deck analysis, synergy maps, or project-specific weights.
