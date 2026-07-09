@@ -1,16 +1,16 @@
 {
   "schema_version": "1.0",
   "name": "Functional Role Assignments",
-  "description": "Schema and contract placeholder for future card-to-functional-role assignments in The Workshop Knowledge Engine.",
+  "description": "Assignment contract and first-pass card-to-functional-role assignments for The Workshop Knowledge Engine.",
   "scope": {
     "includes": [
       "The data contract for assigning functional role IDs to cards",
+      "First-pass card-to-role assignments for resolved card records",
       "Validation expectations for future assignment records",
       "Allowed confidence values and source types",
-      "An empty assignments array reserved for future curated records"
+      "Curated assignment records in the assignments array"
     ],
     "excludes": [
-      "Actual card-to-role assignments",
       "Project-specific role weights",
       "Strategic recommendations",
       "Analysis conclusions",
@@ -94,5 +94,2791 @@
     "assignments must not include power ranking or importance scores.",
     "project-specific weighting belongs later in project_override_schema.json or project-level knowledge."
   ],
-  "assignments": []
+  "assignments": [
+    {
+      "card_name": "Urtet, Remnant of Memnarch",
+      "canonical_card_name": "Urtet, Remnant of Memnarch",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "7aa01ab4-26b0-49dc-8514-b3850d355a21"
+      },
+      "roles": [
+        "token_engine",
+        "tap_untap_engine",
+        "scaling_threat"
+      ],
+      "primary_roles": [
+        "token_engine",
+        "tap_untap_engine"
+      ],
+      "secondary_roles": [
+        "scaling_threat"
+      ],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text creates Myr artifact creature tokens.",
+        "Oracle text untaps each Myr you control.",
+        "Oracle text puts +1/+1 counters on each Myr you control."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Academy Ruins",
+      "canonical_card_name": "Academy Ruins",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "a95b7645-154f-4904-bf71-db7eb24d4df2"
+      },
+      "roles": [
+        "artifact_recursion",
+        "utility_land",
+        "colorless_source",
+        "topdeck_manipulation"
+      ],
+      "primary_roles": [
+        "artifact_recursion",
+        "utility_land"
+      ],
+      "secondary_roles": [
+        "colorless_source",
+        "topdeck_manipulation"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless mana.",
+        "Oracle text puts target artifact card from your graveyard on top of your library."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Adarkar Wastes",
+      "canonical_card_name": "Adarkar Wastes",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "42e0aa15-639a-4e88-9bd8-ce5e7c7d7649"
+      },
+      "roles": [
+        "colored_source",
+        "fixing_land",
+        "colorless_source"
+      ],
+      "primary_roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "secondary_roles": [
+        "colorless_source"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless mana.",
+        "Oracle text adds white or blue mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Aetherflux Reservoir",
+      "canonical_card_name": "Aetherflux Reservoir",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "96b6b2e1-c3e6-464c-8a13-b15deb34e862"
+      },
+      "roles": [
+        "damage_payoff",
+        "payoff_engine",
+        "combo_payoff"
+      ],
+      "primary_roles": [
+        "damage_payoff"
+      ],
+      "secondary_roles": [
+        "payoff_engine",
+        "combo_payoff"
+      ],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text gains life when you cast spells.",
+        "Oracle text can pay life to deal 50 damage to any target."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Agatha's Soul Cauldron",
+      "canonical_card_name": "Agatha's Soul Cauldron",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "019b51b0-e5c6-4208-922b-7736686dddcd"
+      },
+      "roles": [
+        "graveyard_hate",
+        "enabler",
+        "rule_modifier",
+        "utility_piece"
+      ],
+      "primary_roles": [
+        "graveyard_hate",
+        "enabler"
+      ],
+      "secondary_roles": [
+        "rule_modifier",
+        "utility_piece"
+      ],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text exiles target card from a graveyard.",
+        "Oracle text lets creatures gain activated abilities from exiled creature cards."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Alibou, Ancient Witness",
+      "canonical_card_name": "Alibou, Ancient Witness",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "10ff4bac-1f93-4dd3-987a-523a6f733a1e"
+      },
+      "roles": [
+        "damage_payoff",
+        "card_filtering",
+        "enabler",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "damage_payoff"
+      ],
+      "secondary_roles": [
+        "card_filtering",
+        "enabler",
+        "creature_body"
+      ],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text gives other artifact creatures haste.",
+        "Oracle text deals damage and scries when artifact creatures attack."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "All Is Dust",
+      "canonical_card_name": "All Is Dust",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "4210c54e-89fd-4971-ab6a-ca8f4e7fe97a"
+      },
+      "roles": [
+        "board_wipe"
+      ],
+      "primary_roles": [
+        "board_wipe"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text makes each player sacrifice all colored permanents they control."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Ancient Den",
+      "canonical_card_name": "Ancient Den",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "d9a7b0f6-97f9-4937-865c-e25c142c3ed7"
+      },
+      "roles": [
+        "artifact_land",
+        "colored_source"
+      ],
+      "primary_roles": [
+        "artifact_land",
+        "colored_source"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact land.",
+        "Oracle text adds white mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Arcane Denial",
+      "canonical_card_name": "Arcane Denial",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "5eb843ef-b223-40d0-a461-54b16d188d0e"
+      },
+      "roles": [
+        "counterspell",
+        "burst_card_draw"
+      ],
+      "primary_roles": [
+        "counterspell"
+      ],
+      "secondary_roles": [
+        "burst_card_draw"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text counters target spell.",
+        "Oracle text causes cards to be drawn at the next upkeep."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Arcane Signet",
+      "canonical_card_name": "Arcane Signet",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "1cad1bd2-7c56-4ce0-99a6-b2a49c1288dd"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "mana_fixing"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp",
+        "mana_fixing"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact and oracle text taps for mana in your commander color identity."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Basalt Monolith",
+      "canonical_card_name": "Basalt Monolith",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "f79de5e7-1545-420c-bfe1-ee2444fca85b"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "mana_engine"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp"
+      ],
+      "secondary_roles": [
+        "mana_engine"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact and oracle text taps to add three colorless mana.",
+        "Oracle text includes an untap ability."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Ensnaring Bridge",
+      "canonical_card_name": "Ensnaring Bridge",
+      "original_decklist_name": "Bridge of Khazad-dûm",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "1b251eca-06c2-4609-aaed-a88711ef6a45"
+      },
+      "roles": [
+        "defensive_pillowfort",
+        "stax_or_hate_piece"
+      ],
+      "primary_roles": [
+        "defensive_pillowfort",
+        "stax_or_hate_piece"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text prevents creatures with power greater than cards in your hand from attacking."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Buried Ruin",
+      "canonical_card_name": "Buried Ruin",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "7ab1a074-9d92-4125-9200-84cd035f8f53"
+      },
+      "roles": [
+        "artifact_recursion",
+        "utility_land",
+        "colorless_source"
+      ],
+      "primary_roles": [
+        "artifact_recursion",
+        "utility_land"
+      ],
+      "secondary_roles": [
+        "colorless_source"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless mana.",
+        "Oracle text returns target artifact card from your graveyard to your hand."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Cascading Cataracts",
+      "canonical_card_name": "Cascading Cataracts",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "2f3fbd9b-91ab-4691-a916-e20db8ebc513"
+      },
+      "roles": [
+        "fixing_land",
+        "utility_land_mana",
+        "colorless_source",
+        "indestructible_or_regeneration"
+      ],
+      "primary_roles": [
+        "fixing_land",
+        "utility_land_mana"
+      ],
+      "secondary_roles": [
+        "colorless_source",
+        "indestructible_or_regeneration"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land with indestructible.",
+        "Oracle text adds colorless mana or five mana in any color combination."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Clock of Omens",
+      "canonical_card_name": "Clock of Omens",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "5b087992-9c30-4434-acb3-a12ee6f207b3"
+      },
+      "roles": [
+        "tap_untap_engine",
+        "artifact_engine",
+        "enabler"
+      ],
+      "primary_roles": [
+        "tap_untap_engine"
+      ],
+      "secondary_roles": [
+        "artifact_engine",
+        "enabler"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text taps two untapped artifacts you control to untap target artifact."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Cloud Key",
+      "canonical_card_name": "Cloud Key",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "b851ab76-e40e-4232-b120-0bc1905ef0b4"
+      },
+      "roles": [
+        "cost_reduction"
+      ],
+      "primary_roles": [
+        "cost_reduction"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text makes spells of the chosen type cost one less to cast."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Command Tower",
+      "canonical_card_name": "Command Tower",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "0548fb60-c843-4f8f-a029-6f10efc63a41"
+      },
+      "roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "primary_roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds mana of any color in your commander color identity."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Copper Myr",
+      "canonical_card_name": "Copper Myr",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "323efe27-da58-4207-9c0c-dba5031bfa04"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact creature and oracle text taps to add green mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Counterspell",
+      "canonical_card_name": "Counterspell",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "4f616706-ec97-4923-bb1e-11a69fbaa1f8"
+      },
+      "roles": [
+        "counterspell"
+      ],
+      "primary_roles": [
+        "counterspell"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text counters target spell."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Darksteel Citadel",
+      "canonical_card_name": "Darksteel Citadel",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "2ba7597d-6d76-45b8-b172-342999e401bd"
+      },
+      "roles": [
+        "artifact_land",
+        "colorless_source",
+        "indestructible_or_regeneration"
+      ],
+      "primary_roles": [
+        "artifact_land",
+        "colorless_source"
+      ],
+      "secondary_roles": [
+        "indestructible_or_regeneration"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact land.",
+        "Oracle text has indestructible and adds colorless mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Demonic Tutor",
+      "canonical_card_name": "Demonic Tutor",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "a24b4cb6-cebb-428b-8654-74347a6a8d63"
+      },
+      "roles": [
+        "tutor"
+      ],
+      "primary_roles": [
+        "tutor"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text searches your library for a card and puts it into your hand."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Dispatch",
+      "canonical_card_name": "Dispatch",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "99d30a21-b003-4a17-a4c5-97811f230896"
+      },
+      "roles": [
+        "targeted_removal"
+      ],
+      "primary_roles": [
+        "targeted_removal"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text taps target creature or exiles it with metalcraft."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Myr Battlesphere",
+      "canonical_card_name": "Myr Battlesphere",
+      "original_decklist_name": "Egg Hammer",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "0db4cf09-8cf0-4aa7-8bfe-fe600352032d"
+      },
+      "roles": [
+        "token_producer",
+        "damage_payoff",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "token_producer",
+        "damage_payoff"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text creates four Myr artifact creature tokens.",
+        "Oracle text can deal damage when this creature attacks."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Emry, Lurker of the Loch",
+      "canonical_card_name": "Emry, Lurker of the Loch",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "c977d89a-bfd1-4e98-9d95-3e41c53dd188"
+      },
+      "roles": [
+        "artifact_recursion",
+        "graveyard_card_access",
+        "setup_piece",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "artifact_recursion",
+        "graveyard_card_access"
+      ],
+      "secondary_roles": [
+        "setup_piece",
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text mills four cards when it enters.",
+        "Oracle text lets you cast target artifact card from your graveyard."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Etherium Sculptor",
+      "canonical_card_name": "Etherium Sculptor",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "b0556f20-1ea8-4ab5-9a09-dec9959f017b"
+      },
+      "roles": [
+        "cost_reduction",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "cost_reduction"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text makes artifact spells you cast cost one less to cast."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Exotic Orchard",
+      "canonical_card_name": "Exotic Orchard",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "8853ff94-bf44-4cfd-9d3a-0743c361fb0d"
+      },
+      "roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "primary_roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "secondary_roles": [],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds one mana of any color a land an opponent controls could produce."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Fabricate",
+      "canonical_card_name": "Fabricate",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "44e49332-b1e1-4b88-b508-516b55c67a1d"
+      },
+      "roles": [
+        "artifact_tutor",
+        "tutor"
+      ],
+      "primary_roles": [
+        "artifact_tutor",
+        "tutor"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text searches your library for an artifact card and puts it into your hand."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Fomori Vault",
+      "canonical_card_name": "Fomori Vault",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "a5433b98-4657-4bbe-9e72-d3c94c6aa8ef"
+      },
+      "roles": [
+        "utility_land",
+        "card_filtering",
+        "colorless_source"
+      ],
+      "primary_roles": [
+        "utility_land",
+        "card_filtering"
+      ],
+      "secondary_roles": [
+        "colorless_source"
+      ],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless mana.",
+        "Oracle text discards a card, looks at cards based on artifacts, and puts one into your hand."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Forest",
+      "canonical_card_name": "Forest",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "22463284-2478-4b1e-9a37-6dd2383266cf"
+      },
+      "roles": [
+        "colored_source"
+      ],
+      "primary_roles": [
+        "colored_source"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is basic land Forest and oracle text adds green mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Forsaken Monument",
+      "canonical_card_name": "Forsaken Monument",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "82dfdb91-aa69-45a1-adcc-9fcd85f84ccf"
+      },
+      "roles": [
+        "mana_engine",
+        "payoff_engine",
+        "scaling_threat"
+      ],
+      "primary_roles": [
+        "mana_engine",
+        "payoff_engine"
+      ],
+      "secondary_roles": [
+        "scaling_threat"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text adds additional colorless mana when you tap a permanent for colorless.",
+        "Oracle text pumps colorless creatures and gains life when you cast colorless spells."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Foundry Inspector",
+      "canonical_card_name": "Foundry Inspector",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "16debeb1-fb2b-4172-b6da-726416d4fb38"
+      },
+      "roles": [
+        "cost_reduction",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "cost_reduction"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text makes artifact spells you cast cost one less to cast."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Glimmervoid",
+      "canonical_card_name": "Glimmervoid",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "4a639687-d9e3-46a8-bc9f-6ca3912c46ab"
+      },
+      "roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "primary_roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "secondary_roles": [],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds one mana of any color."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Gold Myr",
+      "canonical_card_name": "Gold Myr",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "12331b1d-a561-4a8c-8e85-ed3a607ce508"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact creature and oracle text taps to add white mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Great Furnace",
+      "canonical_card_name": "Great Furnace",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "74c5bb44-d72c-4c1a-a38f-86b4a8f49ae1"
+      },
+      "roles": [
+        "artifact_land",
+        "colored_source"
+      ],
+      "primary_roles": [
+        "artifact_land",
+        "colored_source"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact land.",
+        "Oracle text adds red mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Cyclonic Rift",
+      "canonical_card_name": "Cyclonic Rift",
+      "original_decklist_name": "Hope's Aero Magic",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "45617b0f-fdac-4747-b2d3-d571b717008f"
+      },
+      "roles": [
+        "bounce",
+        "board_wipe"
+      ],
+      "primary_roles": [
+        "bounce"
+      ],
+      "secondary_roles": [
+        "board_wipe"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text returns target nonland permanent you do not control to its owner hand.",
+        "Overload text changes target to each."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Inventors' Fair",
+      "canonical_card_name": "Inventors' Fair",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "275471e3-ded1-40ac-91ef-369dce5764d9"
+      },
+      "roles": [
+        "artifact_tutor",
+        "utility_land",
+        "colorless_source"
+      ],
+      "primary_roles": [
+        "artifact_tutor",
+        "utility_land"
+      ],
+      "secondary_roles": [
+        "colorless_source"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless mana.",
+        "Oracle text can search your library for an artifact card."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Iron Myr",
+      "canonical_card_name": "Iron Myr",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "5bd0a588-b695-4060-b5d5-c6a74710ff0f"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact creature and oracle text taps to add red mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Island",
+      "canonical_card_name": "Island",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "5a74175b-2418-4226-8435-1490532e644f"
+      },
+      "roles": [
+        "colored_source"
+      ],
+      "primary_roles": [
+        "colored_source"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is basic land Island and oracle text adds blue mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Jhoira, Weatherlight Captain",
+      "canonical_card_name": "Jhoira, Weatherlight Captain",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "776f490a-2f75-4c18-8164-56bd65bb09c6"
+      },
+      "roles": [
+        "repeatable_card_draw",
+        "payoff_engine",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "repeatable_card_draw",
+        "payoff_engine"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text draws a card whenever you cast a historic spell."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Kuldotha Forgemaster",
+      "canonical_card_name": "Kuldotha Forgemaster",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "c768267f-5ad2-4f4d-bbc7-6639325401c7"
+      },
+      "roles": [
+        "artifact_tutor",
+        "sacrifice_outlet",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "artifact_tutor",
+        "sacrifice_outlet"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text sacrifices three artifacts to search for an artifact card and put it onto the battlefield."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Lightning Greaves",
+      "canonical_card_name": "Lightning Greaves",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "b61634ae-05be-4b56-8ebb-9d4ade902e42"
+      },
+      "roles": [
+        "protection",
+        "hexproof_or_shroud",
+        "enabler"
+      ],
+      "primary_roles": [
+        "protection",
+        "hexproof_or_shroud"
+      ],
+      "secondary_roles": [
+        "enabler"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text gives equipped creature haste and shroud."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Moonsnare Prototype",
+      "canonical_card_name": "Moonsnare Prototype",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "9d8bc0e9-a536-4bca-92a6-8dca85e1e984"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "bounce",
+        "utility_piece"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp"
+      ],
+      "secondary_roles": [
+        "bounce",
+        "utility_piece"
+      ],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact and oracle text taps an artifact or creature to add colorless mana.",
+        "Channel text puts target nonland permanent on top or bottom of its owner library."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Mountain",
+      "canonical_card_name": "Mountain",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "426b0211-3d5d-4e53-bcf6-21823c655ffd"
+      },
+      "roles": [
+        "colored_source"
+      ],
+      "primary_roles": [
+        "colored_source"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is basic land Mountain and oracle text adds red mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Muddle the Mixture",
+      "canonical_card_name": "Muddle the Mixture",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "e69d760c-48fb-4e7f-8611-547b0c22928c"
+      },
+      "roles": [
+        "counterspell",
+        "tutor"
+      ],
+      "primary_roles": [
+        "counterspell"
+      ],
+      "secondary_roles": [
+        "tutor"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text counters target instant or sorcery spell.",
+        "Transmute text searches for a card with the same mana value."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Myr Convert",
+      "canonical_card_name": "Myr Convert",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "9df0adcf-7ad0-4d70-8dcd-28f69471495b"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "mana_fixing",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp",
+        "mana_fixing"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact creature and oracle text taps to add one mana of any color."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Myr Galvanizer",
+      "canonical_card_name": "Myr Galvanizer",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "e55ca835-b7f3-497c-b0bc-50a182cabecf"
+      },
+      "roles": [
+        "tap_untap_engine",
+        "payoff_engine",
+        "scaling_threat",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "tap_untap_engine",
+        "payoff_engine"
+      ],
+      "secondary_roles": [
+        "scaling_threat",
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text gives other Myr creatures +1/+1.",
+        "Oracle text untaps each other Myr you control."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Myr Kinsmith",
+      "canonical_card_name": "Myr Kinsmith",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "6046e50a-f4c9-4029-a589-62a19371b734"
+      },
+      "roles": [
+        "tutor",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "tutor"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text searches your library for a Myr card and puts it into your hand."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Myr Retriever",
+      "canonical_card_name": "Myr Retriever",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "7f0149d4-0731-474a-a1c3-28c25e486c14"
+      },
+      "roles": [
+        "artifact_recursion",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "artifact_recursion"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text returns another target artifact card from your graveyard to your hand when it dies."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Myr Welder",
+      "canonical_card_name": "Myr Welder",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "eff75f16-413c-4618-b766-67bd8ff4d161"
+      },
+      "roles": [
+        "enabler",
+        "graveyard_hate",
+        "utility_piece",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "enabler"
+      ],
+      "secondary_roles": [
+        "graveyard_hate",
+        "utility_piece",
+        "creature_body"
+      ],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text exiles target artifact card from a graveyard.",
+        "Oracle text gives this creature activated abilities of cards exiled with it."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Mystic Forge",
+      "canonical_card_name": "Mystic Forge",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "bc0de77a-c503-4000-9eb5-aa28a5e91082"
+      },
+      "roles": [
+        "impulse_or_selection",
+        "topdeck_manipulation",
+        "card_filtering",
+        "artifact_engine"
+      ],
+      "primary_roles": [
+        "impulse_or_selection",
+        "topdeck_manipulation"
+      ],
+      "secondary_roles": [
+        "card_filtering",
+        "artifact_engine"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text lets you look at the top card of your library.",
+        "Oracle text lets you cast artifact and colorless spells from the top of your library."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Nevinyrral's Disk",
+      "canonical_card_name": "Nevinyrral's Disk",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "36fb6ee3-bd54-4e5b-b055-c2c42515c162"
+      },
+      "roles": [
+        "board_wipe"
+      ],
+      "primary_roles": [
+        "board_wipe"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text destroys all artifacts, creatures, and enchantments."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Organic Extinction",
+      "canonical_card_name": "Organic Extinction",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "daaa7b7e-76fc-47a0-a58d-1169be1aa335"
+      },
+      "roles": [
+        "board_wipe",
+        "cost_reduction"
+      ],
+      "primary_roles": [
+        "board_wipe"
+      ],
+      "secondary_roles": [
+        "cost_reduction"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text has improvise.",
+        "Oracle text destroys all nonartifact creatures."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Palladium Myr",
+      "canonical_card_name": "Palladium Myr",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "f7c6aba3-38c3-45d1-83e1-40829eb07862"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact creature and oracle text taps to add two colorless mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Plague Myr",
+      "canonical_card_name": "Plague Myr",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "5cc8b864-c6db-4e4d-b9bc-ec84a4c3aa79"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact creature and oracle text taps to add colorless mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Plains",
+      "canonical_card_name": "Plains",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "5f9b6584-ad27-410d-b6f1-c25c91630aea"
+      },
+      "roles": [
+        "colored_source"
+      ],
+      "primary_roles": [
+        "colored_source"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is basic land Plains and oracle text adds white mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Prismatic Lens",
+      "canonical_card_name": "Prismatic Lens",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "74e8d3a8-5937-4108-b2fe-23e049379345"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "mana_fixing"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp",
+        "mana_fixing"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact and oracle text adds colorless mana or filters into one mana of any color."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Propaganda",
+      "canonical_card_name": "Propaganda",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "ac943e31-26bc-4b54-b73f-460e6e402d86"
+      },
+      "roles": [
+        "defensive_pillowfort"
+      ],
+      "primary_roles": [
+        "defensive_pillowfort"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text prevents creatures from attacking you unless their controller pays mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Relic of Legends",
+      "canonical_card_name": "Relic of Legends",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "89691cda-e38b-4f53-bee6-4c234186e6ad"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "mana_fixing",
+        "enabler"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp",
+        "mana_fixing"
+      ],
+      "secondary_roles": [
+        "enabler"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact and oracle text adds one mana of any color.",
+        "Oracle text can tap an untapped legendary creature to add mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Reliquary Tower",
+      "canonical_card_name": "Reliquary Tower",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "e2a27742-08c1-4153-af7f-25a7a98f585e"
+      },
+      "roles": [
+        "utility_land",
+        "colorless_source",
+        "rule_modifier"
+      ],
+      "primary_roles": [
+        "utility_land"
+      ],
+      "secondary_roles": [
+        "colorless_source",
+        "rule_modifier"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless mana.",
+        "Oracle text says you have no maximum hand size."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Repurposing Bay",
+      "canonical_card_name": "Repurposing Bay",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "0cf1ace1-b7f5-4bd9-a494-ee7cb6c1f854"
+      },
+      "roles": [
+        "artifact_tutor",
+        "sacrifice_outlet",
+        "enabler"
+      ],
+      "primary_roles": [
+        "artifact_tutor",
+        "sacrifice_outlet"
+      ],
+      "secondary_roles": [
+        "enabler"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text sacrifices another artifact to search for an artifact card and put it onto the battlefield."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Reshape",
+      "canonical_card_name": "Reshape",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "8f8a8f14-bced-4388-b263-5e70431b191f"
+      },
+      "roles": [
+        "artifact_tutor",
+        "sacrifice_outlet"
+      ],
+      "primary_roles": [
+        "artifact_tutor",
+        "sacrifice_outlet"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text sacrifices an artifact and searches for an artifact card to put onto the battlefield."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Rhystic Study",
+      "canonical_card_name": "Rhystic Study",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "9f37c5b6-a59c-45cd-9a99-e9357fe9ea1b"
+      },
+      "roles": [
+        "repeatable_card_draw",
+        "stax_or_hate_piece"
+      ],
+      "primary_roles": [
+        "repeatable_card_draw"
+      ],
+      "secondary_roles": [
+        "stax_or_hate_piece"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text can draw a card whenever an opponent casts a spell unless that player pays mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Sculpting Steel",
+      "canonical_card_name": "Sculpting Steel",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "d1958f01-77e9-4976-b7f8-f9b62aa78edc"
+      },
+      "roles": [
+        "utility_piece",
+        "enabler"
+      ],
+      "primary_roles": [
+        "utility_piece"
+      ],
+      "secondary_roles": [
+        "enabler"
+      ],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text may have this artifact enter as a copy of any artifact on the battlefield."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Seat of the Synod",
+      "canonical_card_name": "Seat of the Synod",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "57a194b3-2899-4dee-977a-c77df0b94dfe"
+      },
+      "roles": [
+        "artifact_land",
+        "colored_source"
+      ],
+      "primary_roles": [
+        "artifact_land",
+        "colored_source"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact land.",
+        "Oracle text adds blue mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Sensei's Divining Top",
+      "canonical_card_name": "Sensei's Divining Top",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "e5142b7a-e580-4737-a4aa-2590f6610ceb"
+      },
+      "roles": [
+        "topdeck_manipulation",
+        "card_filtering",
+        "utility_piece"
+      ],
+      "primary_roles": [
+        "topdeck_manipulation",
+        "card_filtering"
+      ],
+      "secondary_roles": [
+        "utility_piece"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text looks at the top three cards and reorders them.",
+        "Oracle text can draw a card then put this artifact on top of its owner library."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Dovin's Veto",
+      "canonical_card_name": "Dovin's Veto",
+      "original_decklist_name": "Shadowbringers",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "ba332954-ed8c-48d7-8d85-971c7b71dccf"
+      },
+      "roles": [
+        "counterspell",
+        "protection"
+      ],
+      "primary_roles": [
+        "counterspell"
+      ],
+      "secondary_roles": [
+        "protection"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text says this spell cannot be countered.",
+        "Oracle text counters target noncreature spell."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Shimmer Myr",
+      "canonical_card_name": "Shimmer Myr",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "4f61479b-05e1-4c89-bf11-b79c06ace5e2"
+      },
+      "roles": [
+        "rule_modifier",
+        "enabler",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "rule_modifier",
+        "enabler"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text lets you cast artifact spells as though they had flash."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Shivan Reef",
+      "canonical_card_name": "Shivan Reef",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "e13d0982-2542-4770-8e93-637478a0f84a"
+      },
+      "roles": [
+        "colored_source",
+        "fixing_land",
+        "colorless_source"
+      ],
+      "primary_roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "secondary_roles": [
+        "colorless_source"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless, blue, or red mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Silver Myr",
+      "canonical_card_name": "Silver Myr",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "3ebcc053-21c6-4708-b9fc-532e3749962f"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact creature and oracle text taps to add blue mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Skullclamp",
+      "canonical_card_name": "Skullclamp",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "1d8b007b-3169-4ee3-80c7-781fc096fc7a"
+      },
+      "roles": [
+        "repeatable_card_draw",
+        "enabler"
+      ],
+      "primary_roles": [
+        "repeatable_card_draw"
+      ],
+      "secondary_roles": [
+        "enabler"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text draws two cards whenever equipped creature dies.",
+        "Oracle text equips to a creature."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Slobad, Goblin Tinkerer",
+      "canonical_card_name": "Slobad, Goblin Tinkerer",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "4256dcc1-0eee-4385-9a5c-70abb212bf49"
+      },
+      "roles": [
+        "sacrifice_outlet",
+        "protection",
+        "indestructible_or_regeneration",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "sacrifice_outlet",
+        "protection"
+      ],
+      "secondary_roles": [
+        "indestructible_or_regeneration",
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text sacrifices an artifact to give target artifact indestructible until end of turn."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Snow-Covered Island",
+      "canonical_card_name": "Snow-Covered Island",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "3bfa5ebc-5623-4eec-89ea-dc187489ee4a"
+      },
+      "roles": [
+        "colored_source"
+      ],
+      "primary_roles": [
+        "colored_source"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is basic snow land Island and oracle text adds blue mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Sol Ring",
+      "canonical_card_name": "Sol Ring",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "91fdb56b-54d5-4272-8319-505ff987fe9b"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact and oracle text taps to add two colorless mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Spire of Industry",
+      "canonical_card_name": "Spire of Industry",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "35e9ec06-a848-4230-84a2-19cb8034e0f0"
+      },
+      "roles": [
+        "colored_source",
+        "fixing_land",
+        "colorless_source"
+      ],
+      "primary_roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "secondary_roles": [
+        "colorless_source"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless mana or one mana of any color if you control an artifact."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Springleaf Drum",
+      "canonical_card_name": "Springleaf Drum",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "e15ab0aa-4059-4923-9816-6f7a9e5b5a18"
+      },
+      "roles": [
+        "mana_rock",
+        "ramp",
+        "mana_fixing"
+      ],
+      "primary_roles": [
+        "mana_rock",
+        "ramp",
+        "mana_fixing"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact and oracle text taps an untapped creature to add one mana of any color."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Staff of Domination",
+      "canonical_card_name": "Staff of Domination",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "fde838c8-2f32-4e7d-a236-0bc42dd7abd9"
+      },
+      "roles": [
+        "utility_piece",
+        "tap_untap_engine",
+        "repeatable_card_draw"
+      ],
+      "primary_roles": [
+        "utility_piece",
+        "tap_untap_engine"
+      ],
+      "secondary_roles": [
+        "repeatable_card_draw"
+      ],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text untaps this artifact or target creature.",
+        "Oracle text can tap to draw a card."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Steel Overseer",
+      "canonical_card_name": "Steel Overseer",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "7601fbf2-916f-44b2-837a-201fd8304613"
+      },
+      "roles": [
+        "payoff_engine",
+        "scaling_threat",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "payoff_engine",
+        "scaling_threat"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text puts a +1/+1 counter on each artifact creature you control."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Swamp",
+      "canonical_card_name": "Swamp",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "74414c62-4b68-4e1b-9241-feff3231b9ee"
+      },
+      "roles": [
+        "colored_source"
+      ],
+      "primary_roles": [
+        "colored_source"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is basic land Swamp and oracle text adds black mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Swiftfoot Boots",
+      "canonical_card_name": "Swiftfoot Boots",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "6675632d-d74a-4b1e-8539-ac678d5545a5"
+      },
+      "roles": [
+        "protection",
+        "hexproof_or_shroud",
+        "enabler"
+      ],
+      "primary_roles": [
+        "protection",
+        "hexproof_or_shroud"
+      ],
+      "secondary_roles": [
+        "enabler"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text gives equipped creature hexproof and haste."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Tarnished Citadel",
+      "canonical_card_name": "Tarnished Citadel",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "30375d24-ccfe-47a2-babd-1bda0a6298fe"
+      },
+      "roles": [
+        "colored_source",
+        "fixing_land",
+        "colorless_source"
+      ],
+      "primary_roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "secondary_roles": [
+        "colorless_source"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless or one mana of any color."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Tezzeret, Cruel Captain",
+      "canonical_card_name": "Tezzeret, Cruel Captain",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "02e8e540-8aa3-4e6a-9a11-c3949cab5f0f"
+      },
+      "roles": [
+        "artifact_tutor",
+        "tap_untap_engine",
+        "scaling_threat"
+      ],
+      "primary_roles": [
+        "artifact_tutor",
+        "tap_untap_engine"
+      ],
+      "secondary_roles": [
+        "scaling_threat"
+      ],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text untaps target artifact or creature.",
+        "Oracle text searches for an artifact card with mana value 1 or less."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Tezzeret, Master of the Bridge",
+      "canonical_card_name": "Tezzeret, Master of the Bridge",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "9ee1eea2-961f-445d-b035-6baed454f289"
+      },
+      "roles": [
+        "cost_reduction",
+        "damage_payoff",
+        "artifact_recursion",
+        "impulse_or_selection"
+      ],
+      "primary_roles": [
+        "cost_reduction",
+        "damage_payoff"
+      ],
+      "secondary_roles": [
+        "artifact_recursion",
+        "impulse_or_selection"
+      ],
+      "confidence": "medium",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text gives creature and planeswalker spells affinity for artifacts.",
+        "Oracle text deals damage based on artifacts and returns target artifact card from your graveyard."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "The Mycosynth Gardens",
+      "canonical_card_name": "The Mycosynth Gardens",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "0a6f0408-6758-495f-9d6c-7686a1542fbd"
+      },
+      "roles": [
+        "fixing_land",
+        "utility_land",
+        "colorless_source",
+        "enabler"
+      ],
+      "primary_roles": [
+        "fixing_land",
+        "utility_land"
+      ],
+      "secondary_roles": [
+        "colorless_source",
+        "enabler"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless or one mana of any color.",
+        "Oracle text can become a copy of target nontoken artifact you control."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Thoughtcast",
+      "canonical_card_name": "Thoughtcast",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "466a0be8-31b9-4ea0-9a96-b09a76f4ec69"
+      },
+      "roles": [
+        "burst_card_draw",
+        "cost_reduction"
+      ],
+      "primary_roles": [
+        "burst_card_draw"
+      ],
+      "secondary_roles": [
+        "cost_reduction"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text has affinity for artifacts.",
+        "Oracle text draws two cards."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Three Tree City",
+      "canonical_card_name": "Three Tree City",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "56f88a48-cced-4a9d-8c19-e4f105f0d8a2"
+      },
+      "roles": [
+        "utility_land_mana",
+        "fixing_land",
+        "colorless_source"
+      ],
+      "primary_roles": [
+        "utility_land_mana",
+        "fixing_land"
+      ],
+      "secondary_roles": [
+        "colorless_source"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless mana.",
+        "Oracle text can add mana equal to the number of creatures of the chosen type."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Tree of Tales",
+      "canonical_card_name": "Tree of Tales",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "3b3134b3-1bad-4b41-9e56-700125ff31fa"
+      },
+      "roles": [
+        "artifact_land",
+        "colored_source"
+      ],
+      "primary_roles": [
+        "artifact_land",
+        "colored_source"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact land.",
+        "Oracle text adds green mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Ugin, the Ineffable",
+      "canonical_card_name": "Ugin, the Ineffable",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "2eb7e322-aba0-42f5-80a1-267f3444ac4d"
+      },
+      "roles": [
+        "cost_reduction",
+        "targeted_removal",
+        "token_producer",
+        "impulse_or_selection"
+      ],
+      "primary_roles": [
+        "cost_reduction",
+        "targeted_removal"
+      ],
+      "secondary_roles": [
+        "token_producer",
+        "impulse_or_selection"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text makes colorless spells cost two less to cast.",
+        "Oracle text destroys target permanent that is one or more colors."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Underground River",
+      "canonical_card_name": "Underground River",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "5e50c8d5-6b22-4fc6-87ea-3d7d77ced17f"
+      },
+      "roles": [
+        "colored_source",
+        "fixing_land",
+        "colorless_source"
+      ],
+      "primary_roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "secondary_roles": [
+        "colorless_source"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless, blue, or black mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Unwinding Clock",
+      "canonical_card_name": "Unwinding Clock",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "c3fd1a59-4ade-459f-90d2-1fc67d6d1384"
+      },
+      "roles": [
+        "tap_untap_engine",
+        "artifact_engine"
+      ],
+      "primary_roles": [
+        "tap_untap_engine",
+        "artifact_engine"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text untaps all artifacts you control during each other player untap step."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Urza, Lord High Artificer",
+      "canonical_card_name": "Urza, Lord High Artificer",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "7b7a348a-51f7-4dc5-8fe7-1c70fea5e050"
+      },
+      "roles": [
+        "mana_engine",
+        "token_producer",
+        "impulse_or_selection",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "mana_engine",
+        "token_producer"
+      ],
+      "secondary_roles": [
+        "impulse_or_selection",
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text creates a Construct artifact creature token.",
+        "Oracle text taps an untapped artifact you control to add blue mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Urza's Cave",
+      "canonical_card_name": "Urza's Cave",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "926916ed-2f22-4ba9-9427-194886ad6c1e"
+      },
+      "roles": [
+        "land_tutor",
+        "fetch_or_search_land",
+        "colorless_source",
+        "utility_land"
+      ],
+      "primary_roles": [
+        "land_tutor",
+        "fetch_or_search_land"
+      ],
+      "secondary_roles": [
+        "colorless_source",
+        "utility_land"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless mana.",
+        "Oracle text searches for a land card and puts it onto the battlefield tapped."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Urza's Incubator",
+      "canonical_card_name": "Urza's Incubator",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "c4589226-6072-409b-b598-ebd87f675a6a"
+      },
+      "roles": [
+        "cost_reduction"
+      ],
+      "primary_roles": [
+        "cost_reduction"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text makes creature spells of the chosen type cost two less to cast."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Urza's Mine",
+      "canonical_card_name": "Urza's Mine",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "396bbb7d-ae61-4d8d-b931-9ed2f712832e"
+      },
+      "roles": [
+        "colorless_source",
+        "utility_land_mana"
+      ],
+      "primary_roles": [
+        "colorless_source"
+      ],
+      "secondary_roles": [
+        "utility_land_mana"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless mana, with additional mana when the matching Urza lands are controlled."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Urza's Power Plant",
+      "canonical_card_name": "Urza's Power Plant",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "b0449a19-37f7-4169-9e32-928db5ec76fe"
+      },
+      "roles": [
+        "colorless_source",
+        "utility_land_mana"
+      ],
+      "primary_roles": [
+        "colorless_source"
+      ],
+      "secondary_roles": [
+        "utility_land_mana"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless mana, with additional mana when the matching Urza lands are controlled."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Urza's Tower",
+      "canonical_card_name": "Urza's Tower",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "1e9f09b3-dd2d-4ba9-a57e-4f3c1793f752"
+      },
+      "roles": [
+        "colorless_source",
+        "utility_land_mana"
+      ],
+      "primary_roles": [
+        "colorless_source"
+      ],
+      "secondary_roles": [
+        "utility_land_mana"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless mana, with additional mana when the matching Urza lands are controlled."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Vault of Whispers",
+      "canonical_card_name": "Vault of Whispers",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "e85e4098-f872-4aa4-a71a-208b6090be28"
+      },
+      "roles": [
+        "artifact_land",
+        "colored_source"
+      ],
+      "primary_roles": [
+        "artifact_land",
+        "colored_source"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is artifact land.",
+        "Oracle text adds black mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Walking Ballista",
+      "canonical_card_name": "Walking Ballista",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "5272436e-74f0-44c4-a291-ea8ebc3f1525"
+      },
+      "roles": [
+        "damage_payoff",
+        "scaling_threat",
+        "creature_body"
+      ],
+      "primary_roles": [
+        "damage_payoff",
+        "scaling_threat"
+      ],
+      "secondary_roles": [
+        "creature_body"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text enters with +1/+1 counters and can add counters.",
+        "Oracle text removes counters to deal damage to any target."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Whir of Invention",
+      "canonical_card_name": "Whir of Invention",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "0279fd3c-9252-4958-9d7a-5f33aa25907e"
+      },
+      "roles": [
+        "artifact_tutor",
+        "tutor",
+        "cost_reduction"
+      ],
+      "primary_roles": [
+        "artifact_tutor",
+        "tutor"
+      ],
+      "secondary_roles": [
+        "cost_reduction"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text has improvise.",
+        "Oracle text searches for an artifact card and puts it onto the battlefield."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Yavimaya Coast",
+      "canonical_card_name": "Yavimaya Coast",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "f4c1500b-1f4c-4d33-810c-25e3bb0a4666"
+      },
+      "roles": [
+        "colored_source",
+        "fixing_land",
+        "colorless_source"
+      ],
+      "primary_roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "secondary_roles": [
+        "colorless_source"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds colorless, green, or blue mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Aetherize",
+      "canonical_card_name": "Aetherize",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "1e5530fc-0291-4a17-b048-c5d24e6f51d8"
+      },
+      "roles": [
+        "bounce",
+        "board_wipe"
+      ],
+      "primary_roles": [
+        "bounce"
+      ],
+      "secondary_roles": [
+        "board_wipe"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text returns all attacking creatures to their owners hands."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Darksteel Forge",
+      "canonical_card_name": "Darksteel Forge",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "421089c4-c8d3-48c5-b313-fb1741546271"
+      },
+      "roles": [
+        "protection",
+        "indestructible_or_regeneration",
+        "anti_wipe_protection"
+      ],
+      "primary_roles": [
+        "protection",
+        "indestructible_or_regeneration"
+      ],
+      "secondary_roles": [
+        "anti_wipe_protection"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text gives artifacts you control indestructible."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Ghostly Prison",
+      "canonical_card_name": "Ghostly Prison",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "e1f723a8-0be9-4270-b451-a52d6b2fda4e"
+      },
+      "roles": [
+        "defensive_pillowfort"
+      ],
+      "primary_roles": [
+        "defensive_pillowfort"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text prevents creatures from attacking you unless their controller pays mana."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Meekstone",
+      "canonical_card_name": "Meekstone",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "0a691664-9275-4b89-a8e3-b99c88717ffb"
+      },
+      "roles": [
+        "stax_or_hate_piece",
+        "defensive_pillowfort"
+      ],
+      "primary_roles": [
+        "stax_or_hate_piece"
+      ],
+      "secondary_roles": [
+        "defensive_pillowfort"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text prevents creatures with power 3 or greater from untapping during untap steps."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Mistrise Village",
+      "canonical_card_name": "Mistrise Village",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "d44bccbf-6fab-46e4-8ddb-6577e27ec6e8"
+      },
+      "roles": [
+        "utility_land",
+        "colored_source",
+        "protection"
+      ],
+      "primary_roles": [
+        "utility_land",
+        "colored_source"
+      ],
+      "secondary_roles": [
+        "protection"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds blue mana.",
+        "Oracle text makes the next spell you cast unable to be countered."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Neurok Stealthsuit",
+      "canonical_card_name": "Neurok Stealthsuit",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "d5e58c74-0ba6-452a-94a6-8256c4f6aba8"
+      },
+      "roles": [
+        "protection",
+        "hexproof_or_shroud"
+      ],
+      "primary_roles": [
+        "protection",
+        "hexproof_or_shroud"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text gives equipped creature shroud."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "Torpor Orb",
+      "canonical_card_name": "Torpor Orb",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "dbf02a38-d10d-463e-ab99-e7fd848a1bd3"
+      },
+      "roles": [
+        "stax_or_hate_piece"
+      ],
+      "primary_roles": [
+        "stax_or_hate_piece"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Oracle text says creatures entering do not cause abilities to trigger."
+      ],
+      "assigned_at": "2026-07-09T00:00:00Z"
+    }
+  ]
 }
