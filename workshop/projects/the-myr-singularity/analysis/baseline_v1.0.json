@@ -35,7 +35,7 @@
     "Counts cover the playable 100 cards: the commander plus 99 main-deck entries (Island appears twice; all other names are unique).",
     "The 7 SIDEBOARD cards from the source import are summarized separately and are not included in the playable-100 counts.",
     "A card counts once per role it carries and once per category in which it carries at least one role; multi-role cards therefore appear in multiple counters.",
-    "Flavor-name imports (for example Bridge of Khazad-dum) are counted under their canonical card facts via recorded alias resolution.",
+    "Flavor-name imports (for example Bridge of Khazad-dûm) are counted under their canonical card facts via recorded alias resolution.",
     "All role data comes from first-pass human-curated assignments; 87 of the 100 playable cards carry high-confidence assignments and 13 carry medium-confidence assignments."
   ],
   "deck_identity_summary": {
