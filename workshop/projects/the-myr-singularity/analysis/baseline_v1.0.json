@@ -1,1 +1,431 @@
-{}
+{
+  "schema_version": "1.0",
+  "project_id": "the-myr-singularity",
+  "deck_version_id": "v1.0",
+  "analysis_id": "baseline_v1.0",
+  "analysis_type": "baseline_structural_analysis",
+  "generated_at": "2026-07-09T00:00:00Z",
+  "generated_from": {
+    "project": "workshop/projects/the-myr-singularity/project.json",
+    "brief": "workshop/projects/the-myr-singularity/brief/brief.json",
+    "deck_version": "workshop/projects/the-myr-singularity/versions/v1.0.json",
+    "card_facts": "workshop/card-data/cards.json",
+    "functional_roles": "workshop/knowledge/functional_roles.json",
+    "role_taxonomy": "workshop/knowledge/role_taxonomy.json"
+  },
+  "scope": {
+    "includes": [
+      "Deck identity and project intent summary.",
+      "Card-level composition facts for deck version v1.0.",
+      "Functional role and role-category distribution over the playable 100 cards.",
+      "Per-category structural overviews.",
+      "Neutral structural strengths and pressure points.",
+      "Open questions for later investigation."
+    ],
+    "excludes": [
+      "Card cut, add, swap, or replacement recommendations.",
+      "Upgrade, budget, or price discussion.",
+      "EDHREC or popularity claims.",
+      "Simulation results or matchup conclusions.",
+      "Power scores, rankings, tier placements, or final verdicts.",
+      "Decklist changes of any kind."
+    ]
+  },
+  "method_notes": [
+    "Counts cover the playable 100 cards: the commander plus 99 main-deck entries (Island appears twice; all other names are unique).",
+    "The 7 SIDEBOARD cards from the source import are summarized separately and are not included in the playable-100 counts.",
+    "A card counts once per role it carries and once per category in which it carries at least one role; multi-role cards therefore appear in multiple counters.",
+    "Flavor-name imports (for example Bridge of Khazad-dum) are counted under their canonical card facts via recorded alias resolution.",
+    "All role data comes from first-pass human-curated assignments; 87 of the 100 playable cards carry high-confidence assignments and 13 carry medium-confidence assignments."
+  ],
+  "deck_identity_summary": {
+    "commander": "Urtet, Remnant of Memnarch",
+    "format": "Commander",
+    "stated_identity": "An artifact combo-control engine disguised as a Myr tribal deck.",
+    "stated_resource_model": "Myr and artifact bodies are used as resources, not merely as attackers.",
+    "color_identity": [
+      "W",
+      "U",
+      "B",
+      "R",
+      "G"
+    ],
+    "sprint_1_project_goals": [
+      "Preserve the Myr identity.",
+      "Improve explosiveness.",
+      "Improve consistency.",
+      "Improve mana fixing.",
+      "Improve resilience."
+    ],
+    "composition": {
+      "playable_cards": 100,
+      "lands": 34,
+      "nonland_cards": 66,
+      "artifact_cards": 50,
+      "creature_cards": 24,
+      "myr_typal_cards": 14,
+      "colored_nonland_cards": 23,
+      "average_mana_value_nonland": 3.0,
+      "mana_value_curve_nonland": {
+        "0": 1,
+        "1": 6,
+        "2": 22,
+        "3": 20,
+        "4": 8,
+        "5": 4,
+        "6_plus": 5
+      },
+      "sideboard_cards": 7
+    }
+  },
+  "role_distribution": {
+    "counting_basis": "cards_in_playable_100_carrying_role",
+    "roles": {
+      "creature_body": {
+        "cards_with_role": 23,
+        "cards_with_primary_role": 0
+      },
+      "colored_source": {
+        "cards_with_role": 21,
+        "cards_with_primary_role": 21
+      },
+      "colorless_source": {
+        "cards_with_role": 19,
+        "cards_with_primary_role": 4
+      },
+      "mana_rock": {
+        "cards_with_role": 14,
+        "cards_with_primary_role": 14
+      },
+      "ramp": {
+        "cards_with_role": 14,
+        "cards_with_primary_role": 14
+      },
+      "enabler": {
+        "cards_with_role": 12,
+        "cards_with_primary_role": 3
+      },
+      "fixing_land": {
+        "cards_with_role": 12,
+        "cards_with_primary_role": 12
+      },
+      "cost_reduction": {
+        "cards_with_role": 9,
+        "cards_with_primary_role": 6
+      },
+      "artifact_tutor": {
+        "cards_with_role": 7,
+        "cards_with_primary_role": 7
+      },
+      "utility_land": {
+        "cards_with_role": 7,
+        "cards_with_primary_role": 6
+      },
+      "artifact_land": {
+        "cards_with_role": 6,
+        "cards_with_primary_role": 6
+      },
+      "scaling_threat": {
+        "cards_with_role": 6,
+        "cards_with_primary_role": 2
+      },
+      "tap_untap_engine": {
+        "cards_with_role": 6,
+        "cards_with_primary_role": 6
+      },
+      "utility_piece": {
+        "cards_with_role": 6,
+        "cards_with_primary_role": 2
+      },
+      "artifact_recursion": {
+        "cards_with_role": 5,
+        "cards_with_primary_role": 4
+      },
+      "damage_payoff": {
+        "cards_with_role": 5,
+        "cards_with_primary_role": 5
+      },
+      "mana_fixing": {
+        "cards_with_role": 5,
+        "cards_with_primary_role": 5
+      },
+      "payoff_engine": {
+        "cards_with_role": 5,
+        "cards_with_primary_role": 4
+      },
+      "tutor": {
+        "cards_with_role": 5,
+        "cards_with_primary_role": 4
+      },
+      "utility_land_mana": {
+        "cards_with_role": 5,
+        "cards_with_primary_role": 2
+      },
+      "board_wipe": {
+        "cards_with_role": 4,
+        "cards_with_primary_role": 3
+      },
+      "card_filtering": {
+        "cards_with_role": 4,
+        "cards_with_primary_role": 2
+      },
+      "counterspell": {
+        "cards_with_role": 4,
+        "cards_with_primary_role": 4
+      },
+      "impulse_or_selection": {
+        "cards_with_role": 4,
+        "cards_with_primary_role": 1
+      },
+      "protection": {
+        "cards_with_role": 4,
+        "cards_with_primary_role": 3
+      },
+      "repeatable_card_draw": {
+        "cards_with_role": 4,
+        "cards_with_primary_role": 3
+      },
+      "sacrifice_outlet": {
+        "cards_with_role": 4,
+        "cards_with_primary_role": 4
+      },
+      "artifact_engine": {
+        "cards_with_role": 3,
+        "cards_with_primary_role": 1
+      },
+      "indestructible_or_regeneration": {
+        "cards_with_role": 3,
+        "cards_with_primary_role": 0
+      },
+      "mana_engine": {
+        "cards_with_role": 3,
+        "cards_with_primary_role": 2
+      },
+      "rule_modifier": {
+        "cards_with_role": 3,
+        "cards_with_primary_role": 1
+      },
+      "token_producer": {
+        "cards_with_role": 3,
+        "cards_with_primary_role": 2
+      },
+      "topdeck_manipulation": {
+        "cards_with_role": 3,
+        "cards_with_primary_role": 2
+      },
+      "bounce": {
+        "cards_with_role": 2,
+        "cards_with_primary_role": 1
+      },
+      "burst_card_draw": {
+        "cards_with_role": 2,
+        "cards_with_primary_role": 1
+      },
+      "defensive_pillowfort": {
+        "cards_with_role": 2,
+        "cards_with_primary_role": 2
+      },
+      "graveyard_hate": {
+        "cards_with_role": 2,
+        "cards_with_primary_role": 1
+      },
+      "hexproof_or_shroud": {
+        "cards_with_role": 2,
+        "cards_with_primary_role": 2
+      },
+      "stax_or_hate_piece": {
+        "cards_with_role": 2,
+        "cards_with_primary_role": 1
+      },
+      "targeted_removal": {
+        "cards_with_role": 2,
+        "cards_with_primary_role": 2
+      },
+      "combo_payoff": {
+        "cards_with_role": 1,
+        "cards_with_primary_role": 0
+      },
+      "fetch_or_search_land": {
+        "cards_with_role": 1,
+        "cards_with_primary_role": 1
+      },
+      "graveyard_card_access": {
+        "cards_with_role": 1,
+        "cards_with_primary_role": 1
+      },
+      "land_tutor": {
+        "cards_with_role": 1,
+        "cards_with_primary_role": 1
+      },
+      "setup_piece": {
+        "cards_with_role": 1,
+        "cards_with_primary_role": 0
+      },
+      "token_engine": {
+        "cards_with_role": 1,
+        "cards_with_primary_role": 1
+      }
+    },
+    "taxonomy_roles_unused_in_deck": [
+      "alternate_win_condition",
+      "anti_wipe_protection",
+      "blocker",
+      "combo_enabler",
+      "combo_piece",
+      "commander_support",
+      "creature_recursion",
+      "evasive_threat",
+      "finisher",
+      "graveyard_recursion",
+      "land_ramp",
+      "permanent_recursion",
+      "ritual_or_burst_mana"
+    ]
+  },
+  "category_distribution": {
+    "counting_basis": "cards_with_any_role and cards_with_primary_role count distinct cards in the playable 100; role_assignments_in_category counts role assignments, so multi-role cards contribute more than once",
+    "categories": {
+      "mana_development": {
+        "label": "Mana Development",
+        "cards_with_any_role": 28,
+        "cards_with_primary_role": 22,
+        "role_assignments_in_category": 47
+      },
+      "card_advantage": {
+        "label": "Card Advantage",
+        "cards_with_any_role": 11,
+        "cards_with_primary_role": 6,
+        "role_assignments_in_category": 11
+      },
+      "selection_and_tutoring": {
+        "label": "Selection and Tutoring",
+        "cards_with_any_role": 16,
+        "cards_with_primary_role": 13,
+        "role_assignments_in_category": 20
+      },
+      "interaction": {
+        "label": "Interaction",
+        "cards_with_any_role": 15,
+        "cards_with_primary_role": 12,
+        "role_assignments_in_category": 16
+      },
+      "protection_and_resilience": {
+        "label": "Protection and Resilience",
+        "cards_with_any_role": 8,
+        "cards_with_primary_role": 5,
+        "role_assignments_in_category": 11
+      },
+      "recursion_and_recovery": {
+        "label": "Recursion and Recovery",
+        "cards_with_any_role": 5,
+        "cards_with_primary_role": 4,
+        "role_assignments_in_category": 5
+      },
+      "engine_and_scaling": {
+        "label": "Engine and Scaling",
+        "cards_with_any_role": 14,
+        "cards_with_primary_role": 11,
+        "role_assignments_in_category": 24
+      },
+      "combo_and_win_conditions": {
+        "label": "Combo and Win Conditions",
+        "cards_with_any_role": 5,
+        "cards_with_primary_role": 5,
+        "role_assignments_in_category": 6
+      },
+      "board_presence": {
+        "label": "Board Presence",
+        "cards_with_any_role": 24,
+        "cards_with_primary_role": 2,
+        "role_assignments_in_category": 26
+      },
+      "utility_and_support": {
+        "label": "Utility and Support",
+        "cards_with_any_role": 20,
+        "cards_with_primary_role": 9,
+        "role_assignments_in_category": 26
+      },
+      "lands_and_mana_base": {
+        "label": "Lands and Mana Base",
+        "cards_with_any_role": 34,
+        "cards_with_primary_role": 34,
+        "role_assignments_in_category": 66
+      }
+    }
+  },
+  "section_summaries": {
+    "commander_and_project_intent": "Urtet, Remnant of Memnarch is a five-color-identity Myr commander whose abilities reward casting Myr spells, untapping Myr, and distributing +1/+1 counters. The project brief frames the deck as an artifact combo-control engine that preserves a Myr typal identity, with Sprint 1 goals of improving explosiveness, consistency, mana fixing, and resilience.",
+    "mana_development": "28 of 100 playable cards carry at least one Mana Development role, covering 47 in-category role assignments: 14 mana rocks, 14 ramp cards, 9 cost-reduction effects, 5 mana-fixing effects, and 5 utility-land mana contributions. The layer is concentrated in artifact-based acceleration. No card currently carries the land_ramp or ritual_or_burst_mana roles, so acceleration is almost entirely permanent-based rather than land-based or single-turn burst.",
+    "card_advantage_and_selection": "11 cards carry a Card Advantage role (4 repeatable draw, 2 burst draw, 4 impulse or selection, 1 graveyard card access) and 16 cards carry a Selection and Tutoring role, covering 20 in-category role assignments (7 artifact tutors, 5 broad tutors, 4 card filtering, 3 topdeck manipulation, 1 land tutor). Selection density is weighted toward finding specific artifacts rather than accumulating raw card quantity.",
+    "interaction": "15 cards carry an Interaction role, covering 16 in-category role assignments: 4 counterspells, 4 board wipes, 2 targeted removal effects, 2 bounce effects, 2 stax or hate pieces, and 2 graveyard hate effects. The interaction suite leans toward stack-based answers and mass removal, with a comparatively small count of single-target permanent answers.",
+    "protection_and_resilience": "8 cards carry a Protection and Resilience role in the playable 100, covering 11 in-category role assignments: 4 broad protection, 3 indestructible or regeneration, 2 hexproof or shroud, and 2 defensive pillowfort effects. No playable card currently carries the anti_wipe_protection role; the only card assigned that role (Darksteel Forge) sits in the imported SIDEBOARD section.",
+    "recursion_and_recovery": "5 cards carry a Recursion and Recovery role, and all recursion is artifact-directed (artifact_recursion). No card carries creature_recursion, graveyard_recursion, or permanent_recursion, so recovery capacity is concentrated on returning artifacts.",
+    "engine_and_scaling": "14 cards carry an Engine and Scaling role, covering 24 in-category role assignments: 6 tap-untap engines, 6 scaling threats, 5 payoff engines, 3 artifact engines, 3 mana engines, and 1 token engine. The deck appears structurally dense in repeatable artifact-driven value loops, consistent with the stated engine identity.",
+    "combo_and_win_conditions": "5 cards carry a Combo and Win Conditions role, covering 6 in-category role assignments: 5 damage payoffs and 1 combo payoff (Aetherflux Reservoir, which carries both). No card currently carries the combo_piece, combo_enabler, finisher, or alternate_win_condition roles. Given the stated combo-control archetype, the gap between the archetype description and the tagged win-condition structure is a primary area to investigate: it may reflect first-pass Knowledge coverage rather than the deck's actual structure.",
+    "board_presence": "24 cards carry a Board Presence role, almost entirely as creature_body (23) plus 3 token producers, two of which are also creature bodies. No card carries evasive_threat, blocker, or commander_support. Board presence is therefore functional mass rather than combat-oriented pressure, consistent with bodies-as-resources.",
+    "lands_and_mana_base": "34 lands support a five-color commander identity, carrying 66 land-role assignments: 21 colored sources, 19 colorless sources, 12 fixing lands, 7 playable utility lands (an 8th, Mistrise Village, is in the sideboard), 6 artifact lands, 1 fetch-or-search land, and the 3-land Urza's Mine/Power Plant/Tower set. Only 7 lands are basics (including two Islands and one snow-covered Island) while 23 nonland cards have colored costs, so colored-cast consistency is a defined area for later investigation.",
+    "sideboard": "The imported SIDEBOARD holds 7 cards whose roles skew toward defense and disruption (protection, pillowfort, stax, bounce, board wipe). Commander play typically has no sideboard, so the intended relationship between these cards and the 100-card deck is an open structural question."
+  },
+  "structural_strengths": [
+    "High artifact density (50 of 100 playable cards) that structurally supports the deck's artifact engines, cost reducers, improvise costs, and artifact-count payoffs.",
+    "A deep mana development layer (28 cards carrying 47 mana-development role assignments) built on redundant mana rocks and cost reduction, matching the explosiveness goal in the brief.",
+    "Dedicated artifact tutoring (7 cards) plus broad tutors (5) that give the deck structural access to specific engine pieces.",
+    "Redundant untap effects (6 tap-untap engines) that can reuse mana rocks and activated abilities, consistent with the engine identity.",
+    "An artifact recursion package (5 cards) that lets the deck reuse its primary resource type after disruption.",
+    "A low, engine-oriented curve (average nonland mana value 3.0, with 49 of 66 nonland cards at mana value 3 or less)."
+  ],
+  "structural_pressure_points": [
+    "Win-condition structure is under-described in current Knowledge: no card carries finisher, combo_piece, combo_enabler, or alternate_win_condition, while the brief describes a combo-control archetype. Whether this is a Knowledge coverage gap or a structural gap needs investigation.",
+    "The card advantage layer is comparatively small (11 cards, 6 with a primary card-advantage role), which is relevant to the brief's consistency goal.",
+    "Colored-cast consistency for a five-color identity is unverified: 23 nonland cards have colored costs against 21 colored land sources and 12 fixing lands, with heavy colorless production alongside.",
+    "Anti-wipe resilience is absent from the playable 100 (the only anti_wipe_protection card is in the sideboard), which is relevant to the brief's resilience goal for a board-dependent engine deck.",
+    "Recursion is exclusively artifact-directed; the deck has no tagged means of recovering non-artifact cards.",
+    "Targeted removal is a small share of interaction (2 of 15 interaction cards), concentrating answers in counterspells and board wipes.",
+    "Myr typal density is 14 of 100 cards; how reliably this supports the commander's Myr-cast and Myr-untap triggers is untested.",
+    "The 7-card SIDEBOARD has no defined role in Commander play and its status relative to the 100-card deck is unresolved."
+  ],
+  "open_questions": [
+    "Which specific card combinations constitute the deck's intended combo lines, and which cards would carry combo_piece or combo_enabler once synergy mapping exists as a later Knowledge task?",
+    "Does Aetherflux Reservoir (the sole combo_payoff) have sufficient structural support to function as a win route, and which cards feed it?",
+    "How often can the deck cast its 23 colored nonland cards on curve, given the land mix? This is a question for later simulation.",
+    "How frequently does the commander's Myr-focused trigger set find targets, given 14 Myr typal cards?",
+    "Is the absence of land-based ramp and burst mana a deliberate structural identity or an artifact of the current list?",
+    "What is the intended function of the SIDEBOARD section in this project's workflow?",
+    "Do the 13 medium-confidence role assignments hold up under a focused Knowledge review?",
+    "Walking Ballista sits in the main deck per the source import; its structural role in the engine (scaling threat and damage payoff) versus its wider reputation is deliberately not evaluated here and awaits synergy mapping."
+  ],
+  "explicit_non_recommendation_boundary": {
+    "statement": "This document is a baseline structural analysis only. It makes no card cut, add, swap, replacement, upgrade, budget, or purchase suggestions; it assigns no power score, rank, tier, or verdict; it reports no simulation or matchup results; and it changes no decklist, version, knowledge, or card-data files. Recommendations are a separate later task and must not cite this document as having pre-authorized any change.",
+    "next_layer": "Future recommendation analysis is a separate task that will consume this baseline."
+  },
+  "sideboard_roles": {
+    "Aetherize": [
+      "bounce",
+      "board_wipe"
+    ],
+    "Darksteel Forge": [
+      "protection",
+      "indestructible_or_regeneration",
+      "anti_wipe_protection"
+    ],
+    "Ghostly Prison": [
+      "defensive_pillowfort"
+    ],
+    "Meekstone": [
+      "stax_or_hate_piece",
+      "defensive_pillowfort"
+    ],
+    "Mistrise Village": [
+      "utility_land",
+      "colored_source",
+      "protection"
+    ],
+    "Neurok Stealthsuit": [
+      "protection",
+      "hexproof_or_shroud"
+    ],
+    "Torpor Orb": [
+      "stax_or_hate_piece"
+    ]
+  }
+}
