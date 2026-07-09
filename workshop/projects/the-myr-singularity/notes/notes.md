@@ -51,3 +51,13 @@ Baseline structural analysis created for deck version v1.0.
 - Analysis is structural only: role/category distributions, strengths, pressure points, and open questions.
 - No recommendations, no deck changes, no simulation, no power scoring.
 - Next natural phase: recommendation analysis as a separate task.
+
+## 2026-07-09 - Sprint 1 Recommendation Candidate Schema Checkpoint
+
+Recommendation candidate schema defined in `recommendations/rec-001.json` and `rec-001.md`.
+
+- Schema only: the `candidates` array is empty and no cards are named.
+- Candidates must trace to baseline analysis pressure points/open questions, project goals, card facts (Scryfall IDs), and functional roles.
+- Lifecycle defined: proposed, under_review, accepted, rejected, deferred, needs_testing; accepted/rejected require a user decision and decision log entry.
+- No deck changes are authorized by the schema; deck changes require a new version file plus a decision log entry.
+- Next natural phase: populating candidate records as a separate task.

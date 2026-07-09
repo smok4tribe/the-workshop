@@ -1,1 +1,306 @@
-{}
+{
+  "schema_version": "1.0",
+  "project_id": "the-myr-singularity",
+  "deck_version_id": "v1.0",
+  "recommendation_set_id": "rec-001",
+  "recommendation_type": "candidate_schema",
+  "status": "schema_only",
+  "generated_from": {
+    "baseline_analysis": "workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json",
+    "brief": "workshop/projects/the-myr-singularity/brief/brief.json",
+    "deck_version": "workshop/projects/the-myr-singularity/versions/v1.0.json",
+    "card_facts": "workshop/card-data/cards.json",
+    "functional_roles": "workshop/knowledge/functional_roles.json",
+    "role_taxonomy": "workshop/knowledge/role_taxonomy.json"
+  },
+  "scope": {
+    "includes": [
+      "The data contract for future recommendation candidate records.",
+      "Allowed candidate types, statuses, evidence types, and confidence values.",
+      "Traceability requirements linking candidates to baseline analysis, project goals, card facts, and functional roles.",
+      "The candidate lifecycle and its decision boundaries.",
+      "Validation expectations for future recommendation sets."
+    ],
+    "excludes": [
+      "Actual card cuts, adds, swaps, replacements, or packages.",
+      "Specific card names proposed as recommendations.",
+      "Upgrade, budget, or price discussion.",
+      "EDHREC or popularity claims.",
+      "Final recommendation decisions.",
+      "Decklist changes or new deck versions.",
+      "Simulation results."
+    ]
+  },
+  "explicit_no_recommendations_boundary": {
+    "statement": "This file defines the recommendation candidate schema only. It contains zero candidates and proposes zero changes to any card, deck, version, knowledge, or card-data file. No deck change is authorized by this file. Future candidates must be created in a separate task, must conform to candidate_schema, and remain non-actionable until an explicit user decision is recorded.",
+    "candidates_must_be_empty_while_status_is": "schema_only"
+  },
+  "reference_conventions": {
+    "pressure_point_id": "Format '<analysis_id>:pressure_point:<index>' where <index> is the zero-based position in the structural_pressure_points array of the referenced analysis file. Example: 'baseline_v1.0:pressure_point:0'.",
+    "open_question_id": "Format '<analysis_id>:open_question:<index>' where <index> is the zero-based position in the open_questions array of the referenced analysis file. Example: 'baseline_v1.0:open_question:2'.",
+    "project_goal": "Verbatim goal string from project.json 'goals' or brief.json 'improvement_areas'.",
+    "card_reference": "Cards are referenced by Scryfall ID from workshop/card-data/cards.json, using the format 'scryfall:<id>'. Example: 'scryfall:00000000-0000-0000-0000-000000000000' (placeholder, not a real card).",
+    "role_reference": "role_id values from workshop/knowledge/role_taxonomy.json.",
+    "category_reference": "category_id values from workshop/knowledge/role_taxonomy.json."
+  },
+  "candidate_schema": {
+    "description": "Contract for each future entry of the 'candidates' array. Field groups: identity, traceability, evidence, content, boundary, review.",
+    "identity_fields": {
+      "candidate_id": {
+        "type": "string",
+        "required": true,
+        "description": "Unique ID within the recommendation set. Format 'cand-<zero-padded-number>', for example 'cand-001'."
+      },
+      "candidate_type": {
+        "type": "string",
+        "required": true,
+        "allowed_values": [
+          "add_candidate",
+          "cut_candidate",
+          "swap_candidate",
+          "package_candidate",
+          "mana_base_adjustment_candidate",
+          "role_coverage_candidate",
+          "knowledge_review_candidate"
+        ],
+        "description": "The kind of change the candidate describes. 'knowledge_review_candidate' proposes reviewing Knowledge coverage (for example role tagging) rather than a deck change. 'role_coverage_candidate' describes a role-level gap to address without naming specific cards."
+      },
+      "status": {
+        "type": "string",
+        "required": true,
+        "allowed_values": [
+          "proposed",
+          "under_review",
+          "accepted",
+          "rejected",
+          "deferred",
+          "needs_testing"
+        ],
+        "description": "Lifecycle status. New candidates start as 'proposed'. See candidate_lifecycle for allowed transitions."
+      }
+    },
+    "traceability_fields": {
+      "source_analysis_id": {
+        "type": "string",
+        "required": true,
+        "description": "analysis_id of the analysis document that motivated the candidate, for example 'baseline_v1.0'. Every candidate must trace to an existing analysis."
+      },
+      "source_pressure_point_ids": {
+        "type": "array of string",
+        "required": true,
+        "description": "Pressure point IDs per reference_conventions.pressure_point_id. May be empty only for knowledge_review_candidate entries motivated by open questions alone."
+      },
+      "related_open_question_ids": {
+        "type": "array of string",
+        "required": false,
+        "description": "Open question IDs per reference_conventions.open_question_id."
+      },
+      "related_project_goals": {
+        "type": "array of string",
+        "required": true,
+        "description": "Verbatim project goal strings the candidate serves. At least one is required; candidates serving no stated goal are out of scope."
+      },
+      "related_roles": {
+        "type": "array of string",
+        "required": false,
+        "description": "role_id values affected by or motivating the candidate. Must exist in role_taxonomy.json."
+      },
+      "related_categories": {
+        "type": "array of string",
+        "required": false,
+        "description": "category_id values affected by or motivating the candidate. Must exist in role_taxonomy.json."
+      }
+    },
+    "evidence_fields": {
+      "evidence_summary": {
+        "type": "string",
+        "required": true,
+        "description": "One-paragraph neutral summary of why this candidate exists, grounded in cited evidence items."
+      },
+      "evidence_items": {
+        "type": "array of object",
+        "required": true,
+        "description": "Each item: { evidence_type, reference, note }. 'reference' points into the cited source (file path, ID per reference_conventions, or dated playtest note). At least one item is required.",
+        "item_fields": {
+          "evidence_type": {
+            "type": "string",
+            "required": true,
+            "allowed_values": [
+              "baseline_analysis",
+              "card_facts",
+              "functional_roles",
+              "project_brief",
+              "playtest_note",
+              "simulation_result",
+              "user_preference"
+            ]
+          },
+          "reference": {
+            "type": "string",
+            "required": true
+          },
+          "note": {
+            "type": "string",
+            "required": false
+          }
+        }
+      },
+      "confidence": {
+        "type": "string",
+        "required": true,
+        "allowed_values": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "description": "Curator confidence that the candidate addresses the cited evidence. Not a card quality score."
+      }
+    },
+    "content_fields": {
+      "proposed_change": {
+        "type": "string",
+        "required": true,
+        "description": "Neutral description of the change being considered. Phrased as a candidate for evaluation, never as an instruction."
+      },
+      "affected_cards": {
+        "type": "array of string",
+        "required": true,
+        "description": "Card references per reference_conventions.card_reference. Empty for role_coverage_candidate and knowledge_review_candidate entries that do not yet name cards."
+      },
+      "expected_impact": {
+        "type": "string",
+        "required": true,
+        "description": "Which structural measurements (role counts, category counts, curve, color access) the change is expected to move, and in which direction."
+      },
+      "tradeoffs": {
+        "type": "array of string",
+        "required": true,
+        "description": "What the deck gives up or risks structurally if the candidate is accepted. May be empty only with reviewer-recorded justification."
+      },
+      "risks": {
+        "type": "array of string",
+        "required": true,
+        "description": "Failure modes: identity erosion (for example Myr density), goal conflicts, or Knowledge gaps that could invalidate the evidence."
+      },
+      "constraints_checked": {
+        "type": "array of string",
+        "required": true,
+        "description": "Project constraints verified before proposing, for example commander color identity, Myr typal identity preservation, and format legality per stored card facts."
+      }
+    },
+    "boundary_fields": {
+      "is_actionable": {
+        "type": "boolean",
+        "required": true,
+        "description": "Always false until an explicit user decision is recorded. Candidates are inputs to a decision, not decisions."
+      },
+      "requires_user_decision": {
+        "type": "boolean",
+        "required": true,
+        "description": "True for every candidate that would change the deck. Only the Product Owner decides."
+      },
+      "requires_testing": {
+        "type": "boolean",
+        "required": true,
+        "description": "True when acceptance should wait for playtest or simulation evidence."
+      },
+      "creates_new_deck_version": {
+        "type": "boolean",
+        "required": true,
+        "description": "True when acceptance would produce a new version file. Existing version files are never edited."
+      },
+      "decision_log_required": {
+        "type": "boolean",
+        "required": true,
+        "description": "True when acceptance or rejection must be recorded in decisions/ before any further action."
+      }
+    },
+    "review_fields": {
+      "reviewer_notes": {
+        "type": "array of string",
+        "required": false,
+        "description": "Dated notes from reviewers. Neutral language only."
+      },
+      "user_decision": {
+        "type": "string or null",
+        "required": false,
+        "description": "The Product Owner's recorded decision, if any. Null until decided."
+      },
+      "decision_id": {
+        "type": "string or null",
+        "required": false,
+        "description": "ID of the decision log entry in decisions/ once a decision exists. Null until decided."
+      },
+      "follow_up_tasks": {
+        "type": "array of string",
+        "required": false,
+        "description": "Task references created as a result of review, for example testing or Knowledge review tasks."
+      }
+    }
+  },
+  "candidate_lifecycle": {
+    "initial_status": "proposed",
+    "transitions": [
+      {
+        "from": "proposed",
+        "to": [
+          "under_review"
+        ]
+      },
+      {
+        "from": "under_review",
+        "to": [
+          "accepted",
+          "rejected",
+          "deferred",
+          "needs_testing"
+        ]
+      },
+      {
+        "from": "needs_testing",
+        "to": [
+          "under_review"
+        ]
+      },
+      {
+        "from": "deferred",
+        "to": [
+          "under_review"
+        ]
+      },
+      {
+        "from": "accepted",
+        "to": []
+      },
+      {
+        "from": "rejected",
+        "to": []
+      }
+    ],
+    "rules": [
+      "Every status change is recorded in reviewer_notes with a date.",
+      "'accepted' and 'rejected' are terminal and require a recorded user_decision and decision_id.",
+      "'accepted' does not change the deck by itself: any deck change happens only through a new deck version file plus a decision log entry.",
+      "'needs_testing' candidates return to 'under_review' only with new playtest_note or simulation_result evidence attached.",
+      "No candidate may be created or promoted while this set's status is 'schema_only'."
+    ]
+  },
+  "validation_expectations": [
+    "rec-001.json parses as JSON.",
+    "recommendation_type is 'candidate_schema' and status is 'schema_only' for this set.",
+    "candidates is an empty array while status is 'schema_only'.",
+    "Future candidate records include every required field defined in candidate_schema.",
+    "candidate_id values are unique within the set.",
+    "candidate_type, status, confidence, and evidence_type values come from the allowed sets.",
+    "source_analysis_id references an existing analysis file's analysis_id.",
+    "source_pressure_point_ids and related_open_question_ids resolve to valid indices in the referenced analysis file.",
+    "related_roles and related_categories exist in workshop/knowledge/role_taxonomy.json.",
+    "affected_cards references resolve to Scryfall IDs present in workshop/card-data/cards.json.",
+    "Every candidate cites at least one evidence item and at least one related project goal.",
+    "is_actionable is false unless user_decision and decision_id are recorded.",
+    "Candidates with status 'accepted' or 'rejected' have non-null user_decision and decision_id.",
+    "No candidate text contains final-verdict, power-score, ranking, tier, budget, price, or popularity language.",
+    "Recommendation files never modify deck, version, card-data, knowledge, or analysis files."
+  ],
+  "candidates": []
+}
