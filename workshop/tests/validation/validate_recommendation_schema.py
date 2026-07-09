@@ -1,23 +1,18 @@
 #!/usr/bin/env python3
 """Recommendation Candidate Schema validation checks for Sprint 1.
 
-Validates the recommendation candidate schema in
+Validates recommendation candidate data in
 workshop/projects/the-myr-singularity/recommendations/rec-001.json and its
-companion rec-001.md, in their current schema-only state.
+companion rec-001.md.
 
-This validator confirms schema structure and boundaries only. It does not
-generate recommendations, evaluate cards, or alter deck files. Words like
-add/cut/swap are allowed in schema field descriptions and boundary
-statements; the validator fails only if actual candidate entries exist
-while the set is schema-only, or if recommendation files contain actionable
-recommendation content rather than schema documentation.
+The validator supports two modes:
 
-Run from the repository root:
-
-    python workshop/tests/validation/validate_recommendation_schema.py
-
-Exits 0 with a PASS summary when all checks pass.
-Exits 1 with per-check failure messages when any check fails.
+* schema-only mode:
+  recommendation_type == "candidate_schema", status == "schema_only",
+  and candidates is empty.
+* candidate-set mode:
+  recommendation_type == "candidate_set", status == "candidates_proposed",
+  and candidates contains proposed, non-actionable records.
 
 Standard library only. No external dependencies.
 """
@@ -33,6 +28,9 @@ PROJECT_DIR = REPO_ROOT / "workshop" / "projects" / "the-myr-singularity"
 REC_JSON_PATH = PROJECT_DIR / "recommendations" / "rec-001.json"
 REC_MD_PATH = PROJECT_DIR / "recommendations" / "rec-001.md"
 CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "cards.json"
+ROLES_PATH = REPO_ROOT / "workshop" / "knowledge" / "role_taxonomy.json"
+PROJECT_PATH = PROJECT_DIR / "project.json"
+BRIEF_PATH = PROJECT_DIR / "brief" / "brief.json"
 
 REQUIRED_TOP_LEVEL_FIELDS = [
     "schema_version",
@@ -100,27 +98,38 @@ REQUIRED_EVIDENCE_TYPES = [
 
 REQUIRED_CONFIDENCE_VALUES = ["low", "medium", "high"]
 
-# Actionable-language patterns for check 18. Schema vocabulary such as
-# "add_candidate", "cut_candidate", or descriptions of what candidates MAY
-# describe is allowed; these patterns target direct instructions to change
-# the deck now.
-ACTIONABLE_LANGUAGE_PATTERNS = [
-    r"\byou (should|must) (add|cut|swap|remove|replace)\b",
-    r"\bwe (should|must) (add|cut|swap|remove|replace)\b",
-    r"\bimmediately (add|cut|swap|remove|replace)\b",
+DECK_ALTERING_TYPES = {
+    "add_candidate",
+    "cut_candidate",
+    "swap_candidate",
+    "package_candidate",
+    "mana_base_adjustment_candidate",
+}
+
+FORBIDDEN_CANDIDATE_LANGUAGE_PATTERNS = [
+    r"\bbudget\b",
+    r"\bprice\b",
+    r"\bedhrec\b",
+    r"\bpopularity\b",
     r"\bfinal verdict\b",
-    r"\bauto.?include\b",
-    r"\bpower level\b",
     r"\bpower score\b",
-    r"\btier list\b",
+    r"\bpower level\b",
+    r"\btier\b",
+    r"\branking\b",
+    r"\byou (should|must) (add|cut|swap|remove|replace|upgrade)\b",
+    r"\bwe (should|must) (add|cut|swap|remove|replace|upgrade)\b",
+    r"\bimmediately (add|cut|swap|remove|replace|upgrade)\b",
 ]
 
 
+def load_json(path):
+    with open(path, encoding="utf-8") as handle:
+        return json.load(handle)
+
+
 def load_real_card_names():
-    """All canonical and decklist card names from Card Facts."""
     names = set()
-    cards = json.load(open(CARDS_PATH, encoding="utf-8")).get("cards", [])
-    for card in cards:
+    for card in load_json(CARDS_PATH).get("cards", []):
         for key in ("name", "original_decklist_name", "display_name"):
             value = card.get(key)
             if value:
@@ -129,52 +138,77 @@ def load_real_card_names():
 
 
 def find_real_card_names(text, names):
-    return sorted(n for n in names if n in text)
+    return sorted(name for name in names if name in text)
 
 
-def validate_candidate(candidate, index, context):
-    """Helper for future candidate validation.
+def allowed_values(schema, group, field):
+    return ((schema.get(group) or {}).get(field) or {}).get("allowed_values") or []
 
-    Validates a single candidate record against the field contract. Not
-    exercised in the schema-only state (candidates is empty); kept here so
-    the future task that populates candidates can extend this validator
-    without redesigning it. `context` carries allowed-value sets and real
-    card names.
-    """
-    errors = []
+
+def candidate_text(candidate):
+    return json.dumps(candidate, ensure_ascii=False)
+
+
+def resolve_analysis(doc):
+    generated_from = doc.get("generated_from") or {}
+    rel_path = generated_from.get("baseline_analysis")
+    if not rel_path:
+        return None
+    path = REPO_ROOT / rel_path
+    if not path.is_file():
+        return None
+    return load_json(path)
+
+
+def load_reference_sets():
+    cards = load_json(CARDS_PATH).get("cards", [])
+    scryfall_ids = {card.get("scryfall_id") for card in cards if card.get("scryfall_id")}
+
+    taxonomy = load_json(ROLES_PATH)
+    role_ids = {role.get("role_id") for role in taxonomy.get("roles", []) if role.get("role_id")}
+    category_ids = {
+        category.get("category_id")
+        for category in taxonomy.get("categories", [])
+        if category.get("category_id")
+    }
+
+    goals = set(load_json(PROJECT_PATH).get("goals", []))
+    brief = load_json(BRIEF_PATH)
+    goals.update(brief.get("improvement_areas", []))
+
+    return {
+        "scryfall_ids": scryfall_ids,
+        "role_ids": role_ids,
+        "category_ids": category_ids,
+        "goals": goals,
+    }
+
+
+def check_candidate_required_fields(candidate, index):
     label = f"candidates[{index}]"
-    if not isinstance(candidate, dict):
-        return [f"{label} is not an object"]
-
     required_fields = [
-        "candidate_id", "candidate_type", "status",
-        "source_analysis_id", "source_pressure_point_ids",
+        "candidate_id",
+        "candidate_type",
+        "status",
+        "source_analysis_id",
+        "source_pressure_point_ids",
         "related_project_goals",
-        "evidence_summary", "evidence_items", "confidence",
-        "proposed_change", "affected_cards", "expected_impact",
-        "tradeoffs", "risks", "constraints_checked",
-        "is_actionable", "requires_user_decision", "requires_testing",
-        "creates_new_deck_version", "decision_log_required",
+        "evidence_summary",
+        "evidence_items",
+        "confidence",
+        "proposed_change",
+        "affected_cards",
+        "expected_impact",
+        "tradeoffs",
+        "risks",
+        "constraints_checked",
+        "is_actionable",
+        "requires_user_decision",
+        "requires_testing",
+        "creates_new_deck_version",
+        "decision_log_required",
     ]
-    for field in required_fields:
-        if field not in candidate:
-            errors.append(f"{label} missing required field {field!r}")
-
-    if candidate.get("candidate_type") not in context["candidate_types"]:
-        errors.append(f"{label} has invalid candidate_type {candidate.get('candidate_type')!r}")
-    if candidate.get("status") not in context["status_values"]:
-        errors.append(f"{label} has invalid status {candidate.get('status')!r}")
-    if candidate.get("confidence") not in context["confidence_values"]:
-        errors.append(f"{label} has invalid confidence {candidate.get('confidence')!r}")
-    for i, item in enumerate(candidate.get("evidence_items") or []):
-        if not isinstance(item, dict) or item.get("evidence_type") not in context["evidence_types"]:
-            errors.append(f"{label} evidence_items[{i}] has invalid evidence_type")
-    if candidate.get("status") in ("accepted", "rejected"):
-        if not candidate.get("user_decision") or not candidate.get("decision_id"):
-            errors.append(f"{label} is terminal but lacks user_decision/decision_id")
-    if candidate.get("is_actionable") and not candidate.get("decision_id"):
-        errors.append(f"{label} is_actionable without a recorded decision_id")
-    return errors
+    return [f"{label} missing required field {field!r}" for field in required_fields if field not in candidate]
 
 
 def main():
@@ -187,7 +221,7 @@ def main():
     errors = []
     doc = None
     try:
-        doc = json.load(open(REC_JSON_PATH, encoding="utf-8"))
+        doc = load_json(REC_JSON_PATH)
     except FileNotFoundError:
         errors.append(f"{REC_JSON_PATH} not found")
     except json.JSONDecodeError as exc:
@@ -197,69 +231,77 @@ def main():
         return report(checks)
 
     # Check 2: required top-level fields.
-    errors = [f"missing top-level field {f!r}" for f in REQUIRED_TOP_LEVEL_FIELDS if f not in doc]
+    errors = [f"missing top-level field {field!r}" for field in REQUIRED_TOP_LEVEL_FIELDS if field not in doc]
     check("required top-level fields exist", errors)
 
-    # Check 3: recommendation_type.
-    errors = []
-    if doc.get("recommendation_type") != "candidate_schema":
-        errors.append(f"recommendation_type is {doc.get('recommendation_type')!r}, expected 'candidate_schema'")
-    check("recommendation_type equals 'candidate_schema'", errors)
-
-    # Check 4: status.
-    errors = []
-    if doc.get("status") != "schema_only":
-        errors.append(f"status is {doc.get('status')!r}, expected 'schema_only'")
-    check("status equals 'schema_only'", errors)
-
-    # Check 5: candidates empty while schema_only.
-    errors = []
+    recommendation_type = doc.get("recommendation_type")
+    status = doc.get("status")
     candidates = doc.get("candidates")
+
+    # Check 3: recommendation_type is a supported mode.
+    errors = []
+    if recommendation_type not in {"candidate_schema", "candidate_set"}:
+        errors.append(f"unsupported recommendation_type {recommendation_type!r}")
+    check("recommendation_type is a supported mode", errors)
+
+    # Check 4: status is a supported mode.
+    errors = []
+    if status not in {"schema_only", "candidates_proposed"}:
+        errors.append(f"unsupported status {status!r}")
+    check("status is a supported mode", errors)
+
+    # Check 5: recommendation_type/status/candidates cardinality are consistent.
+    errors = []
     if not isinstance(candidates, list):
         errors.append("candidates is not an array")
-    elif doc.get("status") == "schema_only" and candidates:
-        errors.append(f"candidates must be empty while status is 'schema_only', found {len(candidates)}")
-    check("candidates is an empty array while status is 'schema_only'", errors)
+    elif recommendation_type == "candidate_schema":
+        if status != "schema_only":
+            errors.append("candidate_schema mode must use status 'schema_only'")
+        if candidates:
+            errors.append(f"schema_only mode must have zero candidates, found {len(candidates)}")
+    elif recommendation_type == "candidate_set":
+        if status != "candidates_proposed":
+            errors.append("candidate_set mode must use status 'candidates_proposed'")
+        if not candidates:
+            errors.append("candidate_set mode must contain at least one candidate")
+    check("mode pairing and candidate cardinality are valid", errors)
 
     # Check 6: generated_from references existing files.
     errors = []
     generated_from = doc.get("generated_from") or {}
     for key in REQUIRED_GENERATED_FROM_KEYS:
-        rel = generated_from.get(key)
-        if not rel:
+        rel_path = generated_from.get(key)
+        if not rel_path:
             errors.append(f"generated_from missing key {key!r}")
-        elif not (REPO_ROOT / rel).is_file():
-            errors.append(f"generated_from[{key!r}] references missing file {rel!r}")
+        elif not (REPO_ROOT / rel_path).is_file():
+            errors.append(f"generated_from[{key!r}] references missing file {rel_path!r}")
     check("generated_from references expected existing files", errors)
 
     schema = doc.get("candidate_schema") or {}
 
     # Check 7: required field groups.
-    errors = [f"candidate_schema missing group {g!r}" for g in REQUIRED_FIELD_GROUPS if g not in schema]
+    errors = [f"candidate_schema missing group {group!r}" for group in REQUIRED_FIELD_GROUPS if group not in schema]
     check("candidate_schema contains the required field groups", errors)
 
-    def allowed_values(group, field):
-        return ((schema.get(group) or {}).get(field) or {}).get("allowed_values") or []
-
     # Check 8: candidate_type allowed values.
-    got = allowed_values("identity_fields", "candidate_type")
-    errors = [f"candidate_type allowed_values missing {v!r}" for v in REQUIRED_CANDIDATE_TYPES if v not in got]
+    got = allowed_values(schema, "identity_fields", "candidate_type")
+    errors = [f"candidate_type allowed_values missing {value!r}" for value in REQUIRED_CANDIDATE_TYPES if value not in got]
     check("candidate_type allowed values include all required types", errors)
 
     # Check 9: status allowed values.
-    got = allowed_values("identity_fields", "status")
-    errors = [f"status allowed_values missing {v!r}" for v in REQUIRED_STATUS_VALUES if v not in got]
+    got = allowed_values(schema, "identity_fields", "status")
+    errors = [f"status allowed_values missing {value!r}" for value in REQUIRED_STATUS_VALUES if value not in got]
     check("status allowed values include all required statuses", errors)
 
     # Check 10: evidence_type allowed values.
     evidence_items = (schema.get("evidence_fields") or {}).get("evidence_items") or {}
     got = ((evidence_items.get("item_fields") or {}).get("evidence_type") or {}).get("allowed_values") or []
-    errors = [f"evidence_type allowed_values missing {v!r}" for v in REQUIRED_EVIDENCE_TYPES if v not in got]
+    errors = [f"evidence_type allowed_values missing {value!r}" for value in REQUIRED_EVIDENCE_TYPES if value not in got]
     check("evidence_type allowed values include all required types", errors)
 
     # Check 11: confidence allowed values.
-    got = allowed_values("evidence_fields", "confidence")
-    errors = [f"confidence allowed_values missing {v!r}" for v in REQUIRED_CONFIDENCE_VALUES if v not in got]
+    got = allowed_values(schema, "evidence_fields", "confidence")
+    errors = [f"confidence allowed_values missing {value!r}" for value in REQUIRED_CONFIDENCE_VALUES if value not in got]
     check("confidence allowed values include low, medium, high", errors)
 
     lifecycle = doc.get("candidate_lifecycle") or {}
@@ -269,7 +311,7 @@ def main():
     # Check 12: terminal accepted/rejected states.
     errors = []
     for terminal in ("accepted", "rejected"):
-        entry = next((t for t in transitions if isinstance(t, dict) and t.get("from") == terminal), None)
+        entry = next((item for item in transitions if isinstance(item, dict) and item.get("from") == terminal), None)
         if entry is None:
             errors.append(f"candidate_lifecycle has no transition entry for {terminal!r}")
         elif entry.get("to"):
@@ -278,8 +320,11 @@ def main():
 
     # Check 13: accepted/rejected require user_decision and decision_id.
     errors = []
-    if not (re.search(r"accepted.*rejected|rejected.*accepted", rules_text)
-            and "user_decision" in rules_text and "decision_id" in rules_text):
+    if not (
+        re.search(r"accepted.*rejected|rejected.*accepted", rules_text)
+        and "user_decision" in rules_text
+        and "decision_id" in rules_text
+    ):
         errors.append("lifecycle rules do not state that accepted/rejected require user_decision and decision_id")
     check("lifecycle rules require user_decision and decision_id for terminal states", errors)
 
@@ -291,77 +336,158 @@ def main():
 
     # Check 15: boundary states no deck change is authorized.
     errors = []
-    boundary = doc.get("explicit_no_recommendations_boundary") or {}
-    boundary_text = json.dumps(boundary).lower()
+    boundary_text = json.dumps(doc.get("explicit_no_recommendations_boundary") or {}, ensure_ascii=False).lower()
     if "no deck change is authorized" not in boundary_text:
         errors.append("explicit_no_recommendations_boundary does not state that no deck change is authorized")
-    check("explicit_no_recommendations_boundary states no deck change is authorized", errors)
+    check("explicit boundary states no deck change is authorized", errors)
 
-    # Check 16: no real recommendation candidate exists.
+    candidates = candidates if isinstance(candidates, list) else []
+
+    # Check 16: candidate IDs are unique and required fields are present.
     errors = []
-    if isinstance(candidates, list) and candidates:
-        errors.append(f"{len(candidates)} candidate record(s) exist; expected none in schema-only state")
-    check("no real recommendation candidate exists", errors)
+    seen_ids = set()
+    for index, candidate in enumerate(candidates):
+        if not isinstance(candidate, dict):
+            errors.append(f"candidates[{index}] is not an object")
+            continue
+        errors.extend(check_candidate_required_fields(candidate, index))
+        candidate_id = candidate.get("candidate_id")
+        if not re.fullmatch(r"cand-\d{3}", str(candidate_id)):
+            errors.append(f"candidates[{index}] has invalid candidate_id {candidate_id!r}")
+        if candidate_id in seen_ids:
+            errors.append(f"duplicate candidate_id {candidate_id!r}")
+        seen_ids.add(candidate_id)
+        if candidate.get("candidate_type") not in REQUIRED_CANDIDATE_TYPES:
+            errors.append(f"{candidate_id} has invalid candidate_type {candidate.get('candidate_type')!r}")
+        if candidate.get("status") not in REQUIRED_STATUS_VALUES:
+            errors.append(f"{candidate_id} has invalid status {candidate.get('status')!r}")
+        if candidate.get("confidence") not in REQUIRED_CONFIDENCE_VALUES:
+            errors.append(f"{candidate_id} has invalid confidence {candidate.get('confidence')!r}")
+    check("candidate records have unique IDs and required schema fields", errors)
 
-    real_names = load_real_card_names()
-
-    # Check 17: no candidate text names real cards as proposed recommendations.
+    # Check 17: candidate-set records are proposed and non-actionable.
     errors = []
-    for i, candidate in enumerate(candidates if isinstance(candidates, list) else []):
-        hits = find_real_card_names(json.dumps(candidate), real_names)
-        if hits:
-            errors.append(f"candidates[{i}] names real cards: {hits}")
-    check("no candidate text names real cards as proposed recommendations", errors)
+    if recommendation_type == "candidate_set":
+        for candidate in candidates:
+            candidate_id = candidate.get("candidate_id")
+            if candidate.get("status") != "proposed":
+                errors.append(f"{candidate_id} status is not 'proposed'")
+            if candidate.get("is_actionable") is not False:
+                errors.append(f"{candidate_id} is_actionable must be false")
+            if candidate.get("user_decision") is not None:
+                errors.append(f"{candidate_id} user_decision must be null while proposed")
+            if candidate.get("decision_id") is not None:
+                errors.append(f"{candidate_id} decision_id must be null while proposed")
+            if candidate.get("candidate_type") != "knowledge_review_candidate":
+                if candidate.get("requires_user_decision") is not True:
+                    errors.append(f"{candidate_id} requires_user_decision must be true")
+            if candidate.get("candidate_type") in DECK_ALTERING_TYPES:
+                if candidate.get("creates_new_deck_version") is not True:
+                    errors.append(f"{candidate_id} deck-altering candidate must create a new version if accepted")
+                if candidate.get("decision_log_required") is not True:
+                    errors.append(f"{candidate_id} deck-altering candidate must require a decision log")
+    check("candidate-set records are proposed, non-actionable, and undecided", errors)
 
-    # Check 18: no actionable deck-change language outside boundary/schema
-    # descriptions. In the schema-only state, no real card name may appear
-    # anywhere in the recommendation files, and no direct instruction to
-    # change the deck may appear. Schema vocabulary (add/cut/swap as field
-    # names or descriptions of what future candidates may describe) is
-    # allowed by design.
+    # Check 18: evidence and project goals are present for every candidate.
     errors = []
-    rec_json_text = REC_JSON_PATH.read_text(encoding="utf-8")
-    rec_md_text = REC_MD_PATH.read_text(encoding="utf-8") if REC_MD_PATH.is_file() else ""
-    combined = rec_json_text + "\n" + rec_md_text
-    if doc.get("status") == "schema_only":
-        hits = find_real_card_names(combined, real_names)
-        if hits:
-            errors.append(f"real card names appear in schema-only recommendation files: {hits}")
-    for pattern in ACTIONABLE_LANGUAGE_PATTERNS:
-        match = re.search(pattern, combined, flags=re.IGNORECASE)
-        if match:
-            errors.append(f"actionable/evaluative language found: {match.group(0)!r}")
-    check("no actionable deck-change language in recommendation files", errors)
+    for candidate in candidates:
+        candidate_id = candidate.get("candidate_id")
+        if not candidate.get("source_analysis_id"):
+            errors.append(f"{candidate_id} lacks source_analysis_id")
+        if not candidate.get("related_project_goals"):
+            errors.append(f"{candidate_id} lacks related_project_goals")
+        if not candidate.get("evidence_items"):
+            errors.append(f"{candidate_id} lacks evidence_items")
+        for item_index, item in enumerate(candidate.get("evidence_items") or []):
+            if not isinstance(item, dict):
+                errors.append(f"{candidate_id} evidence_items[{item_index}] is not an object")
+                continue
+            if item.get("evidence_type") not in REQUIRED_EVIDENCE_TYPES:
+                errors.append(f"{candidate_id} evidence_items[{item_index}] has invalid evidence_type")
+            if not item.get("reference"):
+                errors.append(f"{candidate_id} evidence_items[{item_index}] lacks reference")
+    check("every candidate has analysis, evidence, and project-goal traceability", errors)
 
-    # Check 19: rec-001.md exists.
-    errors = [] if REC_MD_PATH.is_file() else [f"{REC_MD_PATH} not found"]
-    check("rec-001.md exists", errors)
-
-    # Check 20: rec-001.md states the schema-only boundaries.
+    # Check 19: references resolve.
     errors = []
+    references = load_reference_sets()
+    analysis = resolve_analysis(doc)
+    pressure_count = len((analysis or {}).get("structural_pressure_points", []))
+    question_count = len((analysis or {}).get("open_questions", []))
+    analysis_id = (analysis or {}).get("analysis_id")
+    for candidate in candidates:
+        candidate_id = candidate.get("candidate_id")
+        if analysis_id and candidate.get("source_analysis_id") != analysis_id:
+            errors.append(f"{candidate_id} source_analysis_id does not match {analysis_id!r}")
+        for ref in candidate.get("source_pressure_point_ids") or []:
+            match = re.fullmatch(r"baseline_v1\.0:pressure_point:(\d+)", str(ref))
+            if not match or int(match.group(1)) >= pressure_count:
+                errors.append(f"{candidate_id} has unresolved pressure point {ref!r}")
+        for ref in candidate.get("related_open_question_ids") or []:
+            match = re.fullmatch(r"baseline_v1\.0:open_question:(\d+)", str(ref))
+            if not match or int(match.group(1)) >= question_count:
+                errors.append(f"{candidate_id} has unresolved open question {ref!r}")
+        for role_id in candidate.get("related_roles") or []:
+            if role_id not in references["role_ids"]:
+                errors.append(f"{candidate_id} has unknown role {role_id!r}")
+        for category_id in candidate.get("related_categories") or []:
+            if category_id not in references["category_ids"]:
+                errors.append(f"{candidate_id} has unknown category {category_id!r}")
+        for goal in candidate.get("related_project_goals") or []:
+            if goal not in references["goals"]:
+                errors.append(f"{candidate_id} has unknown project goal {goal!r}")
+        for card_ref in candidate.get("affected_cards") or []:
+            if not str(card_ref).startswith("scryfall:"):
+                errors.append(f"{candidate_id} affected_cards entry is not a Scryfall ref: {card_ref!r}")
+                continue
+            scryfall_id = str(card_ref).split(":", 1)[1]
+            if scryfall_id not in references["scryfall_ids"]:
+                errors.append(f"{candidate_id} affected_cards ref not found in cards.json: {card_ref!r}")
+    check("candidate references resolve to analysis, goals, cards, roles, and categories", errors)
+
+    # Check 20: candidate text has no forbidden evaluative or external-data language.
+    errors = []
+    for candidate in candidates:
+        text = candidate_text(candidate)
+        for pattern in FORBIDDEN_CANDIDATE_LANGUAGE_PATTERNS:
+            match = re.search(pattern, text, flags=re.IGNORECASE)
+            if match:
+                errors.append(f"{candidate.get('candidate_id')} contains forbidden language {match.group(0)!r}")
+    check("candidate text avoids forbidden recommendation language", errors)
+
+    # Check 21: rec-001.md reflects the current mode.
+    errors = []
+    if not REC_MD_PATH.is_file():
+        errors.append(f"{REC_MD_PATH} not found")
+        rec_md_text = ""
+    else:
+        rec_md_text = REC_MD_PATH.read_text(encoding="utf-8")
     md_lower = rec_md_text.lower()
-    md_requirements = {
-        "states it is a schema, not a recommendation": r"is not a recommendation|not a recommendation\b",
-        "states the candidates array is empty": r"candidates.*(array|list).*(is|remains?) empty|zero candidates",
-        "states no deck change is authorized": r"no deck changes? (is|are) authorized|authorizes no deck change",
-    }
-    for requirement, pattern in md_requirements.items():
-        if not re.search(pattern, md_lower):
-            errors.append(f"rec-001.md does not clearly state: {requirement}")
-    check("rec-001.md states schema-only / not a recommendation / empty candidates / no deck change", errors)
-
-    # Future candidate records (none today) are validated per-record.
-    errors = []
-    context = {
-        "candidate_types": REQUIRED_CANDIDATE_TYPES,
-        "status_values": REQUIRED_STATUS_VALUES,
-        "evidence_types": REQUIRED_EVIDENCE_TYPES,
-        "confidence_values": REQUIRED_CONFIDENCE_VALUES,
-        "real_card_names": real_names,
-    }
-    for i, candidate in enumerate(candidates if isinstance(candidates, list) else []):
-        errors.extend(validate_candidate(candidate, i, context))
-    check("all candidate records conform to the candidate schema (vacuous while empty)", errors)
+    if recommendation_type == "candidate_schema":
+        real_name_hits = find_real_card_names(rec_md_text + REC_JSON_PATH.read_text(encoding="utf-8"), load_real_card_names())
+        if real_name_hits:
+            errors.append(f"real card names appear in schema-only mode: {real_name_hits}")
+        for pattern in [
+            r"schema[- ]only|schema only",
+            r"not a recommendation",
+            r"zero candidates|candidates.*empty",
+            r"no deck changes? (is|are) authorized|authorizes no deck change",
+        ]:
+            if not re.search(pattern, md_lower):
+                errors.append(f"rec-001.md missing schema-only boundary pattern {pattern!r}")
+    elif recommendation_type == "candidate_set":
+        for pattern in [
+            r"candidate set",
+            r"proposed",
+            r"non-actionable|non actionable",
+            r"no deck changes? (is|are) authorized|no deck change is authorized",
+            r"product owner",
+            r"decision log",
+            r"new deck version",
+        ]:
+            if not re.search(pattern, md_lower):
+                errors.append(f"rec-001.md missing candidate-set boundary pattern {pattern!r}")
+    check("rec-001.md reflects the active recommendation mode", errors)
 
     return report(checks)
 
