@@ -3,8 +3,8 @@
   "project_id": "the-myr-singularity",
   "deck_version_id": "v1.0",
   "recommendation_set_id": "rec-001",
-  "recommendation_type": "candidate_schema",
-  "status": "schema_only",
+  "recommendation_type": "candidate_set",
+  "status": "candidates_proposed",
   "generated_from": {
     "baseline_analysis": "workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json",
     "brief": "workshop/projects/the-myr-singularity/brief/brief.json",
@@ -15,25 +15,39 @@
   },
   "scope": {
     "includes": [
-      "The data contract for future recommendation candidate records.",
+      "The data contract for recommendation candidate records.",
       "Allowed candidate types, statuses, evidence types, and confidence values.",
       "Traceability requirements linking candidates to baseline analysis, project goals, card facts, and functional roles.",
       "The candidate lifecycle and its decision boundaries.",
-      "Validation expectations for future recommendation sets."
+      "A first proposed candidate set for Product Owner review.",
+      "Internal/current-card-facts candidates limited to cards already present in the current Card Facts layer.",
+      "Validation expectations for recommendation candidate sets."
     ],
     "excludes": [
-      "Actual card cuts, adds, swaps, replacements, or packages.",
-      "Specific card names proposed as recommendations.",
-      "Upgrade, budget, or price discussion.",
-      "EDHREC or popularity claims.",
-      "Final recommendation decisions.",
+      "Accepted or rejected recommendation decisions.",
+      "Actionable deck changes.",
       "Decklist changes or new deck versions.",
-      "Simulation results."
+      "External card additions or swaps whose Candidate Card Facts have not been imported.",
+      "Project decision log entries.",
+      "Simulation results.",
+      "External popularity claims.",
+      "Comparative ranking, tiering, or scoring."
     ]
   },
   "explicit_no_recommendations_boundary": {
-    "statement": "This file defines the recommendation candidate schema only. It contains zero candidates and proposes zero changes to any card, deck, version, knowledge, or card-data file. No deck change is authorized by this file. Future candidates must be created in a separate task, must conform to candidate_schema, and remain non-actionable until an explicit user decision is recorded.",
-    "candidates_must_be_empty_while_status_is": "schema_only"
+    "statement": "This file contains proposed recommendation candidates for Product Owner review. Candidates are non-actionable: no deck change is authorized by this file, no candidate is accepted or rejected, and any future deck change requires an explicit user decision, a decision log entry, and a new deck version file.",
+    "candidate_set_status": "candidates_proposed",
+    "candidate_status_required": "proposed",
+    "candidate_is_actionable_required": false
+  },
+  "candidate_scope_limitation": {
+    "scope_type": "internal_current_card_facts_only",
+    "statement": "This candidate set is limited to internal/current-card-facts candidates: every affected card must already exist in workshop/card-data/cards.json.",
+    "limitations": [
+      "External card additions require a future Candidate Card Facts Intake task.",
+      "External candidate cards must be imported into Card Facts before they can be referenced in affected_cards.",
+      "This set intentionally does not propose outside-card add or swap candidates until those candidate cards have Card Facts records."
+    ]
   },
   "reference_conventions": {
     "pressure_point_id": "Format '<analysis_id>:pressure_point:<index>' where <index> is the zero-based position in the structural_pressure_points array of the referenced analysis file. Example: 'baseline_v1.0:pressure_point:0'.",
@@ -287,20 +301,505 @@
   },
   "validation_expectations": [
     "rec-001.json parses as JSON.",
-    "recommendation_type is 'candidate_schema' and status is 'schema_only' for this set.",
-    "candidates is an empty array while status is 'schema_only'.",
-    "Future candidate records include every required field defined in candidate_schema.",
+    "recommendation_type is either 'candidate_schema' with status 'schema_only' or 'candidate_set' with status 'candidates_proposed'.",
+    "candidates is an empty array while status is 'schema_only' and non-empty while status is 'candidates_proposed'.",
+    "Candidate records include every required field defined in candidate_schema.",
     "candidate_id values are unique within the set.",
     "candidate_type, status, confidence, and evidence_type values come from the allowed sets.",
+    "Candidate-set records remain status 'proposed', is_actionable false, and not accepted or rejected.",
     "source_analysis_id references an existing analysis file's analysis_id.",
     "source_pressure_point_ids and related_open_question_ids resolve to valid indices in the referenced analysis file.",
     "related_roles and related_categories exist in workshop/knowledge/role_taxonomy.json.",
     "affected_cards references resolve to Scryfall IDs present in workshop/card-data/cards.json.",
     "Every candidate cites at least one evidence item and at least one related project goal.",
-    "is_actionable is false unless user_decision and decision_id are recorded.",
-    "Candidates with status 'accepted' or 'rejected' have non-null user_decision and decision_id.",
-    "No candidate text contains final-verdict, power-score, ranking, tier, budget, price, or popularity language.",
-    "Recommendation files never modify deck, version, card-data, knowledge, or analysis files."
+    "Deck-altering candidates require user decision, decision log, testing, and a new deck version before implementation.",
+    "Knowledge review candidates may be non-deck-altering and may leave requires_user_decision false.",
+    "Candidates with status accepted or rejected have non-null user_decision and decision_id.",
+    "Candidate text contains no external-market, popularity, final-verdict, power-score, ranking, or tier language.",
+    "Recommendation files never modify deck, version, card-data, knowledge, analysis, decision, or report files."
   ],
-  "candidates": []
+  "candidates": [
+    {
+      "candidate_id": "cand-001",
+      "candidate_type": "mana_base_adjustment_candidate",
+      "status": "proposed",
+      "source_analysis_id": "baseline_v1.0",
+      "source_pressure_point_ids": [
+        "baseline_v1.0:pressure_point:2"
+      ],
+      "related_open_question_ids": [
+        "baseline_v1.0:open_question:2"
+      ],
+      "related_project_goals": [
+        "Improve mana fixing.",
+        "Improve consistency."
+      ],
+      "related_roles": [
+        "colored_source",
+        "fixing_land",
+        "colorless_source",
+        "utility_land_mana"
+      ],
+      "related_categories": [
+        "lands_and_mana_base",
+        "mana_development"
+      ],
+      "evidence_summary": "Baseline v1.0 flags colored-cast consistency as unverified because the deck has many colored nonland cards alongside a colorless-heavy land package. This candidate groups the stored mana-base facts for review without authorizing a land change.",
+      "evidence_items": [
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:pressure_point:2",
+          "note": "Colored-cast consistency remains unverified in the structural baseline."
+        },
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:open_question:2",
+          "note": "Future testing should examine whether colored nonland cards cast on curve."
+        },
+        {
+          "evidence_type": "functional_roles",
+          "reference": "colored_source, fixing_land, colorless_source, utility_land_mana",
+          "note": "Functional role assignments separate colored access from colorless utility production."
+        }
+      ],
+      "confidence": "medium",
+      "proposed_change": "Review the balance between colored access lands and colorless utility lands, using Cascading Cataracts, Tarnished Citadel, Spire of Industry, The Mycosynth Gardens, Three Tree City, and the Urza lands as the initial evidence group.",
+      "affected_cards": [
+        "scryfall:2f3fbd9b-91ab-4691-a916-e20db8ebc513",
+        "scryfall:30375d24-ccfe-47a2-babd-1bda0a6298fe",
+        "scryfall:35e9ec06-a848-4230-84a2-19cb8034e0f0",
+        "scryfall:0a6f0408-6758-495f-9d6c-7686a1542fbd",
+        "scryfall:56f88a48-cced-4a9d-8c19-e4f105f0d8a2",
+        "scryfall:396bbb7d-ae61-4d8d-b931-9ed2f712832e",
+        "scryfall:b0449a19-37f7-4169-9e32-928db5ec76fe",
+      "scryfall:1e9f09b3-dd2d-4ba9-a57e-4f3c1793f752"
+      ],
+      "expected_impact": "Expected structural movement would be in colored_source, fixing_land, colorless_source, and utility_land_mana counts, plus future color-access testing.",
+      "tradeoffs": [
+        "Changing utility land density could reduce stored colorless utility roles.",
+        "Changing colored access density could affect the existing artifact-land and utility-land mix."
+      ],
+      "risks": [
+        "The baseline has not simulated colored-cast timing.",
+        "Commander identity and Myr identity must remain intact if this candidate advances."
+      ],
+      "constraints_checked": [
+        "Uses only stored card facts and functional roles.",
+        "Does not edit the decklist or version files.",
+        "Does not accept a mana-base change without Product Owner decision."
+      ],
+      "is_actionable": false,
+      "requires_user_decision": true,
+      "requires_testing": true,
+      "creates_new_deck_version": true,
+      "decision_log_required": true,
+      "reviewer_notes": [
+        "2026-07-09: Proposed for Product Owner review as a mana-base consistency candidate."
+      ],
+      "user_decision": null,
+      "decision_id": null,
+      "follow_up_tasks": [
+        "Run future color-access testing before any deck version change."
+      ]
+    },
+    {
+      "candidate_id": "cand-002",
+      "candidate_type": "package_candidate",
+      "status": "proposed",
+      "source_analysis_id": "baseline_v1.0",
+      "source_pressure_point_ids": [
+        "baseline_v1.0:pressure_point:0"
+      ],
+      "related_open_question_ids": [
+        "baseline_v1.0:open_question:0",
+        "baseline_v1.0:open_question:4"
+      ],
+      "related_project_goals": [
+        "Improve explosiveness.",
+        "Preserve the Myr identity."
+      ],
+      "related_roles": [
+        "mana_engine",
+        "tap_untap_engine",
+        "artifact_engine",
+        "ramp",
+        "mana_rock"
+      ],
+      "related_categories": [
+        "mana_development",
+        "engine_and_scaling",
+        "utility_and_support"
+      ],
+      "evidence_summary": "Baseline v1.0 leaves intended combo lines and burst structure open. This candidate groups existing artifact mana and tap-untap engine cards for review as an explosiveness package, without selecting a line or changing the deck.",
+      "evidence_items": [
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:pressure_point:0",
+          "note": "Win-condition structure is under-described in the baseline."
+        },
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:open_question:0",
+          "note": "Intended combo lines are not yet mapped."
+        },
+        {
+          "evidence_type": "functional_roles",
+          "reference": "mana_engine, tap_untap_engine, artifact_engine",
+          "note": "Functional roles identify artifact engine pieces that can be reviewed together."
+        }
+      ],
+      "confidence": "medium",
+      "proposed_change": "Review Basalt Monolith, Clock of Omens, Myr Galvanizer, Unwinding Clock, and Staff of Domination as an artifact mana and tap-untap package candidate for future testing.",
+      "affected_cards": [
+        "scryfall:f79de5e7-1545-420c-bfe1-ee2444fca85b",
+        "scryfall:5b087992-9c30-4434-acb3-a12ee6f207b3",
+        "scryfall:e55ca835-b7f3-497c-b0bc-50a182cabecf",
+        "scryfall:c3fd1a59-4ade-459f-90d2-1fc67d6d1384",
+      "scryfall:fde838c8-2f32-4e7d-a236-0bc42dd7abd9"
+      ],
+      "expected_impact": "Expected structural movement would be reviewed through mana_engine, tap_untap_engine, artifact_engine, ramp, and mana_rock role coverage.",
+      "tradeoffs": [
+        "Package concentration could compete with other role coverage slots.",
+        "Engine review may expose Knowledge gaps rather than a deck construction issue."
+      ],
+      "risks": [
+        "Combo mapping has not been completed.",
+        "Testing is required before treating the package as a deck-version input."
+      ],
+      "constraints_checked": [
+        "Uses only existing card facts and role assignments.",
+        "Preserves Myr identity as an explicit review constraint.",
+        "Does not create or approve a deck change."
+      ],
+      "is_actionable": false,
+      "requires_user_decision": true,
+      "requires_testing": true,
+      "creates_new_deck_version": true,
+      "decision_log_required": true,
+      "reviewer_notes": [
+        "2026-07-09: Proposed as a package candidate for later engine review and testing."
+      ],
+      "user_decision": null,
+      "decision_id": null,
+      "follow_up_tasks": [
+        "Map artifact engine lines before any acceptance decision."
+      ]
+    },
+    {
+      "candidate_id": "cand-003",
+      "candidate_type": "package_candidate",
+      "status": "proposed",
+      "source_analysis_id": "baseline_v1.0",
+      "source_pressure_point_ids": [
+        "baseline_v1.0:pressure_point:3"
+      ],
+      "related_open_question_ids": [
+        "baseline_v1.0:open_question:5"
+      ],
+      "related_project_goals": [
+        "Improve resilience.",
+        "Improve consistency."
+      ],
+      "related_roles": [
+        "protection",
+        "anti_wipe_protection",
+        "hexproof_or_shroud",
+        "indestructible_or_regeneration",
+        "utility_land"
+      ],
+      "related_categories": [
+        "protection_and_resilience",
+        "lands_and_mana_base"
+      ],
+      "evidence_summary": "Baseline v1.0 reports no anti-wipe resilience in the playable 100 and notes unresolved sideboard status. This candidate packages stored protection and resilience facts for review without moving any card.",
+      "evidence_items": [
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:pressure_point:3",
+          "note": "Anti-wipe resilience is absent from the playable 100 in the baseline."
+        },
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:open_question:5",
+          "note": "The sideboard status is unresolved."
+        },
+        {
+          "evidence_type": "functional_roles",
+          "reference": "protection, anti_wipe_protection, hexproof_or_shroud",
+          "note": "Functional roles identify protection and resilience coverage."
+        }
+      ],
+      "confidence": "medium",
+      "proposed_change": "Review Darksteel Forge, Neurok Stealthsuit, and Mistrise Village as a protection and resilience package candidate, with sideboard status left unresolved until Product Owner review.",
+      "affected_cards": [
+        "scryfall:421089c4-c8d3-48c5-b313-fb1741546271",
+        "scryfall:d5e58c74-0ba6-452a-94a6-8256c4f6aba8",
+        "scryfall:d44bccbf-6fab-46e4-8ddb-6577e27ec6e8"
+      ],
+      "expected_impact": "Expected structural movement would be in protection_and_resilience coverage, especially anti_wipe_protection and protection roles.",
+      "tradeoffs": [
+        "Adding resilience emphasis could compete with engine or mana development slots.",
+        "Sideboard status must be resolved before any versioned deck action."
+      ],
+      "risks": [
+        "The sideboard boundary is unresolved.",
+        "Protection coverage may be sufficient for the intended play pattern once testing exists."
+      ],
+      "constraints_checked": [
+        "Does not move sideboard cards.",
+        "Does not modify deck or version files.",
+        "Requires Product Owner decision and decision log before any future deck version."
+      ],
+      "is_actionable": false,
+      "requires_user_decision": true,
+      "requires_testing": true,
+      "creates_new_deck_version": true,
+      "decision_log_required": true,
+      "reviewer_notes": [
+        "2026-07-09: Proposed as a resilience package candidate tied to the baseline anti-wipe pressure point."
+      ],
+      "user_decision": null,
+      "decision_id": null,
+      "follow_up_tasks": [
+        "Resolve sideboard status before considering a versioned deck action."
+      ]
+    },
+    {
+      "candidate_id": "cand-004",
+      "candidate_type": "knowledge_review_candidate",
+      "status": "proposed",
+      "source_analysis_id": "baseline_v1.0",
+      "source_pressure_point_ids": [
+        "baseline_v1.0:pressure_point:0"
+      ],
+      "related_open_question_ids": [
+        "baseline_v1.0:open_question:0",
+        "baseline_v1.0:open_question:1",
+        "baseline_v1.0:open_question:7"
+      ],
+      "related_project_goals": [
+        "Improve explosiveness.",
+        "Improve consistency."
+      ],
+      "related_roles": [
+        "combo_piece",
+        "combo_enabler",
+        "combo_payoff",
+        "finisher",
+        "damage_payoff",
+        "scaling_threat"
+      ],
+      "related_categories": [
+        "combo_and_win_conditions",
+        "engine_and_scaling"
+      ],
+      "evidence_summary": "Baseline v1.0 notes that win-condition structure may be a Knowledge gap rather than a deck gap. This candidate asks for role coverage review before any deck-changing recommendation is considered.",
+      "evidence_items": [
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:pressure_point:0",
+          "note": "No cards are currently carrying finisher, combo_piece, combo_enabler, or alternate_win_condition roles in the baseline."
+        },
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:open_question:1",
+          "note": "Aetherflux Reservoir support remains an open question."
+        },
+        {
+          "evidence_type": "functional_roles",
+          "reference": "combo_piece, combo_enabler, combo_payoff, finisher, damage_payoff, scaling_threat",
+          "note": "The relevant role vocabulary exists and can be reviewed against current assignments."
+        }
+      ],
+      "confidence": "high",
+      "proposed_change": "Review combo and win-condition role coverage for Walking Ballista, Aetherflux Reservoir, Basalt Monolith, Clock of Omens, and Myr Galvanizer before making any deck construction candidate from the baseline pressure point.",
+      "affected_cards": [
+        "scryfall:5272436e-74f0-44c4-a291-ea8ebc3f1525",
+        "scryfall:96b6b2e1-c3e6-464c-8a13-b15deb34e862",
+        "scryfall:f79de5e7-1545-420c-bfe1-ee2444fca85b",
+        "scryfall:5b087992-9c30-4434-acb3-a12ee6f207b3",
+        "scryfall:e55ca835-b7f3-497c-b0bc-50a182cabecf"
+      ],
+      "expected_impact": "Expected movement would be Knowledge-layer clarity for combo_and_win_conditions and engine_and_scaling roles, not a decklist change.",
+      "tradeoffs": [
+        "Knowledge review may delay deck construction candidates.",
+        "Role updates, if any, must be handled in a later scoped task."
+      ],
+      "risks": [
+        "Current role assignments may be intentionally conservative.",
+        "Card interactions still need a separate synergy-mapping step."
+      ],
+      "constraints_checked": [
+        "Does not edit role assignments in this task.",
+        "Does not create a deck-changing recommendation.",
+        "Uses existing role taxonomy IDs only."
+      ],
+      "is_actionable": false,
+      "requires_user_decision": false,
+      "requires_testing": false,
+      "creates_new_deck_version": false,
+      "decision_log_required": false,
+      "reviewer_notes": [
+        "2026-07-09: Proposed as a Knowledge review candidate only."
+      ],
+      "user_decision": null,
+      "decision_id": null,
+      "follow_up_tasks": [
+        "Open a later Knowledge review task if Product Owner wants role coverage revisited."
+      ]
+    },
+    {
+      "candidate_id": "cand-005",
+      "candidate_type": "role_coverage_candidate",
+      "status": "proposed",
+      "source_analysis_id": "baseline_v1.0",
+      "source_pressure_point_ids": [
+        "baseline_v1.0:pressure_point:1"
+      ],
+      "related_open_question_ids": [],
+      "related_project_goals": [
+        "Improve consistency."
+      ],
+      "related_roles": [
+        "repeatable_card_draw",
+        "burst_card_draw",
+        "impulse_or_selection",
+        "topdeck_manipulation",
+        "card_filtering",
+        "artifact_tutor",
+        "tutor"
+      ],
+      "related_categories": [
+        "card_advantage",
+        "selection_and_tutoring"
+      ],
+      "evidence_summary": "Baseline v1.0 identifies card advantage as comparatively small. This candidate records a role-coverage review path for consistency without naming a deck change.",
+      "evidence_items": [
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:pressure_point:1",
+          "note": "Card advantage has 11 cards and 6 primary-role cards in the baseline."
+        },
+        {
+          "evidence_type": "functional_roles",
+          "reference": "card_advantage, selection_and_tutoring",
+          "note": "The taxonomy separates draw, selection, filtering, and tutoring roles for later review."
+        },
+        {
+          "evidence_type": "project_brief",
+          "reference": "workshop/projects/the-myr-singularity/brief/brief.json",
+          "note": "Consistency is a stated project goal."
+        }
+      ],
+      "confidence": "medium",
+      "proposed_change": "Review card advantage and selection role coverage as a consistency candidate before naming any specific add, cut, or swap candidate.",
+      "affected_cards": [],
+      "expected_impact": "Expected movement would be clearer coverage targets for card_advantage and selection_and_tutoring before any future deck-version candidate.",
+      "tradeoffs": [
+        "Role-level review may not identify a deck action.",
+        "Future card-level candidates would need separate evidence and Product Owner review."
+      ],
+      "risks": [
+        "Current draw and selection counts may be adequate for the intended play pattern.",
+        "No playtest evidence exists yet for consistency failures."
+      ],
+      "constraints_checked": [
+        "No real card is proposed by this candidate.",
+        "No decklist or version file is changed.",
+        "Future deck-changing candidates must be created separately."
+      ],
+      "is_actionable": false,
+      "requires_user_decision": true,
+      "requires_testing": true,
+      "creates_new_deck_version": false,
+      "decision_log_required": true,
+      "reviewer_notes": [
+        "2026-07-09: Proposed as a role-coverage candidate tied to consistency."
+      ],
+      "user_decision": null,
+      "decision_id": null,
+      "follow_up_tasks": [
+        "Create a later card-level candidate only if Product Owner requests it."
+      ]
+    },
+    {
+      "candidate_id": "cand-006",
+      "candidate_type": "package_candidate",
+      "status": "proposed",
+      "source_analysis_id": "baseline_v1.0",
+      "source_pressure_point_ids": [
+        "baseline_v1.0:pressure_point:4"
+      ],
+      "related_open_question_ids": [],
+      "related_project_goals": [
+        "Improve resilience.",
+        "Preserve the Myr identity."
+      ],
+      "related_roles": [
+        "artifact_recursion",
+        "graveyard_card_access",
+        "utility_land",
+        "creature_body"
+      ],
+      "related_categories": [
+        "recursion_and_recovery",
+        "lands_and_mana_base",
+        "board_presence"
+      ],
+      "evidence_summary": "Baseline v1.0 identifies recovery as artifact-directed. This candidate groups artifact recursion and utility-land recovery cards for review while preserving the project boundary that no deck action is approved.",
+      "evidence_items": [
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:pressure_point:4",
+          "note": "Recursion is exclusively artifact-directed in the baseline."
+        },
+        {
+          "evidence_type": "functional_roles",
+          "reference": "artifact_recursion, graveyard_card_access, utility_land",
+          "note": "Functional roles identify the recovery channels already represented."
+        },
+        {
+          "evidence_type": "project_brief",
+          "reference": "workshop/projects/the-myr-singularity/brief/brief.json",
+          "note": "Resilience and Myr identity are stated project goals."
+        }
+      ],
+      "confidence": "medium",
+      "proposed_change": "Review Myr Retriever, Academy Ruins, Buried Ruin, Inventors' Fair, and Urza's Cave as an artifact recursion and recovery package candidate for future resilience review.",
+      "affected_cards": [
+        "scryfall:7f0149d4-0731-474a-a1c3-28c25e486c14",
+        "scryfall:a95b7645-154f-4904-bf71-db7eb24d4df2",
+        "scryfall:7ab1a074-9d92-4125-9200-84cd035f8f53",
+        "scryfall:275471e3-ded1-40ac-91ef-369dce5764d9",
+        "scryfall:926916ed-2f22-4ba9-9427-194886ad6c1e"
+      ],
+      "expected_impact": "Expected structural movement would be reviewed through artifact_recursion, graveyard_card_access, utility_land, and board_presence coverage.",
+      "tradeoffs": [
+        "Recovery focus could compete with proactive engine or board-presence slots if advanced later.",
+        "Non-artifact recovery remains outside this candidate."
+      ],
+      "risks": [
+        "The artifact-directed recovery shape may be intentional for the deck identity.",
+        "No testing exists yet to show recovery failure frequency."
+      ],
+      "constraints_checked": [
+        "Preserves Myr identity as a review constraint.",
+        "Does not change the decklist.",
+        "Requires Product Owner decision before any versioned action."
+      ],
+      "is_actionable": false,
+      "requires_user_decision": true,
+      "requires_testing": true,
+      "creates_new_deck_version": true,
+      "decision_log_required": true,
+      "reviewer_notes": [
+        "2026-07-09: Proposed as an artifact recovery package candidate."
+      ],
+      "user_decision": null,
+      "decision_id": null,
+      "follow_up_tasks": [
+        "Compare recovery package behavior during future testing."
+      ]
+    }
+  ]
 }
