@@ -1,16 +1,16 @@
 {
   "schema_version": "1.0",
   "name": "Functional Role Assignments",
-  "description": "Schema and contract placeholder for future card-to-functional-role assignments in The Workshop Knowledge Engine.",
+  "description": "Assignment contract and first-pass card-to-functional-role assignments for The Workshop Knowledge Engine.",
   "scope": {
     "includes": [
       "The data contract for assigning functional role IDs to cards",
+      "First-pass card-to-role assignments for resolved card records",
       "Validation expectations for future assignment records",
       "Allowed confidence values and source types",
-      "An empty assignments array reserved for future curated records"
+      "Curated assignment records in the assignments array"
     ],
     "excludes": [
-      "Actual card-to-role assignments",
       "Project-specific role weights",
       "Strategic recommendations",
       "Analysis conclusions",
