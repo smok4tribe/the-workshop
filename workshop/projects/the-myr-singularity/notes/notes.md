@@ -61,3 +61,12 @@ Recommendation candidate schema defined in `recommendations/rec-001.json` and `r
 - Lifecycle defined: proposed, under_review, accepted, rejected, deferred, needs_testing; accepted/rejected require a user decision and decision log entry.
 - No deck changes are authorized by the schema; deck changes require a new version file plus a decision log entry.
 - Next natural phase: populating candidate records as a separate task.
+
+## 2026-07-09 - Sprint 1 Recommendation Schema Validator Checkpoint
+
+Recommendation schema validator added at `workshop/tests/validation/validate_recommendation_schema.py`.
+
+- Validates the rec-001 schema structure, allowed values, lifecycle rules, and schema-only boundaries.
+- Confirms the candidates array is empty and no real card names or actionable deck-change language appear.
+- Includes a per-candidate validation helper for future candidate records.
+- No recommendations were created and no deck, version, card-data, knowledge, or analysis files changed.
