@@ -1,12 +1,14 @@
 # Validation
 
-Automated consistency checks for Sprint 1. Two validators live here:
+Automated consistency checks for Sprint 1. Three validators live here:
 
 - `validate_knowledge_layer.py` — guards the Card Facts / Card Knowledge
   boundary (see "Knowledge Layer Validation" below).
 - `validate_recommendation_schema.py` — guards the recommendation candidate
   schema, schema-only mode, and candidate-set mode (see "Recommendation Schema
   Validation" below).
+- `validate_candidate_card_facts.py` — guards the external candidate Card Facts
+  intake layer (see "Candidate Card Facts Validation" below).
 
 # Knowledge Layer Validation
 
@@ -116,3 +118,53 @@ This validator checks schema structure, candidate traceability, and boundaries
 only. It does not generate candidates, evaluate cards, run analysis or
 simulation, or alter deck, version, card-data, knowledge, analysis, decision, or
 report files.
+
+# Candidate Card Facts Validation
+
+`validate_candidate_card_facts.py` validates the external candidate Card Facts
+intake layer in `workshop/card-data/candidate_cards.json` and
+`workshop/card-data/candidate_card_import_metadata.json`.
+
+It complements the other validators:
+
+- `validate_knowledge_layer.py` validates the existing deck Card Facts and
+  functional role assignments.
+- `validate_recommendation_schema.py` validates recommendation candidate
+  schema and candidate-set boundaries.
+- `validate_candidate_card_facts.py` validates external Card Facts that may be
+  referenced by future recommendation candidates after validator support exists.
+
+## How to run
+
+From the repository root:
+
+```bash
+python workshop/tests/validation/validate_candidate_card_facts.py
+```
+
+Standard library only; no external dependencies. Prints a per-check
+`[PASS]`/`[FAIL]` line for every check. Exits `0` with a PASS summary when
+all checks pass, exits `1` with failure details when any check fails.
+
+## What it checks
+
+- `candidate_cards.json` and `candidate_card_import_metadata.json` parse as
+  JSON.
+- Exactly six candidate card records exist.
+- Metadata reports six imported cards, zero unresolved cards, and an empty
+  unresolved list.
+- The required candidate card names are present exactly.
+- Every record has a Scryfall ID and Scryfall source reference.
+- Every record has required canonical fields such as name, type line, color
+  identity, legalities, and oracle text where applicable.
+- Scryfall IDs are unique.
+- Candidate cards do not already exist in `workshop/card-data/cards.json` by
+  Scryfall ID or exact name.
+- Every record has `recommendation_status: "facts_only"`.
+- Candidate facts and metadata contain no actionable recommendation language.
+
+## What it does not do
+
+This validator does not import card facts, create recommendation candidates,
+change decks, change versions, update Knowledge, write decisions, or alter any
+files.
