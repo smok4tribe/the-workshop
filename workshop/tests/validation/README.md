@@ -110,7 +110,46 @@ all checks pass, exits `1` with failure details when any check fails.
   baseline analysis, project goals, card facts, and functional roles.
 - Deck-altering candidates require Product Owner decision, testing, a decision
   log, and a new deck version before implementation.
+- Qualified recommendation card references resolve against the correct fact
+  store:
+  - `deck:scryfall:<id>` resolves against `workshop/card-data/cards.json`.
+  - `candidate:scryfall:<id>` resolves against
+    `workshop/card-data/candidate_cards.json`, must not exist in `cards.json`,
+    and must have `recommendation_status: "facts_only"`.
+  - legacy bare `scryfall:<id>` resolves against `cards.json` only for
+    `rec-001`; future recommendation sets must use qualified references.
+- Directional card fields are supported for future deck-changing candidates:
+  - `affected_cards` contains every card touched by a candidate.
+  - `incoming_cards` contains cards entering the deck and must use
+    `candidate:scryfall:<id>`.
+  - `outgoing_cards` contains cards leaving the deck and must use
+    `deck:scryfall:<id>`.
+  - `affected_cards` must include every reference from `incoming_cards` and
+    `outgoing_cards`.
+- `outgoing_cards` must resolve to playable v1.0 commander/main deck cards,
+  not sideboard-only cards. Sideboard cards in `affected_cards` still pass.
+- `incoming_cards` must be Commander-legal and within the commander color
+  identity derived from the v1.0 commander Card Facts record.
+- `candidate_scope_limitation.scope_type:
+  "internal_current_card_facts_only"` rejects `candidate:scryfall:<id>`
+  references, preserving the rec-001 internal-only boundary.
 - `rec-001.md` exists and reflects the active mode and no-deck-change boundary.
+
+`candidate_card_facts` is accepted by the validator as a future evidence type.
+Candidate facts remain facts-only; external recommendation candidates are not
+created by Task 18A.
+
+`rec-001` is frozen as the internal/current-card-facts candidate set. Its
+embedded `candidate_schema` does not yet mention `incoming_cards` or
+`outgoing_cards`, and it uses legacy bare `scryfall:<id>` references. Future
+`rec-002` work should carry an updated candidate schema, likely schema version
+`1.1`, so the data contract and validator converge again.
+
+The recommendation validator relates to
+`validate_candidate_card_facts.py` as follows: candidate Card Facts validation
+proves the external facts layer is facts-only and structurally valid; the
+recommendation schema validator controls whether future recommendation
+candidates may reference that layer.
 
 ## What it does not do
 
