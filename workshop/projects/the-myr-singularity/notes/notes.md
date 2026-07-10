@@ -102,3 +102,13 @@ External recommendation reference model added to the recommendation validator.
 - No external candidates were created.
 - No deck changes were made.
 - Future `rec-002` should carry an updated candidate schema, likely schema version `1.1`.
+
+## 2026-07-09 - Sprint 1 External Proposed Candidates Checkpoint
+
+rec-002 created as the first external proposed recommendation candidate set.
+
+- Five candidates (cand-007 to cand-011) reference external candidate Card Facts via `candidate:scryfall:<id>`.
+- All candidates are proposed, non-actionable, and undecided; outgoing slots are deliberately empty pending Product Owner review.
+- Candidate Card Facts remain facts-only; rec-001 remains internal-only and unchanged.
+- No recommendations were accepted and no deck changes were made.
+- Product Owner review is required before any action; accepted changes additionally require a decision log entry and a new deck version.

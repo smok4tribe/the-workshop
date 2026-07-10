@@ -1,0 +1,750 @@
+{
+  "schema_version": "1.1",
+  "project_id": "the-myr-singularity",
+  "deck_version_id": "v1.0",
+  "recommendation_set_id": "rec-002",
+  "recommendation_type": "candidate_set",
+  "status": "candidates_proposed",
+  "generated_from": {
+    "baseline_analysis": "workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json",
+    "brief": "workshop/projects/the-myr-singularity/brief/brief.json",
+    "deck_version": "workshop/projects/the-myr-singularity/versions/v1.0.json",
+    "card_facts": "workshop/card-data/cards.json",
+    "candidate_card_facts": "workshop/card-data/candidate_cards.json",
+    "functional_roles": "workshop/knowledge/functional_roles.json",
+    "role_taxonomy": "workshop/knowledge/role_taxonomy.json"
+  },
+  "scope": {
+    "includes": [
+      "The first external proposed recommendation candidate set.",
+      "Proposed, non-actionable candidates referencing stored external candidate Card Facts.",
+      "Qualified card references: deck:scryfall:<id> and candidate:scryfall:<id>.",
+      "Traceability to baseline pressure points, open questions, project goals, card facts, and functional roles."
+    ],
+    "excludes": [
+      "Accepted or rejected candidates.",
+      "Deck changes, new deck versions, or decision log entries.",
+      "Changes to rec-001, card facts, candidate card facts, Knowledge, analysis, decisions, or reports.",
+      "Upgrade, cost, or popularity claims of any kind."
+    ]
+  },
+  "explicit_no_recommendations_boundary": {
+    "statement": "Every candidate in this set is proposed only. No candidate is accepted or rejected, no candidate is actionable, and no deck change is authorized by this file. A Product Owner decision is required before any candidate advances, and any future accepted change additionally requires a decision log entry and a new deck version file. The referenced candidate Card Facts remain facts_only and are not recommendations.",
+    "candidates_remain": "proposed_and_non_actionable"
+  },
+  "reference_conventions": {
+    "pressure_point_id": "Format '<analysis_id>:pressure_point:<index>' where <index> is the zero-based position in the structural_pressure_points array of the referenced analysis file. Example: 'baseline_v1.0:pressure_point:0'.",
+    "open_question_id": "Format '<analysis_id>:open_question:<index>' where <index> is the zero-based position in the open_questions array of the referenced analysis file. Example: 'baseline_v1.0:open_question:2'.",
+    "project_goal": "Verbatim goal string from project.json 'goals' or brief.json 'improvement_areas'.",
+    "card_reference": "Qualified references only. deck:scryfall:<id> resolves against workshop/card-data/cards.json. candidate:scryfall:<id> resolves against workshop/card-data/candidate_cards.json, must not exist in cards.json, and the fact record must remain recommendation_status facts_only. Legacy bare scryfall:<id> is reserved for rec-001 and is not allowed in this set.",
+    "role_reference": "role_id values from workshop/knowledge/role_taxonomy.json.",
+    "category_reference": "category_id values from workshop/knowledge/role_taxonomy.json.",
+    "incoming_cards": "Cards entering the deck if a candidate is later accepted; candidate:scryfall:<id> references only.",
+    "outgoing_cards": "Cards leaving the deck if a candidate is later accepted; deck:scryfall:<id> references only, and each must be a playable v1.0 commander/main-deck card rather than a sideboard card.",
+    "affected_cards": "Union traceability field: every card a candidate touches, including all incoming_cards and outgoing_cards references."
+  },
+  "candidate_schema": {
+    "description": "Contract for each entry of the 'candidates' array, schema version 1.1. Extends the rec-001 contract with qualified card references and directional fields for deck-changing candidates.",
+    "identity_fields": {
+      "candidate_id": {
+        "type": "string",
+        "required": true,
+        "description": "Unique ID within the recommendation set. Format 'cand-<zero-padded-number>', for example 'cand-001'."
+      },
+      "candidate_type": {
+        "type": "string",
+        "required": true,
+        "allowed_values": [
+          "add_candidate",
+          "cut_candidate",
+          "swap_candidate",
+          "package_candidate",
+          "mana_base_adjustment_candidate",
+          "role_coverage_candidate",
+          "knowledge_review_candidate"
+        ],
+        "description": "The kind of change the candidate describes. 'knowledge_review_candidate' proposes reviewing Knowledge coverage (for example role tagging) rather than a deck change. 'role_coverage_candidate' describes a role-level gap to address without naming specific cards."
+      },
+      "status": {
+        "type": "string",
+        "required": true,
+        "allowed_values": [
+          "proposed",
+          "under_review",
+          "accepted",
+          "rejected",
+          "deferred",
+          "needs_testing"
+        ],
+        "description": "Lifecycle status. New candidates start as 'proposed'. See candidate_lifecycle for allowed transitions."
+      }
+    },
+    "traceability_fields": {
+      "source_analysis_id": {
+        "type": "string",
+        "required": true,
+        "description": "analysis_id of the analysis document that motivated the candidate, for example 'baseline_v1.0'. Every candidate must trace to an existing analysis."
+      },
+      "source_pressure_point_ids": {
+        "type": "array of string",
+        "required": true,
+        "description": "Pressure point IDs per reference_conventions.pressure_point_id. May be empty only for knowledge_review_candidate entries motivated by open questions alone."
+      },
+      "related_open_question_ids": {
+        "type": "array of string",
+        "required": false,
+        "description": "Open question IDs per reference_conventions.open_question_id."
+      },
+      "related_project_goals": {
+        "type": "array of string",
+        "required": true,
+        "description": "Verbatim project goal strings the candidate serves. At least one is required; candidates serving no stated goal are out of scope."
+      },
+      "related_roles": {
+        "type": "array of string",
+        "required": false,
+        "description": "role_id values affected by or motivating the candidate. Must exist in role_taxonomy.json."
+      },
+      "related_categories": {
+        "type": "array of string",
+        "required": false,
+        "description": "category_id values affected by or motivating the candidate. Must exist in role_taxonomy.json."
+      }
+    },
+    "evidence_fields": {
+      "evidence_summary": {
+        "type": "string",
+        "required": true,
+        "description": "One-paragraph neutral summary of why this candidate exists, grounded in cited evidence items."
+      },
+      "evidence_items": {
+        "type": "array of object",
+        "required": true,
+        "description": "Each item: { evidence_type, reference, note }. 'reference' points into the cited source. candidate_card_facts items reference stored external candidate facts via candidate:scryfall:<id>. At least one item is required, and every incoming external card must be backed by at least one candidate_card_facts item.",
+        "item_fields": {
+          "evidence_type": {
+            "type": "string",
+            "required": true,
+            "allowed_values": [
+              "baseline_analysis",
+              "card_facts",
+              "functional_roles",
+              "project_brief",
+              "playtest_note",
+              "simulation_result",
+              "user_preference",
+              "candidate_card_facts"
+            ]
+          },
+          "reference": {
+            "type": "string",
+            "required": true
+          },
+          "note": {
+            "type": "string",
+            "required": false
+          }
+        }
+      },
+      "confidence": {
+        "type": "string",
+        "required": true,
+        "allowed_values": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "description": "Curator confidence that the candidate addresses the cited evidence. Not a card quality score."
+      }
+    },
+    "content_fields": {
+      "proposed_change": {
+        "type": "string",
+        "required": true,
+        "description": "Neutral description of the change being considered. Phrased as a candidate for evaluation, never as an instruction."
+      },
+      "affected_cards": {
+        "type": "array of string",
+        "required": true,
+        "description": "Every card the candidate touches, as qualified references: deck:scryfall:<id> for cards in workshop/card-data/cards.json and candidate:scryfall:<id> for cards in workshop/card-data/candidate_cards.json. Bare scryfall:<id> references are not allowed in rec-002 or later sets. Must include every reference from incoming_cards and outgoing_cards."
+      },
+      "expected_impact": {
+        "type": "string",
+        "required": true,
+        "description": "Which structural measurements (role counts, category counts, curve, color access) the change is expected to move, and in which direction."
+      },
+      "tradeoffs": {
+        "type": "array of string",
+        "required": true,
+        "description": "What the deck gives up or risks structurally if the candidate is accepted. May be empty only with reviewer-recorded justification."
+      },
+      "risks": {
+        "type": "array of string",
+        "required": true,
+        "description": "Failure modes: identity erosion (for example Myr density), goal conflicts, or Knowledge gaps that could invalidate the evidence."
+      },
+      "constraints_checked": {
+        "type": "array of string",
+        "required": true,
+        "description": "Project constraints verified before proposing, for example commander color identity, Myr typal identity preservation, and format legality per stored card facts."
+      },
+      "incoming_cards": {
+        "type": "array of string",
+        "required": true,
+        "description": "Cards that would enter the deck if the candidate were later accepted. Must use candidate:scryfall:<id> references. Empty for candidates that do not bring cards in."
+      },
+      "outgoing_cards": {
+        "type": "array of string",
+        "required": true,
+        "description": "Cards that would leave the deck if the candidate were later accepted. Must use deck:scryfall:<id> references and resolve to playable v1.0 commander/main-deck cards, not sideboard cards. Empty for candidates that do not remove cards."
+      }
+    },
+    "boundary_fields": {
+      "is_actionable": {
+        "type": "boolean",
+        "required": true,
+        "description": "Always false until an explicit user decision is recorded. Candidates are inputs to a decision, not decisions."
+      },
+      "requires_user_decision": {
+        "type": "boolean",
+        "required": true,
+        "description": "True for every candidate that would change the deck. Only the Product Owner decides."
+      },
+      "requires_testing": {
+        "type": "boolean",
+        "required": true,
+        "description": "True when acceptance should wait for playtest or simulation evidence."
+      },
+      "creates_new_deck_version": {
+        "type": "boolean",
+        "required": true,
+        "description": "True when acceptance would produce a new version file. Existing version files are never edited."
+      },
+      "decision_log_required": {
+        "type": "boolean",
+        "required": true,
+        "description": "True when acceptance or rejection must be recorded in decisions/ before any further action."
+      }
+    },
+    "review_fields": {
+      "reviewer_notes": {
+        "type": "array of string",
+        "required": false,
+        "description": "Dated notes from reviewers. Neutral language only."
+      },
+      "user_decision": {
+        "type": "string or null",
+        "required": false,
+        "description": "The Product Owner's recorded decision, if any. Null until decided."
+      },
+      "decision_id": {
+        "type": "string or null",
+        "required": false,
+        "description": "ID of the decision log entry in decisions/ once a decision exists. Null until decided."
+      },
+      "follow_up_tasks": {
+        "type": "array of string",
+        "required": false,
+        "description": "Task references created as a result of review, for example testing or Knowledge review tasks."
+      }
+    }
+  },
+  "candidate_lifecycle": {
+    "initial_status": "proposed",
+    "transitions": [
+      {
+        "from": "proposed",
+        "to": [
+          "under_review"
+        ]
+      },
+      {
+        "from": "under_review",
+        "to": [
+          "accepted",
+          "rejected",
+          "deferred",
+          "needs_testing"
+        ]
+      },
+      {
+        "from": "needs_testing",
+        "to": [
+          "under_review"
+        ]
+      },
+      {
+        "from": "deferred",
+        "to": [
+          "under_review"
+        ]
+      },
+      {
+        "from": "accepted",
+        "to": []
+      },
+      {
+        "from": "rejected",
+        "to": []
+      }
+    ],
+    "rules": [
+      "Every status change is recorded in reviewer_notes with a date.",
+      "'accepted' and 'rejected' are terminal and require a recorded user_decision and decision_id.",
+      "'accepted' does not change the deck by itself: any deck change happens only through a new deck version file plus a decision log entry.",
+      "'needs_testing' candidates return to 'under_review' only with new playtest_note or simulation_result evidence attached.",
+      "No candidate may be created or promoted while this set's status is 'schema_only'."
+    ]
+  },
+  "validation_expectations": [
+    "rec-002.json parses as JSON.",
+    "recommendation_type is 'candidate_set' and status is 'candidates_proposed'.",
+    "Every candidate uses qualified card references; bare scryfall:<id> never appears.",
+    "Every candidate:scryfall:<id> reference resolves in candidate_cards.json, does not exist in cards.json, and its fact record is facts_only.",
+    "Every deck:scryfall:<id> reference resolves in cards.json.",
+    "incoming_cards use candidate:scryfall:<id> only; outgoing_cards use deck:scryfall:<id> only and resolve to playable v1.0 cards.",
+    "affected_cards includes every incoming_cards and outgoing_cards reference.",
+    "Every incoming card is Commander legal and within the commander color identity per stored candidate facts.",
+    "Every candidate is proposed, is_actionable false, user_decision null, decision_id null.",
+    "Every deck-altering candidate requires user decision, testing, a decision log, and a new deck version.",
+    "Every incoming external card is backed by at least one candidate_card_facts evidence item.",
+    "Candidate text contains no cost, popularity, verdict, or scoring language.",
+    "This set never modifies rec-001, deck, version, card-data, knowledge, analysis, decision, or report files."
+  ],
+  "candidates": [
+    {
+      "candidate_id": "cand-007",
+      "candidate_type": "mana_base_adjustment_candidate",
+      "status": "proposed",
+      "source_analysis_id": "baseline_v1.0",
+      "source_pressure_point_ids": [
+        "baseline_v1.0:pressure_point:2"
+      ],
+      "related_open_question_ids": [
+        "baseline_v1.0:open_question:2"
+      ],
+      "related_project_goals": [
+        "Improve mana fixing.",
+        "Improve consistency."
+      ],
+      "related_roles": [
+        "colored_source",
+        "fixing_land",
+        "mana_fixing"
+      ],
+      "related_categories": [
+        "lands_and_mana_base",
+        "mana_development"
+      ],
+      "evidence_summary": "The baseline flags colored-cast consistency as unverified: 23 nonland cards have colored costs against 21 colored land sources for a five-color identity. City of Brass and Mana Confluence are stored candidate facts whose oracle text adds one mana of any color, which is the most direct land-slot answer to that pressure point. This candidate reviews adding one or both as a mana-base adjustment.",
+      "evidence_items": [
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:pressure_point:2",
+          "note": "Colored-cast consistency for the five-color identity is unverified."
+        },
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:open_question:2",
+          "note": "How often colored nonland cards can be cast on curve is an open simulation question."
+        },
+        {
+          "evidence_type": "candidate_card_facts",
+          "reference": "candidate:scryfall:c21565d0-fc40-4d89-9b27-87c03385e0af",
+          "note": "Oracle text: taps for one mana of any color; deals 1 damage when it becomes tapped."
+        },
+        {
+          "evidence_type": "candidate_card_facts",
+          "reference": "candidate:scryfall:504a69eb-3c2d-4bb1-b117-252b15acf0c2",
+          "note": "Oracle text: taps for one mana of any color at the cost of 1 life."
+        },
+        {
+          "evidence_type": "project_brief",
+          "reference": "workshop/projects/the-myr-singularity/brief/brief.json",
+          "note": "Mana fixing is a stated Sprint 1 improvement area."
+        }
+      ],
+      "confidence": "medium",
+      "proposed_change": "Candidate for review: introduce City of Brass and/or Mana Confluence to the mana base to increase any-color land sources. No outgoing card is nominated yet; if the Product Owner advances this candidate, selecting which land or lands would leave is part of the review and would form a follow-up swap decision.",
+      "affected_cards": [
+        "candidate:scryfall:c21565d0-fc40-4d89-9b27-87c03385e0af",
+        "candidate:scryfall:504a69eb-3c2d-4bb1-b117-252b15acf0c2"
+      ],
+      "incoming_cards": [
+        "candidate:scryfall:c21565d0-fc40-4d89-9b27-87c03385e0af",
+        "candidate:scryfall:504a69eb-3c2d-4bb1-b117-252b15acf0c2"
+      ],
+      "outgoing_cards": [],
+      "expected_impact": "Expected to increase colored_source and fixing_land counts (currently 21 and 12 among 34 lands) and improve access to the 23 colored nonland cards. Does not change nonland role distributions.",
+      "tradeoffs": [
+        "Each card causes incremental damage or life loss when used for colored mana, per stored oracle text.",
+        "Any land they would replace has its own current function; the deck's colorless production needs (19 colorless sources) also weigh against removing colorless-producing lands.",
+        "Adding lands without removing any is not possible in a fixed 100-card deck, so a later swap target is unavoidable if advanced."
+      ],
+      "risks": [
+        "Life loss accumulates in a deck that may also want life as a resource for other effects.",
+        "Improving colored access is only useful if colored casting is actually a failure mode; open_question:2 has not been tested or simulated yet."
+      ],
+      "constraints_checked": [
+        "Both incoming cards are Commander legal per stored candidate facts legalities.",
+        "Both incoming cards have empty color identity, a subset of the commander's five-color identity.",
+        "Neither card exists in workshop/card-data/cards.json; both remain facts_only candidate records.",
+        "Myr typal identity is unaffected: this candidate touches only the land slot.",
+        "No deck, version, decision, or card-data file is changed by this candidate."
+      ],
+      "is_actionable": false,
+      "requires_user_decision": true,
+      "requires_testing": true,
+      "creates_new_deck_version": true,
+      "decision_log_required": true,
+      "reviewer_notes": [
+        "2026-07-09: Proposed for Product Owner review as an external candidate."
+      ],
+      "user_decision": null,
+      "decision_id": null,
+      "follow_up_tasks": [
+        "Color-access simulation for open_question:2 before any decision.",
+        "If advanced, a follow-up review to nominate the outgoing land or lands."
+      ]
+    },
+    {
+      "candidate_id": "cand-008",
+      "candidate_type": "add_candidate",
+      "status": "proposed",
+      "source_analysis_id": "baseline_v1.0",
+      "source_pressure_point_ids": [
+        "baseline_v1.0:pressure_point:1"
+      ],
+      "related_open_question_ids": [
+        "baseline_v1.0:open_question:0"
+      ],
+      "related_project_goals": [
+        "Improve consistency.",
+        "Improve explosiveness."
+      ],
+      "related_roles": [
+        "utility_land",
+        "artifact_tutor",
+        "token_producer",
+        "scaling_threat",
+        "colorless_source"
+      ],
+      "related_categories": [
+        "lands_and_mana_base",
+        "selection_and_tutoring",
+        "board_presence"
+      ],
+      "evidence_summary": "The baseline shows selection weighted toward artifact tutoring (7 artifact tutors) while card advantage stays small (11 cards). Urza's Saga is a stored candidate fact whose chapters create Construct tokens that scale with artifact count and search the library for a 0 or 1 mana-cost artifact. In a deck with 50 artifacts including Sol Ring, Skullclamp, Lightning Greaves, and six artifact lands, that is a repeatable land-slot selection effect. This candidate reviews adding it.",
+      "evidence_items": [
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:pressure_point:1",
+          "note": "The card advantage layer is comparatively small; land-slot selection adds access without spending a nonland slot."
+        },
+        {
+          "evidence_type": "candidate_card_facts",
+          "reference": "candidate:scryfall:c1e0f201-42cb-46a1-901a-65bb4fc18f6c",
+          "note": "Chapter abilities: taps for colorless, creates a Construct that scales with artifacts, tutors an artifact with mana value 0 or 1."
+        },
+        {
+          "evidence_type": "card_facts",
+          "reference": "workshop/card-data/cards.json",
+          "note": "The deck holds 50 artifact cards and several 0-1 mana value artifact targets."
+        }
+      ],
+      "confidence": "medium",
+      "proposed_change": "Candidate for review: add Urza's Saga to the mana base as a utility land contributing artifact selection, Construct board presence, and colorless mana. The outgoing slot is left to a later Product Owner review.",
+      "affected_cards": [
+        "candidate:scryfall:c1e0f201-42cb-46a1-901a-65bb4fc18f6c"
+      ],
+      "incoming_cards": [
+        "candidate:scryfall:c1e0f201-42cb-46a1-901a-65bb4fc18f6c"
+      ],
+      "outgoing_cards": [],
+      "expected_impact": "Expected to add utility_land, artifact_tutor, token_producer, and scaling_threat coverage from the land slot, raising selection density without consuming a nonland slot.",
+      "tradeoffs": [
+        "Produces only colorless mana, which sits in tension with the colored-access pressure point this set also addresses.",
+        "Sacrifices itself after its final chapter, so the land count effectively drops by one over time.",
+        "As an enchantment land it is exposed to enchantment removal that ordinary lands avoid."
+      ],
+      "risks": [
+        "Its value depends on the density of 0-1 mana value artifact targets staying high through future deck changes.",
+        "Adding another colorless source could worsen colored-cast consistency before cand-007 style fixing is reviewed."
+      ],
+      "constraints_checked": [
+        "Commander legal per stored candidate facts legalities.",
+        "Empty color identity, a subset of the commander's five-color identity.",
+        "Not present in workshop/card-data/cards.json; the fact record remains facts_only.",
+        "Myr typal identity is unaffected: this candidate touches only the land slot.",
+        "No deck, version, decision, or card-data file is changed by this candidate."
+      ],
+      "is_actionable": false,
+      "requires_user_decision": true,
+      "requires_testing": true,
+      "creates_new_deck_version": true,
+      "decision_log_required": true,
+      "reviewer_notes": [
+        "2026-07-09: Proposed for Product Owner review as an external candidate."
+      ],
+      "user_decision": null,
+      "decision_id": null,
+      "follow_up_tasks": [
+        "Testing to observe chapter timing against the deck's actual curve.",
+        "If advanced, nominate the outgoing card in a follow-up review."
+      ]
+    },
+    {
+      "candidate_id": "cand-009",
+      "candidate_type": "add_candidate",
+      "status": "proposed",
+      "source_analysis_id": "baseline_v1.0",
+      "source_pressure_point_ids": [
+        "baseline_v1.0:pressure_point:0"
+      ],
+      "related_open_question_ids": [
+        "baseline_v1.0:open_question:0",
+        "baseline_v1.0:open_question:1"
+      ],
+      "related_project_goals": [
+        "Improve explosiveness."
+      ],
+      "related_roles": [
+        "sacrifice_outlet",
+        "mana_engine",
+        "ritual_or_burst_mana",
+        "artifact_engine"
+      ],
+      "related_categories": [
+        "engine_and_scaling",
+        "mana_development",
+        "utility_and_support"
+      ],
+      "evidence_summary": "The baseline notes the deck has no card tagged ritual_or_burst_mana and that its win-condition structure is under-described, with Aetherflux Reservoir as the sole tagged combo payoff. Krark-Clan Ironworks is a stored candidate fact that converts artifact sacrifices into two colorless mana each. With 50 artifacts, token producers, and Myr Retriever already in the deck, it is a burst-mana engine that could feed large turns and the existing payoff. This candidate reviews adding it.",
+      "evidence_items": [
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:pressure_point:0",
+          "note": "Win-condition structure is under-described; burst mana feeding the tagged combo payoff is one route to investigate."
+        },
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:open_question:1",
+          "note": "Whether Aetherflux Reservoir has sufficient structural support is an open question."
+        },
+        {
+          "evidence_type": "candidate_card_facts",
+          "reference": "candidate:scryfall:c60174d6-1f9d-4870-b3db-34d6fcb3f6ab",
+          "note": "Oracle text: sacrifice an artifact to add two colorless mana."
+        },
+        {
+          "evidence_type": "functional_roles",
+          "reference": "workshop/knowledge/functional_roles.json",
+          "note": "The deck currently has zero ritual_or_burst_mana role assignments."
+        }
+      ],
+      "confidence": "medium",
+      "proposed_change": "Candidate for review: add Krark-Clan Ironworks as an artifact sacrifice mana engine for explosive turns. The outgoing slot is left to a later Product Owner review.",
+      "affected_cards": [
+        "candidate:scryfall:c60174d6-1f9d-4870-b3db-34d6fcb3f6ab"
+      ],
+      "incoming_cards": [
+        "candidate:scryfall:c60174d6-1f9d-4870-b3db-34d6fcb3f6ab"
+      ],
+      "outgoing_cards": [],
+      "expected_impact": "Expected to add the deck's first ritual_or_burst_mana coverage plus a repeatable sacrifice_outlet, and to increase mana_engine density feeding damage payoffs and large commander turns.",
+      "tradeoffs": [
+        "Consumes the deck's own artifacts, which competes with artifact-count payoffs and Myr board presence.",
+        "Four mana on a curve that averages 3.0 and peaks at two-mana plays."
+      ],
+      "risks": [
+        "Can pull the deck's identity toward a dedicated combo engine, which the Product Owner may not want; this is an identity decision, not a structural one.",
+        "May reduce casual readability of game states for other players.",
+        "Its strongest lines depend on combo mapping (open_question:0) that has not been done; testing is required to see whether it is an engine or a distraction."
+      ],
+      "constraints_checked": [
+        "Commander legal per stored candidate facts legalities.",
+        "Empty color identity, a subset of the commander's five-color identity.",
+        "Not present in workshop/card-data/cards.json; the fact record remains facts_only.",
+        "Myr bodies are a sacrifice resource only if the Product Owner accepts that mode; the candidate itself does not change the Myr identity.",
+        "No deck, version, decision, or card-data file is changed by this candidate."
+      ],
+      "is_actionable": false,
+      "requires_user_decision": true,
+      "requires_testing": true,
+      "creates_new_deck_version": true,
+      "decision_log_required": true,
+      "reviewer_notes": [
+        "2026-07-09: Proposed for Product Owner review as an external candidate."
+      ],
+      "user_decision": null,
+      "decision_id": null,
+      "follow_up_tasks": [
+        "Combo-line mapping (open_question:0) before any decision.",
+        "Playtesting focused on whether sacrifice lines conflict with Myr board plans."
+      ]
+    },
+    {
+      "candidate_id": "cand-010",
+      "candidate_type": "add_candidate",
+      "status": "proposed",
+      "source_analysis_id": "baseline_v1.0",
+      "source_pressure_point_ids": [
+        "baseline_v1.0:pressure_point:6"
+      ],
+      "related_open_question_ids": [
+        "baseline_v1.0:open_question:3"
+      ],
+      "related_project_goals": [
+        "Preserve the Myr identity.",
+        "Improve explosiveness."
+      ],
+      "related_roles": [
+        "mana_engine",
+        "ritual_or_burst_mana",
+        "payoff_engine"
+      ],
+      "related_categories": [
+        "engine_and_scaling",
+        "mana_development"
+      ],
+      "evidence_summary": "The baseline questions how reliably the commander's Myr-focused triggers find targets given 14 Myr typal cards, and the commander itself creates Myr tokens on every Myr spell. Mana Echoes is a stored candidate fact that adds colorless mana equal to the number of creatures sharing a type whenever a creature enters. In a deck that makes many same-type Myr bodies, that converts typal board presence into burst mana. This candidate reviews adding it as a Myr-identity-aligned explosiveness engine.",
+      "evidence_items": [
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:pressure_point:6",
+          "note": "Myr typal density versus the commander's triggers is untested; this candidate leans into the typal plan rather than away from it."
+        },
+        {
+          "evidence_type": "candidate_card_facts",
+          "reference": "candidate:scryfall:bd079929-fa58-4484-91b7-31305b87ee43",
+          "note": "Oracle text: whenever a creature enters, add colorless mana equal to creatures sharing a creature type with it."
+        },
+        {
+          "evidence_type": "card_facts",
+          "reference": "workshop/card-data/cards.json",
+          "note": "The commander and 13 other Myr typal cards produce or are same-type bodies, including token generators."
+        }
+      ],
+      "confidence": "low",
+      "proposed_change": "Candidate for review: add Mana Echoes as a Myr typal burst mana engine. The outgoing slot is left to a later Product Owner review.",
+      "affected_cards": [
+        "candidate:scryfall:bd079929-fa58-4484-91b7-31305b87ee43"
+      ],
+      "incoming_cards": [
+        "candidate:scryfall:bd079929-fa58-4484-91b7-31305b87ee43"
+      ],
+      "outgoing_cards": [],
+      "expected_impact": "Expected to convert Myr token production into colorless burst mana, adding ritual_or_burst_mana and payoff_engine coverage that scales with the typal plan the project wants to preserve.",
+      "tradeoffs": [
+        "Produces colorless mana only, which funds artifacts and the commander's generic costs but not colored spells.",
+        "Its {2}{R}{R} cost adds red pips to the colored-cast consistency question the baseline already flags."
+      ],
+      "risks": [
+        "Board-dependent: it does little from an empty board, so it can arrive as a late win-more piece rather than acceleration; confidence is low until tested.",
+        "An enchantment in a deck whose protection effects are artifact-directed."
+      ],
+      "constraints_checked": [
+        "Commander legal per stored candidate facts legalities.",
+        "Color identity ['R'] is a subset of the commander's five-color identity.",
+        "Not present in workshop/card-data/cards.json; the fact record remains facts_only.",
+        "Directly supports the stated Myr identity rather than diluting it.",
+        "No deck, version, decision, or card-data file is changed by this candidate."
+      ],
+      "is_actionable": false,
+      "requires_user_decision": true,
+      "requires_testing": true,
+      "creates_new_deck_version": true,
+      "decision_log_required": true,
+      "reviewer_notes": [
+        "2026-07-09: Proposed for Product Owner review as an external candidate."
+      ],
+      "user_decision": null,
+      "decision_id": null,
+      "follow_up_tasks": [
+        "Testing for open_question:3 (Myr trigger frequency) with and without this engine."
+      ]
+    },
+    {
+      "candidate_id": "cand-011",
+      "candidate_type": "add_candidate",
+      "status": "proposed",
+      "source_analysis_id": "baseline_v1.0",
+      "source_pressure_point_ids": [
+        "baseline_v1.0:pressure_point:1"
+      ],
+      "related_open_question_ids": [
+        "baseline_v1.0:open_question:0"
+      ],
+      "related_project_goals": [
+        "Improve consistency.",
+        "Improve explosiveness."
+      ],
+      "related_roles": [
+        "artifact_tutor",
+        "tap_untap_engine",
+        "tutor"
+      ],
+      "related_categories": [
+        "selection_and_tutoring",
+        "engine_and_scaling"
+      ],
+      "evidence_summary": "The baseline shows the deck's selection is already its strongest access layer while raw card advantage stays small. Tezzeret the Seeker is a stored candidate fact whose abilities untap up to two artifacts, search the library for an artifact with mana value X or less and put it onto the battlefield, and provide an artifact-animating emblem-free ultimate. Untapping mana rocks and tutoring artifacts directly to the battlefield overlap with the deck's engine plan. This candidate reviews adding it.",
+      "evidence_items": [
+        {
+          "evidence_type": "baseline_analysis",
+          "reference": "baseline_v1.0:pressure_point:1",
+          "note": "Selection is the deck's main access route; battlefield tutoring compresses the path from search to play."
+        },
+        {
+          "evidence_type": "candidate_card_facts",
+          "reference": "candidate:scryfall:cf339735-eb1a-46f0-8c3e-eae06f278eca",
+          "note": "Loyalty abilities: untap up to two artifacts; search for an artifact with mana value X or less onto the battlefield; -5 animates artifacts."
+        },
+        {
+          "evidence_type": "functional_roles",
+          "reference": "workshop/knowledge/functional_roles.json",
+          "note": "The deck already runs 7 artifact_tutor and 6 tap_untap_engine assignments this card would reinforce."
+        }
+      ],
+      "confidence": "medium",
+      "proposed_change": "Candidate for review: add Tezzeret the Seeker as an artifact tutor and untap engine in the planeswalker slot. The outgoing slot is left to a later Product Owner review.",
+      "affected_cards": [
+        "candidate:scryfall:cf339735-eb1a-46f0-8c3e-eae06f278eca"
+      ],
+      "incoming_cards": [
+        "candidate:scryfall:cf339735-eb1a-46f0-8c3e-eae06f278eca"
+      ],
+      "outgoing_cards": [],
+      "expected_impact": "Expected to raise artifact_tutor and tap_untap_engine density, put searched artifacts directly onto the battlefield, and add a repeatable untap effect for mana rocks.",
+      "tradeoffs": [
+        "Five mana value on a curve that averages 3.0; it competes with the deck's other five-plus plays.",
+        "Reinforces roles the deck already covers well (7 artifact tutors, 6 untap engines) rather than filling an empty role."
+      ],
+      "risks": [
+        "A planeswalker in a deck with little evasive pressure or dedicated blockers may not survive a turn cycle.",
+        "Its {3}{U}{U} cost adds blue pips to the colored-cast consistency question the baseline already flags."
+      ],
+      "constraints_checked": [
+        "Commander legal per stored candidate facts legalities.",
+        "Color identity ['U'] is a subset of the commander's five-color identity.",
+        "Not present in workshop/card-data/cards.json; the fact record remains facts_only.",
+        "Myr typal identity is unaffected; the card supports the artifact engine plan.",
+        "No deck, version, decision, or card-data file is changed by this candidate."
+      ],
+      "is_actionable": false,
+      "requires_user_decision": true,
+      "requires_testing": true,
+      "creates_new_deck_version": true,
+      "decision_log_required": true,
+      "reviewer_notes": [
+        "2026-07-09: Proposed for Product Owner review as an external candidate."
+      ],
+      "user_decision": null,
+      "decision_id": null,
+      "follow_up_tasks": [
+        "Testing planeswalker survivability in representative games.",
+        "Role-overlap review against existing tutors before any decision."
+      ]
+    }
+  ]
+}
