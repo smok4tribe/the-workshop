@@ -149,3 +149,19 @@ Review validator extended to support progressed Product Owner reviews.
   `under_review` and no candidate has been accepted, rejected, or
   deferred.
 - No deck changes were made.
+
+## 2026-07-10 - Sprint 1 Product Owner Review Recorded Checkpoint
+
+Product Owner review recorded for rec-002.
+
+- cand-007, cand-008, and cand-011 are `accepted_for_decision`: eligible
+  for a future decision-log task, with no deck change authorized.
+- cand-009 and cand-010 are `needs_testing`: testing is required before
+  any decision-log task for those candidates.
+- Top-level review status moved to `in_progress`; every entry records
+  `reviewed_at`, rationale, and testing intent.
+- rec-002 candidate records remain proposed, non-actionable, and
+  undecided.
+- No decision logs were created.
+- No deck changes were made.
+- No v1.1 was created.
