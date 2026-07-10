@@ -112,3 +112,20 @@ rec-002 created as the first external proposed recommendation candidate set.
 - Candidate Card Facts remain facts-only; rec-001 remains internal-only and unchanged.
 - No recommendations were accepted and no deck changes were made.
 - Product Owner review is required before any action; accepted changes additionally require a decision log entry and a new deck version.
+
+## 2026-07-10 - Sprint 1 Product Owner Review Schema Checkpoint
+
+Product Owner review schema and rec-002 review scaffold added.
+
+- `review_schema.json` defines the review artifact contract, including
+  allowed review statuses and the explicit distinction that
+  `accepted_for_decision` does not change the deck by itself.
+- `review-rec-002.json`/`review-rec-002.md` created as the first Product
+  Owner review scaffold, covering cand-007 through cand-011.
+- All rec-002 review entries are `under_review` only; none are
+  `accepted_for_decision`, `rejected`, `deferred`, or `needs_testing` yet.
+- No candidates were accepted, rejected, or deferred.
+- No deck changes were made.
+- No decision log entries were created.
+- No new deck version was created.
+- `rec-001` and `rec-002` remain unmodified by this review layer.

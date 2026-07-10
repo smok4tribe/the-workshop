@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "product_owner_candidate_review",
+  "project_id": "the-myr-singularity",
+  "deck_version_id": "v1.0",
+  "recommendation_set_id": "rec-002",
+  "source_recommendation_file": "workshop/projects/the-myr-singularity/recommendations/rec-002.json",
+  "review_status": "pending_product_owner_review",
+  "explicit_boundary": {
+    "statement": "This artifact is a Product Owner review scaffold for rec-002. No candidate has been accepted, rejected, or deferred by this artifact yet. No deck change is authorized. No decision log entry is created. No new deck version is created. rec-002.json and rec-002.md remain unmodified by this artifact.",
+    "accepted_or_rejected_or_deferred": false,
+    "deck_change_authorized": false,
+    "decision_log_created": false,
+    "new_deck_version_created": false
+  },
+  "review_entries": [
+    {
+      "candidate_id": "cand-007",
+      "recommendation_set_id": "rec-002",
+      "review_status": "under_review",
+      "reviewer_role": "Product Owner",
+      "reviewer_notes": "",
+      "rationale": "",
+      "testing_required": null,
+      "testing_notes": "",
+      "decision_log_required": true,
+      "creates_new_deck_version_if_accepted": true,
+      "reviewed_at": null
+    },
+    {
+      "candidate_id": "cand-008",
+      "recommendation_set_id": "rec-002",
+      "review_status": "under_review",
+      "reviewer_role": "Product Owner",
+      "reviewer_notes": "",
+      "rationale": "",
+      "testing_required": null,
+      "testing_notes": "",
+      "decision_log_required": true,
+      "creates_new_deck_version_if_accepted": true,
+      "reviewed_at": null
+    },
+    {
+      "candidate_id": "cand-009",
+      "recommendation_set_id": "rec-002",
+      "review_status": "under_review",
+      "reviewer_role": "Product Owner",
+      "reviewer_notes": "",
+      "rationale": "",
+      "testing_required": null,
+      "testing_notes": "",
+      "decision_log_required": true,
+      "creates_new_deck_version_if_accepted": true,
+      "reviewed_at": null
+    },
+    {
+      "candidate_id": "cand-010",
+      "recommendation_set_id": "rec-002",
+      "review_status": "under_review",
+      "reviewer_role": "Product Owner",
+      "reviewer_notes": "",
+      "rationale": "",
+      "testing_required": null,
+      "testing_notes": "",
+      "decision_log_required": true,
+      "creates_new_deck_version_if_accepted": true,
+      "reviewed_at": null
+    },
+    {
+      "candidate_id": "cand-011",
+      "recommendation_set_id": "rec-002",
+      "review_status": "under_review",
+      "reviewer_role": "Product Owner",
+      "reviewer_notes": "",
+      "rationale": "",
+      "testing_required": null,
+      "testing_notes": "",
+      "decision_log_required": true,
+      "creates_new_deck_version_if_accepted": true,
+      "reviewed_at": null
+    }
+  ]
+}

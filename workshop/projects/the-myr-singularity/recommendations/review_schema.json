@@ -1,0 +1,143 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "product_owner_candidate_review_schema",
+  "purpose": "Defines the data contract for Product Owner review artifacts. A review artifact records how a human Product Owner is evaluating proposed recommendation candidates from a recommendation set (for example rec-002), without itself changing the deck, without editing the candidate records it reviews, and without creating a decision log entry. Review is a separate layer that sits between recommendation candidates (generated, non-actionable) and decision logs (human-authorized deck changes).",
+  "scope": {
+    "includes": [
+      "The review artifact contract: required top-level fields and required review-entry fields.",
+      "Allowed review_status values and their meaning.",
+      "The explicit distinction between accepted_for_decision and an actual deck change.",
+      "Boundary rules describing what a review artifact can never do.",
+      "Traceability requirements linking every review entry back to its recommendation set and candidate."
+    ],
+    "excludes": [
+      "Accepting, rejecting, or deferring any candidate.",
+      "Modifying recommendation candidate records (rec-001, rec-002, or any future rec-NNN).",
+      "Creating or modifying decision log entries.",
+      "Creating or modifying deck version files.",
+      "Any deck change."
+    ]
+  },
+  "explicit_no_deck_change_boundary": {
+    "statement": "Review artifacts record Product Owner review intent only. No review artifact, by itself, accepts, rejects, defers, authorizes, or implements a deck change. A deck change requires a decision log entry and a new deck version file, both created in a later, separate task.",
+    "review_is_actionable": false
+  },
+  "allowed_review_statuses": [
+    "under_review",
+    "needs_testing",
+    "deferred",
+    "accepted_for_decision",
+    "rejected"
+  ],
+  "review_status_distinction": {
+    "accepted_for_decision": {
+      "does_not_change_the_deck": true,
+      "meaning": "accepted_for_decision means the Product Owner has decided this candidate may proceed to a future decision log task. It is a review-layer signal only.",
+      "deck_change_requires": [
+        "A decision log entry in workshop/projects/the-myr-singularity/decisions/.",
+        "A new deck version file in workshop/projects/the-myr-singularity/versions/."
+      ]
+    },
+    "rejected": {
+      "does_not_change_the_deck": true,
+      "meaning": "rejected means the Product Owner does not want this candidate to proceed further. It does not delete or alter the candidate record itself."
+    },
+    "deferred": {
+      "does_not_change_the_deck": true,
+      "meaning": "deferred means review is paused pending more information, time, or priority, and may return to under_review later."
+    },
+    "needs_testing": {
+      "does_not_change_the_deck": true,
+      "meaning": "needs_testing means the Product Owner wants playtest or simulation evidence before continuing review."
+    },
+    "under_review": {
+      "does_not_change_the_deck": true,
+      "meaning": "under_review is the initial, neutral state: the Product Owner has not yet formed a review conclusion."
+    }
+  },
+  "review_entry_schema": {
+    "description": "Contract for each entry of a review artifact's 'review_entries' array.",
+    "required_fields": {
+      "candidate_id": {
+        "type": "string",
+        "required": true,
+        "description": "The candidate_id being reviewed, matching a candidate_id in the referenced recommendation set exactly, for example 'cand-007'."
+      },
+      "recommendation_set_id": {
+        "type": "string",
+        "required": true,
+        "description": "The recommendation_set_id the candidate belongs to, for example 'rec-002'. Every review entry must remain traceable to its recommendation set."
+      },
+      "review_status": {
+        "type": "string",
+        "required": true,
+        "allowed_values": [
+          "under_review",
+          "needs_testing",
+          "deferred",
+          "accepted_for_decision",
+          "rejected"
+        ],
+        "description": "The Product Owner's current review status for this candidate. New review entries start as 'under_review'."
+      },
+      "reviewer_role": {
+        "type": "string",
+        "required": true,
+        "description": "The role of the person recording this review, for example 'Product Owner'."
+      },
+      "reviewer_notes": {
+        "type": "string",
+        "required": true,
+        "description": "Free-text reviewer notes. May be empty until the Product Owner writes notes. Neutral language only."
+      },
+      "rationale": {
+        "type": "string",
+        "required": true,
+        "description": "The Product Owner's stated reasoning for the review_status. May be empty until a review conclusion is formed."
+      },
+      "testing_required": {
+        "type": "boolean or null",
+        "required": true,
+        "description": "Whether this candidate needs playtest or simulation evidence before it can be accepted for decision. Null or unresolved until the Product Owner assesses it."
+      },
+      "testing_notes": {
+        "type": "string",
+        "required": true,
+        "description": "Notes about what testing is needed or has been observed. May be empty."
+      },
+      "decision_log_required": {
+        "type": "boolean",
+        "required": true,
+        "description": "True when this candidate, if ever accepted, must be recorded in a decision log entry before any further action. Mirrors the candidate's own decision_log_required field."
+      },
+      "creates_new_deck_version_if_accepted": {
+        "type": "boolean",
+        "required": true,
+        "description": "True when accepting this candidate would eventually require a new deck version file. Mirrors the candidate's own creates_new_deck_version field."
+      },
+      "reviewed_at": {
+        "type": "string or null",
+        "required": true,
+        "description": "ISO 8601 date the review_status was last set by the Product Owner. Null until a real review conclusion is recorded."
+      }
+    }
+  },
+  "boundary_rules": [
+    "Review entries cannot modify candidate records. The recommendation file being reviewed (for example rec-002.json) is never edited by a review artifact.",
+    "Review entries cannot modify deck versions. No versions/*.json file is created or edited by a review artifact.",
+    "Review entries cannot create decisions by themselves. A decision log entry is a separate, later artifact created only after Product Owner acceptance.",
+    "Review entries cannot promote candidate facts into deck facts. workshop/card-data/cards.json and workshop/card-data/candidate_cards.json are never edited by a review artifact.",
+    "Every candidate must remain traceable to its recommendation set: every review entry's recommendation_set_id and candidate_id must resolve to a real candidate in that recommendation set's JSON file."
+  ],
+  "validation_expectations": [
+    "The review artifact JSON parses as JSON and has every required top-level field.",
+    "source_recommendation_file points to an existing, parseable recommendation JSON file.",
+    "Every review_entries candidate_id exists in the referenced recommendation set.",
+    "Every candidate in the referenced recommendation set has exactly one review entry.",
+    "No review entry references a candidate_id absent from the recommendation set.",
+    "Newly scaffolded review entries have review_status 'under_review', reviewed_at null, and are not accepted_for_decision, rejected, deferred, or needs_testing.",
+    "decision_log_required and creates_new_deck_version_if_accepted mirror the candidate's own boundary fields for candidates that could lead to deck changes.",
+    "The review artifact's explicit_boundary states that no deck change is authorized.",
+    "The review markdown companion states the Product Owner review purpose, the no-deck-change boundary, and mentions every candidate ID it covers."
+  ]
+}

@@ -1,6 +1,6 @@
 # Validation
 
-Automated consistency checks for Sprint 1. Three validators live here:
+Automated consistency checks for Sprint 1. Four validators live here:
 
 - `validate_knowledge_layer.py` — guards the Card Facts / Card Knowledge
   boundary (see "Knowledge Layer Validation" below).
@@ -9,6 +9,8 @@ Automated consistency checks for Sprint 1. Three validators live here:
   Validation" below).
 - `validate_candidate_card_facts.py` — guards the external candidate Card Facts
   intake layer (see "Candidate Card Facts Validation" below).
+- `validate_recommendation_review.py` — guards the Product Owner review
+  scaffold layer (see "Recommendation Review Validation" below).
 
 # Knowledge Layer Validation
 
@@ -220,3 +222,89 @@ all checks pass, exits `1` with failure details when any check fails.
 This validator does not import card facts, create recommendation candidates,
 change decks, change versions, update Knowledge, write decisions, or alter any
 files.
+
+# Recommendation Review Validation
+
+`validate_recommendation_review.py` validates the Product Owner review
+scaffold layer: `workshop/projects/the-myr-singularity/recommendations/
+review_schema.json` (the review artifact contract) and
+`review-rec-002.json`/`review-rec-002.md` (the first review artifact,
+scoped to rec-002).
+
+## What the review artifact is
+
+A review artifact is where a human Product Owner records review intent
+about proposed recommendation candidates: notes, rationale, testing needs,
+and an eventual review conclusion (`review_status`). It is a separate
+artifact from the recommendation candidates it reviews — it never edits
+`rec-002.json`, and it never creates a decision or a deck change by itself.
+
+## Layer distinctions
+
+- **Proposed candidate** (`rec-002.json`): a generated, non-actionable
+  recommendation candidate record. `status: "proposed"`,
+  `is_actionable: false`.
+- **Product Owner review** (`review-rec-002.json`): a human review record
+  about a candidate. `review_status` values are `under_review`,
+  `needs_testing`, `deferred`, `accepted_for_decision`, and `rejected`.
+- **`accepted_for_decision`**: a review status meaning the Product Owner
+  believes the candidate may proceed to a future decision log task. It
+  does **not** change the deck by itself and does not create a decision.
+- **Decision log**
+  (`workshop/projects/the-myr-singularity/decisions/`): a separate, later
+  artifact recording an actual Product Owner decision, created only after
+  review.
+- **Deck version**
+  (`workshop/projects/the-myr-singularity/versions/`): the only place an
+  actual deck change is recorded, and only after a decision log entry
+  exists.
+
+**Product Owner review does not change the deck.** Only a decision log
+entry plus a new deck version file authorize a deck change.
+
+## How to run
+
+From the repository root:
+
+```bash
+python workshop/tests/validation/validate_recommendation_review.py
+```
+
+Standard library only; no external dependencies. Prints a per-check
+`[PASS]`/`[FAIL]` line for every check. Exits `0` with a PASS summary when
+all checks pass, exits `1` with failure details when any check fails.
+
+## What it checks
+
+- `review_schema.json` and `review-rec-002.json` parse as JSON, and
+  `review-rec-002.md` exists.
+- The review artifact's `source_recommendation_file` and
+  `recommendation_set_id` reference `rec-002.json`, which exists and
+  parses.
+- Every review entry's `candidate_id` exists in `rec-002.json`, every
+  rec-002 candidate has exactly one review entry, and no review entry
+  references an unknown or duplicate candidate.
+- Every review entry has all required fields (`candidate_id`,
+  `recommendation_set_id`, `review_status`, `reviewer_role`,
+  `reviewer_notes`, `rationale`, `testing_required`, `testing_notes`,
+  `decision_log_required`, `creates_new_deck_version_if_accepted`,
+  `reviewed_at`).
+- Every initial review entry has `review_status: "under_review"`, no entry
+  is `accepted_for_decision`, `rejected`, `deferred`, or `needs_testing`
+  yet, and no `reviewed_at` value is set yet.
+- The artifact's `explicit_boundary` states that no candidate has been
+  accepted/rejected/deferred, no decision log was created, no new deck
+  version was created, and no deck change is authorized.
+- `decision_log_required` and `creates_new_deck_version_if_accepted` are
+  `true` on review entries for candidates whose own `decision_log_required`
+  / `creates_new_deck_version` fields are `true` in `rec-002.json`.
+- The validator does not modify `rec-002.json` or `review-rec-002.json`.
+- `review-rec-002.md` states the no-deck-change boundary, mentions Product
+  Owner review, and mentions every candidate ID from rec-002.
+
+## What it does not do
+
+This validator does not accept, reject, or defer any candidate, does not
+create a decision log entry or a new deck version, does not modify
+`rec-001.json`/`rec-001.md`/`rec-002.json`/`rec-002.md`, and does not
+alter card-data, Knowledge, analysis, decision, or report files.
