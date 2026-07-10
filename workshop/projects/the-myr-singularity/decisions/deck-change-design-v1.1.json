@@ -1,0 +1,154 @@
+{
+  "design_id": "deck-change-design-v1.1",
+  "project_id": "the-myr-singularity",
+  "source_decision_ids": [
+    "decision-002",
+    "decision-003",
+    "decision-004"
+  ],
+  "source_recommendation_id": "rec-002",
+  "source_review_file": "workshop/projects/the-myr-singularity/recommendations/review-rec-002.json",
+  "design_status": "proposed_for_product_owner_review",
+  "target_future_version": "v1.1",
+  "created_at": "2026-07-10T20:13:16Z",
+  "created_by": "Claude",
+  "design_type": "pre_version_deck_change_design",
+  "deck_change_authorized": false,
+  "deck_change_implemented": false,
+  "creates_new_deck_version": false,
+  "incoming_cards": [
+    {
+      "name": "City of Brass",
+      "reference": "candidate:scryfall:c21565d0-fc40-4d89-9b27-87c03385e0af",
+      "source_decision_id": "decision-002",
+      "slot": "land"
+    },
+    {
+      "name": "Mana Confluence",
+      "reference": "candidate:scryfall:504a69eb-3c2d-4bb1-b117-252b15acf0c2",
+      "source_decision_id": "decision-002",
+      "slot": "land"
+    },
+    {
+      "name": "Urza's Saga",
+      "reference": "candidate:scryfall:c1e0f201-42cb-46a1-901a-65bb4fc18f6c",
+      "source_decision_id": "decision-003",
+      "slot": "land"
+    },
+    {
+      "name": "Tezzeret the Seeker",
+      "reference": "candidate:scryfall:cf339735-eb1a-46f0-8c3e-eae06f278eca",
+      "source_decision_id": "decision-004",
+      "slot": "nonland"
+    }
+  ],
+  "proposed_outgoing_cards": [
+    {
+      "name": "Urza's Mine",
+      "reference": "deck:scryfall:396bbb7d-ae61-4d8d-b931-9ed2f712832e",
+      "slot": "land"
+    },
+    {
+      "name": "Urza's Power Plant",
+      "reference": "deck:scryfall:b0449a19-37f7-4169-9e32-928db5ec76fe",
+      "slot": "land"
+    },
+    {
+      "name": "Urza's Tower",
+      "reference": "deck:scryfall:1e9f09b3-dd2d-4ba9-a57e-4f3c1793f752",
+      "slot": "land"
+    },
+    {
+      "name": "Nevinyrral's Disk",
+      "reference": "deck:scryfall:36fb6ee3-bd54-4e5b-b055-c2c42515c162",
+      "slot": "nonland"
+    }
+  ],
+  "alternative_outgoing_cards": [
+    {
+      "name": "Propaganda",
+      "reference": "deck:scryfall:ac943e31-26bc-4b54-b73f-460e6e402d86",
+      "rationale": "Defensive pillowfort effect that is less aligned with the proactive artifact-engine plan; kept in the primary design because it is the only defensive_pillowfort effect in the playable 100 and the brief lists resilience as a goal. Viable swap for Nevinyrral's Disk if the Product Owner prefers keeping three board wipes."
+    },
+    {
+      "name": "Prismatic Lens",
+      "reference": "deck:scryfall:74e8d3a8-5937-4108-b2fe-23e049379345",
+      "rationale": "Weakest of the five mana-fixing rocks once City of Brass and Mana Confluence improve land-level fixing; kept in the primary design because it is a cheap untap target for Tezzeret the Seeker and cutting it would lower mana_rock/ramp density (14 each) alongside a curve-topping addition. Viable swap for Nevinyrral's Disk if the Product Owner prefers preserving interaction count over rock count."
+    }
+  ],
+  "unchanged_needs_testing_candidates": [
+    {
+      "candidate_id": "cand-009",
+      "name": "Krark-Clan Ironworks",
+      "status": "needs_testing",
+      "note": "Not part of this design; requires testing before any decision-log task."
+    },
+    {
+      "candidate_id": "cand-010",
+      "name": "Mana Echoes",
+      "status": "needs_testing",
+      "note": "Not part of this design; requires testing before any decision-log task."
+    }
+  ],
+  "design_rationale": "The design keeps the land count at 34 by swapping the three Urza's Tron lands for City of Brass, Mana Confluence, and Urza's Saga, and makes a single nonland swap of Nevinyrral's Disk for Tezzeret the Seeker. Incomplete Tron is a low-consistency assembly in singleton Commander and all three pieces produce only colorless mana in a deck whose baseline pressure point is colored-cast consistency (23 colored nonland cards against 21 colored sources). The two any-color lands raise colored sources to 23, Urza's Saga returns an artifact-engine land to the freed slot, and Tezzeret the Seeker adds battlefield artifact tutoring plus rock untap. Nevinyrral's Disk is the one board wipe of three that destroys the deck's own artifact board; the remaining wipes (All Is Dust, which spares the deck's mostly colorless permanents, and Organic Extinction, whose double-white cost the new lands make more castable) are both better aligned with the artifact identity.",
+  "per_change_rationale": [
+    {
+      "change": "IN City of Brass (for OUT Urza's Mine)",
+      "rationale": "Replaces a colorless-only Tron piece with an any-color source, directly addressing baseline pressure point 2 (colored-cast consistency). The 1-damage-when-tapped cost is accepted as the price of full fixing."
+    },
+    {
+      "change": "IN Mana Confluence (for OUT Urza's Power Plant)",
+      "rationale": "Second any-color source for the same pressure point; also eases historically hard colored casts such as Organic Extinction's double white. 1 life per activation is accepted for the same reason as City of Brass."
+    },
+    {
+      "change": "IN Urza's Saga (for OUT Urza's Tower)",
+      "rationale": "Keeps an 'Urza's' land in the slot while converting it from conditional colorless ramp into artifact selection (0-1 mana-value tutor targets include Walking Ballista, Skullclamp, and the six artifact lands), Construct board presence scaling with 50 artifacts, and colorless mana. Urza's Cave can still fetch it, so the Cave loses nothing when Tron leaves."
+    },
+    {
+      "change": "IN Tezzeret the Seeker (for OUT Nevinyrral's Disk)",
+      "rationale": "Swaps the least identity-aligned interaction piece (a wipe that destroys the deck's own artifacts, creatures, and enchantments and enters tapped) for a proactive artifact engine: battlefield tutoring for mana value X or less, a repeatable two-artifact untap that reuses mana rocks, and an artifact-scaling threat. The deck keeps two wipes that both play well with its own board."
+    }
+  ],
+  "mana_base_impact": {
+    "land_count": "34 before, 34 after: three lands out, three lands in.",
+    "colored_sources": "21 before, 23 after: City of Brass and Mana Confluence add two any-color sources.",
+    "fixing_lands": "12 before, 14 after: both incoming painlands are full-fixing lands; the Tron pieces fixed nothing.",
+    "colorless_sources": "19 before, 17 after: three colorless-only Tron pieces out, Urza's Saga in. The deck's colorless needs (artifact costs, commander generic costs) remain well covered.",
+    "burst_ceiling": "The rare assembled-Tron burst (7 colorless from 3 lands) is given up; the design trades a low-probability ceiling for consistent colored access, and notes that the deck's explosiveness plan is artifact-based, not land-based.",
+    "life_pressure": "City of Brass and Mana Confluence introduce incremental life loss when used; acceptable while the deck's life total is not otherwise a resource, flagged as a testing observation for later."
+  },
+  "artifact_engine_impact": {
+    "selection": "Urza's Saga adds a repeatable land-slot artifact tutor for 0-1 mana-value targets; Tezzeret the Seeker adds direct-to-battlefield artifact tutoring for mana value X or less, raising artifact_tutor coverage from 7 toward 9 effective sources.",
+    "untap_engines": "Tezzeret the Seeker's +1 untaps up to two artifacts, reinforcing the 6 existing tap_untap_engine cards and reusing the 14 mana rocks.",
+    "board_presence": "Urza's Saga's Construct tokens scale with the deck's 50 artifacts, adding board presence from the mana base.",
+    "losses": "Nevinyrral's Disk leaves, but it was interaction rather than engine; no engine piece is cut."
+  },
+  "identity_impact": {
+    "myr_identity": "No Myr card is touched; the 14 Myr typal cards and the commander plan are unchanged.",
+    "artifact_identity": "Strengthened: two of four incoming cards are artifact-engine cards, and the cut wipe was the deck's only self-destructive artifact effect.",
+    "protected_cards": "Walking Ballista is not proposed as a cut and gains value as an Urza's Saga and Tezzeret tutor target. The commander is untouched. No sideboard card is proposed as a main-deck cut."
+  },
+  "risk_assessment": [
+    "Board-wipe density drops from 3 to 2; if the meta punishes fewer resets, Propaganda->Disk preference can be revisited (alternative cut listed).",
+    "Painland life loss accumulates in longer games; needs observation during v1.1 testing.",
+    "Tezzeret the Seeker is a 5 mana-value play on a 3.0-average curve and may not survive a turn cycle in a deck with little evasive pressure; its floor (untap two rocks) limits the downside.",
+    "Urza's Saga sacrifices itself after chapter III, effectively lowering the land count by one over time; the 34-land count and Urza's Cave fetch mitigate this.",
+    "Losing utility_land_mana density (the Tron trio carried 3 of 5 such role tags) slightly reduces land-based ramp texture; the deck's 14 mana rocks remain the primary acceleration."
+  ],
+  "open_questions": [
+    "Should the four changes ship together in v1.1 or be staged (lands first, Tezzeret second)?",
+    "How much painland life pressure is acceptable before it interacts badly with future candidates (for example Mana Confluence plus aggressive metas)?",
+    "Is two board wipes enough, or should the Disk cut be swapped for the Propaganda or Prismatic Lens alternative?",
+    "Does Prismatic Lens remain worth its slot after land-level fixing improves (a possible future v1.2 review, not part of this design)?"
+  ],
+  "product_owner_review_required": true,
+  "required_next_step": "product_owner_approval_before_v1.1",
+  "explicit_boundary": {
+    "statement": "This is design only. No deck change is authorized. No deck change is implemented. deck/current.txt is unchanged. versions/v1.1.json is not created or populated. Product Owner approval is required before v1.1. This design does not mark any decision as implemented, does not mark any recommendation candidate as accepted or implemented, and does not promote candidate card facts into deck card facts.",
+    "deck_change_authorized": false,
+    "deck_change_implemented": false,
+    "new_deck_version_created": false,
+    "decisions_marked_implemented": false,
+    "candidates_marked_implemented": false
+  }
+}
