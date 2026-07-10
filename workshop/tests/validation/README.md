@@ -327,9 +327,17 @@ modified.
   `true` on review entries for candidates whose own `decision_log_required`
   / `creates_new_deck_version` fields are `true` in `rec-002.json`.
 - No review entry carries decision-layer fields (`decision_id`,
-  `user_decision`), and no decision file in
-  `workshop/projects/the-myr-singularity/decisions/` is populated while
-  only review states exist.
+  `user_decision`), and every decision file in
+  `workshop/projects/the-myr-singularity/decisions/` is either an empty
+  placeholder or a non-authorizing decision scaffold: `decision_status:
+  "pending_deck_change_design"`, `decision_type:
+  "candidate_accepted_for_decision_path"`, `deck_change_authorized`,
+  `deck_change_implemented`, and `creates_new_deck_version` all false,
+  `target_deck_version` null, `proposed_outgoing_cards` empty,
+  `required_next_step: "deck_change_design_before_v1.1"`, an
+  `explicit_boundary` that says no deck change is authorized, and a
+  `source_candidate_id` that is `accepted_for_decision` in
+  review-rec-002 (never a `needs_testing` candidate).
 - No deck version file beyond `v1.0.json` is populated: review states
   never create v1.1.
 - rec-002 candidate records remain unmodified: every candidate stays
