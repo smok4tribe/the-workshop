@@ -215,3 +215,19 @@ v1.1 deck-change design artifact created for the accepted rec-002 decisions.
 - No v1.1 was created; `versions/v1.1.json` remains an empty placeholder.
 - Next step is Product Owner approval or revision of the design
   (`product_owner_approval_before_v1.1`).
+
+## 2026-07-10 - Sprint 1 Product Owner Design Approval Checkpoint
+
+Product Owner approved deck-change-design-v1.1 as proposed.
+
+- Approved IN: City of Brass, Mana Confluence, Urza's Saga, Tezzeret the
+  Seeker.
+- Approved OUT: Urza's Mine, Urza's Power Plant, Urza's Tower,
+  Nevinyrral's Disk.
+- The design artifact is now `product_owner_approved` but remains
+  non-implementing: `deck_change_authorized` and
+  `deck_change_implemented` stay false.
+- No deck change was made; `deck/current.txt` is unchanged.
+- No v1.1 was created; `versions/v1.1.json` remains an empty placeholder.
+- cand-009 and cand-010 remain `needs_testing` and untouched.
+- Next step is create DeckVersion v1.1 (`create_deck_version_v1.1`).

@@ -340,14 +340,22 @@ modified.
     `source_candidate_id` that is `accepted_for_decision` in
     review-rec-002 (never a `needs_testing` candidate);
   - a non-authorizing pre-version design artifact (`design_type:
-    "pre_version_deck_change_design"`): `design_status:
-    "proposed_for_product_owner_review"`, `deck_change_authorized`,
-    `deck_change_implemented`, and `creates_new_deck_version` all false,
-    `product_owner_review_required: true`, `required_next_step:
-    "product_owner_approval_before_v1.1"`, an `explicit_boundary` that
-    says no deck change is authorized, and `source_decision_ids` that
-    resolve to existing decision files. Design artifacts may propose
-    outgoing cuts — proposing is not authorizing.
+    "pre_version_deck_change_design"`) with `deck_change_authorized`,
+    `deck_change_implemented`, and `creates_new_deck_version` all false
+    and `source_decision_ids` that resolve to existing decision files, in
+    one of two states:
+    - proposed: `design_status: "proposed_for_product_owner_review"`,
+      `product_owner_review_required: true`, `required_next_step:
+      "product_owner_approval_before_v1.1"`, and an `explicit_boundary`
+      that says no deck change is authorized;
+    - approved: `design_status: "product_owner_approved"`,
+      `product_owner_approved: true`, `product_owner_approval_required:
+      false`, `required_next_step: "create_deck_version_v1.1"`, and an
+      `explicit_boundary` stating the design is approved but not
+      implemented. Approval never implements anything: only a future
+      task creates v1.1.
+    Design artifacts may propose outgoing cuts — proposing is not
+    authorizing.
 - No deck version file beyond `v1.0.json` is populated: review states
   never create v1.1.
 - rec-002 candidate records remain unmodified: every candidate stays

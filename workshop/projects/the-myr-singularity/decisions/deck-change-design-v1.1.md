@@ -2,10 +2,31 @@
 
 ## Status
 
-`proposed_for_product_owner_review` — this is a **design proposal only**.
-No deck change is authorized or implemented. `deck/current.txt` is
-unchanged and `versions/v1.1.json` is not created or populated. Product
-Owner approval is required before v1.1 exists.
+`product_owner_approved` — the Product Owner **approved this design as
+proposed** on 2026-07-10. The approval covers the exact IN/OUT sets below.
+
+Even with approval, this artifact remains **non-implementing**: no deck
+change is implemented in this task, `deck/current.txt` remains unchanged,
+and `versions/v1.1.json` is not created or populated yet. Approval
+authorizes the next task to create DeckVersion v1.1; it does not itself
+change the deck.
+
+## Approved IN / OUT
+
+| IN | slot | OUT | slot |
+|---|---|---|---|
+| City of Brass | land | Urza's Mine | land |
+| Mana Confluence | land | Urza's Power Plant | land |
+| Urza's Saga | land | Urza's Tower | land |
+| Tezzeret the Seeker | nonland | Nevinyrral's Disk | nonland |
+
+## Approval rationale
+
+The Product Owner approves the design because it directly addresses
+colored mana consistency, removes the low-consistency Tron package, adds
+artifact-aligned utility and tutoring, preserves Myr identity, keeps
+Walking Ballista, keeps land count stable, and removes the most
+self-destructive board wipe rather than cutting core engine/ramp pieces.
 
 ## Source decisions
 
@@ -21,15 +42,6 @@ cand-009 (Krark-Clan Ironworks) and cand-010 (Mana Echoes) remain
 Keep the land count at 34 by swapping the three Urza's Tron lands for the
 three incoming lands, and make a single nonland swap for Tezzeret the
 Seeker. Four cards in, four cards out.
-
-## IN / OUT
-
-| IN | slot | OUT | slot |
-|---|---|---|---|
-| City of Brass | land | Urza's Mine | land |
-| Mana Confluence | land | Urza's Power Plant | land |
-| Urza's Saga | land | Urza's Tower | land |
-| Tezzeret the Seeker | nonland | Nevinyrral's Disk | nonland |
 
 ## Why these incoming cards
 
@@ -119,13 +131,15 @@ Seeker. Four cards in, four cards out.
 
 ## Boundary statement
 
-This is design only. No deck change is authorized. No deck change is
-implemented. `deck/current.txt` is unchanged. `versions/v1.1.json` is not
-created or populated. Product Owner approval is required before v1.1.
-This design does not mark any decision as implemented, does not mark any
-recommendation candidate as accepted or implemented, and does not promote
-candidate card facts into deck card facts.
+This design has Product Owner approval, but the deck change is approved
+and **not implemented**. This artifact still does not modify the deck: no
+deck change is implemented in this task. `deck/current.txt` remains
+unchanged. `versions/v1.1.json` remains an empty, unpopulated placeholder.
+A future task must create DeckVersion v1.1 before any implementation
+exists. This design does not mark any decision as implemented, does not
+mark any recommendation candidate as accepted or implemented, and does
+not promote candidate card facts into deck card facts.
 
 ## Required next step
 
-`product_owner_approval_before_v1.1`
+`create_deck_version_v1.1` — create DeckVersion v1.1 in a future task.
