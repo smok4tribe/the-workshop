@@ -129,3 +129,23 @@ Product Owner review schema and rec-002 review scaffold added.
 - No decision log entries were created.
 - No new deck version was created.
 - `rec-001` and `rec-002` remain unmodified by this review layer.
+
+## 2026-07-10 - Sprint 1 Review Validator Non-Neutral States Checkpoint
+
+Review validator extended to support progressed Product Owner reviews.
+
+- The validator now accepts non-neutral entry states (`needs_testing`,
+  `deferred`, `accepted_for_decision`, `rejected`) alongside the scaffold
+  state, with top-level `review_status` values `in_progress` and
+  `completed`.
+- Non-neutral entries must record `reviewed_at`, `rationale`, and a
+  resolved `testing_required`; `needs_testing` additionally requires
+  testing notes.
+- Boundaries still enforced: `accepted_for_decision` and `needs_testing`
+  do not change the deck, no decision log entries are created, no new
+  deck version (v1.1) is created, and rec-002 candidate records remain
+  proposed, non-actionable, and undecided.
+- `review-rec-002.json` itself is unchanged: all entries remain
+  `under_review` and no candidate has been accepted, rejected, or
+  deferred.
+- No deck changes were made.
