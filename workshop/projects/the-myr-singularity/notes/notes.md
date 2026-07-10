@@ -196,3 +196,22 @@ Review validator relaxed to accept non-authorizing decision scaffolds.
   "No deck change is authorized." phrase required by the validator.
 - All validators pass again, including the review validator at 25/25.
 - No deck changes were made and no v1.1 was created.
+
+## 2026-07-10 - Sprint 1 v1.1 Deck-Change Design Checkpoint
+
+v1.1 deck-change design artifact created for the accepted rec-002 decisions.
+
+- `deck-change-design-v1.1.json`/`.md` cover decision-002, decision-003,
+  and decision-004.
+- Proposed IN: City of Brass, Mana Confluence, Urza's Saga, Tezzeret the
+  Seeker. Proposed OUT for Product Owner review: Urza's Mine, Urza's
+  Power Plant, Urza's Tower, Nevinyrral's Disk (alternatives documented:
+  Propaganda, Prismatic Lens).
+- The review validator now also accepts non-authorizing pre-version
+  design artifacts; proposing cuts is not authorizing them.
+- cand-009 and cand-010 remain `needs_testing` and untouched.
+- No deck change was made; `deck/current.txt` and `versions/v1.0.json`
+  are unchanged.
+- No v1.1 was created; `versions/v1.1.json` remains an empty placeholder.
+- Next step is Product Owner approval or revision of the design
+  (`product_owner_approval_before_v1.1`).

@@ -387,11 +387,14 @@ def main():
     check("decision_log_required is true for candidates that could lead to deck changes", errors_17)
     check("creates_new_deck_version_if_accepted is true for candidates that could lead to deck changes", errors_18)
 
-    # Check 19: decision files are placeholders or non-authorizing scaffolds only.
-    # Empty placeholder decision files are allowed. Populated decision files are
-    # allowed only as decision scaffolds: pending deck-change design, explicitly
-    # non-authorizing and non-implemented, with no outgoing cuts chosen, and
-    # traceable to a rec-002 candidate whose review is accepted_for_decision.
+    # Check 19: decision files are placeholders, non-authorizing scaffolds, or
+    # non-authorizing designs only. Empty placeholder decision files are allowed.
+    # Populated decision files are allowed only as decision scaffolds (pending
+    # deck-change design, explicitly non-authorizing and non-implemented, with no
+    # outgoing cuts chosen, traceable to an accepted_for_decision rec-002
+    # candidate) or as pre-version deck-change design artifacts (explicitly
+    # non-authorizing and non-implemented proposals awaiting Product Owner
+    # approval, traceable to existing decision scaffolds).
     errors = []
     for index, entry in enumerate(review_entries):
         if not isinstance(entry, dict):
@@ -421,6 +424,15 @@ def main():
         ("proposed_outgoing_cards", []),
         ("required_next_step", "deck_change_design_before_v1.1"),
     ]
+    design_required_values = [
+        ("design_type", "pre_version_deck_change_design"),
+        ("design_status", "proposed_for_product_owner_review"),
+        ("deck_change_authorized", False),
+        ("deck_change_implemented", False),
+        ("creates_new_deck_version", False),
+        ("product_owner_review_required", True),
+        ("required_next_step", "product_owner_approval_before_v1.1"),
+    ]
     for decision_path in sorted(DECISIONS_DIR.glob("*.json")):
         try:
             decision_doc = load_json(decision_path)
@@ -430,6 +442,34 @@ def main():
         if decision_doc == {}:
             continue
         rel_path = decision_path.relative_to(REPO_ROOT)
+        if decision_doc.get("design_type") == "pre_version_deck_change_design":
+            # Non-authorizing pre-version design artifact.
+            for field, expected in design_required_values:
+                if field not in decision_doc:
+                    errors.append(f"{rel_path} design is missing required field {field!r}")
+                elif decision_doc.get(field) != expected:
+                    errors.append(
+                        f"{rel_path} design field {field!r} must be {expected!r}, "
+                        f"found {decision_doc.get(field)!r}"
+                    )
+            design_boundary = decision_doc.get("explicit_boundary")
+            if not isinstance(design_boundary, dict):
+                errors.append(f"{rel_path} design is missing an explicit_boundary object")
+            elif "no deck change is authorized" not in json.dumps(design_boundary, ensure_ascii=False).lower():
+                errors.append(
+                    f"{rel_path} explicit_boundary does not say 'no deck change is authorized'"
+                )
+            source_decision_ids = decision_doc.get("source_decision_ids")
+            if not isinstance(source_decision_ids, list) or not source_decision_ids:
+                errors.append(f"{rel_path} design must list its source_decision_ids")
+            else:
+                for source_decision_id in source_decision_ids:
+                    if not (DECISIONS_DIR / f"{source_decision_id}.json").is_file():
+                        errors.append(
+                            f"{rel_path} design references missing decision file "
+                            f"{source_decision_id!r}"
+                        )
+            continue
         for field, expected in scaffold_required_values:
             if field not in decision_doc:
                 errors.append(f"{rel_path} scaffold is missing required field {field!r}")
@@ -456,7 +496,7 @@ def main():
                 f"{rel_path} references {source_candidate_id!r}, which is not an "
                 "accepted_for_decision candidate in review-rec-002"
             )
-    check("decision files are placeholders or non-authorizing scaffolds only", errors)
+    check("decision files are placeholders, non-authorizing scaffolds, or non-authorizing designs only", errors)
 
     # Check 20: no new deck version (v1.1) has been created by review.
     errors = []

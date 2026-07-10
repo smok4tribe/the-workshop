@@ -328,16 +328,26 @@ modified.
   / `creates_new_deck_version` fields are `true` in `rec-002.json`.
 - No review entry carries decision-layer fields (`decision_id`,
   `user_decision`), and every decision file in
-  `workshop/projects/the-myr-singularity/decisions/` is either an empty
-  placeholder or a non-authorizing decision scaffold: `decision_status:
-  "pending_deck_change_design"`, `decision_type:
-  "candidate_accepted_for_decision_path"`, `deck_change_authorized`,
-  `deck_change_implemented`, and `creates_new_deck_version` all false,
-  `target_deck_version` null, `proposed_outgoing_cards` empty,
-  `required_next_step: "deck_change_design_before_v1.1"`, an
-  `explicit_boundary` that says no deck change is authorized, and a
-  `source_candidate_id` that is `accepted_for_decision` in
-  review-rec-002 (never a `needs_testing` candidate).
+  `workshop/projects/the-myr-singularity/decisions/` is one of:
+  - an empty placeholder;
+  - a non-authorizing decision scaffold: `decision_status:
+    "pending_deck_change_design"`, `decision_type:
+    "candidate_accepted_for_decision_path"`, `deck_change_authorized`,
+    `deck_change_implemented`, and `creates_new_deck_version` all false,
+    `target_deck_version` null, `proposed_outgoing_cards` empty,
+    `required_next_step: "deck_change_design_before_v1.1"`, an
+    `explicit_boundary` that says no deck change is authorized, and a
+    `source_candidate_id` that is `accepted_for_decision` in
+    review-rec-002 (never a `needs_testing` candidate);
+  - a non-authorizing pre-version design artifact (`design_type:
+    "pre_version_deck_change_design"`): `design_status:
+    "proposed_for_product_owner_review"`, `deck_change_authorized`,
+    `deck_change_implemented`, and `creates_new_deck_version` all false,
+    `product_owner_review_required: true`, `required_next_step:
+    "product_owner_approval_before_v1.1"`, an `explicit_boundary` that
+    says no deck change is authorized, and `source_decision_ids` that
+    resolve to existing decision files. Design artifacts may propose
+    outgoing cuts — proposing is not authorizing.
 - No deck version file beyond `v1.0.json` is populated: review states
   never create v1.1.
 - rec-002 candidate records remain unmodified: every candidate stays
