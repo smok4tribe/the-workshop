@@ -27,7 +27,7 @@
   "rationale": "Product Owner accepted the mana-fixing candidate for the decision path because the baseline analysis identified colored-cast consistency as a structural pressure point, and City of Brass / Mana Confluence directly address colored access.",
   "required_next_step": "deck_change_design_before_v1.1",
   "explicit_boundary": {
-    "statement": "This decision scaffold does not change the deck. It does not create v1.1. It does not select outgoing cuts. It does not mark the recommendation candidate as implemented. A future task must design the actual deck change and create a new deck version before implementation.",
+    "statement": "This decision scaffold does not change the deck. No deck change is authorized. It does not create v1.1. It does not select outgoing cuts. It does not mark the recommendation candidate as implemented. A future task must design the actual deck change and create a new deck version before implementation.",
     "deck_change_authorized": false,
     "deck_change_implemented": false,
     "outgoing_cuts_selected": false,

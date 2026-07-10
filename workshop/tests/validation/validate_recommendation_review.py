@@ -387,7 +387,11 @@ def main():
     check("decision_log_required is true for candidates that could lead to deck changes", errors_17)
     check("creates_new_deck_version_if_accepted is true for candidates that could lead to deck changes", errors_18)
 
-    # Check 19: no decision log entry has been created by review.
+    # Check 19: decision files are placeholders or non-authorizing scaffolds only.
+    # Empty placeholder decision files are allowed. Populated decision files are
+    # allowed only as decision scaffolds: pending deck-change design, explicitly
+    # non-authorizing and non-implemented, with no outgoing cuts chosen, and
+    # traceable to a rec-002 candidate whose review is accepted_for_decision.
     errors = []
     for index, entry in enumerate(review_entries):
         if not isinstance(entry, dict):
@@ -397,18 +401,62 @@ def main():
                 f"{entry_label(index, entry)} carries decision-layer field {field!r}; "
                 "decisions are recorded in decisions/, not in review entries"
             )
+    accepted_candidate_ids = {
+        entry.get("candidate_id")
+        for entry in entries
+        if entry.get("review_status") == "accepted_for_decision"
+    }
+    needs_testing_candidate_ids = {
+        entry.get("candidate_id")
+        for entry in entries
+        if entry.get("review_status") == "needs_testing"
+    }
+    scaffold_required_values = [
+        ("decision_status", "pending_deck_change_design"),
+        ("decision_type", "candidate_accepted_for_decision_path"),
+        ("deck_change_authorized", False),
+        ("deck_change_implemented", False),
+        ("creates_new_deck_version", False),
+        ("target_deck_version", None),
+        ("proposed_outgoing_cards", []),
+        ("required_next_step", "deck_change_design_before_v1.1"),
+    ]
     for decision_path in sorted(DECISIONS_DIR.glob("*.json")):
         try:
             decision_doc = load_json(decision_path)
         except json.JSONDecodeError as exc:
             errors.append(f"{decision_path} is not valid JSON: {exc}")
             continue
-        if decision_doc != {}:
+        if decision_doc == {}:
+            continue
+        rel_path = decision_path.relative_to(REPO_ROOT)
+        for field, expected in scaffold_required_values:
+            if field not in decision_doc:
+                errors.append(f"{rel_path} scaffold is missing required field {field!r}")
+            elif decision_doc.get(field) != expected:
+                errors.append(
+                    f"{rel_path} scaffold field {field!r} must be {expected!r}, "
+                    f"found {decision_doc.get(field)!r}"
+                )
+        decision_boundary = decision_doc.get("explicit_boundary")
+        if not isinstance(decision_boundary, dict):
+            errors.append(f"{rel_path} scaffold is missing an explicit_boundary object")
+        elif "no deck change is authorized" not in json.dumps(decision_boundary, ensure_ascii=False).lower():
             errors.append(
-                f"{decision_path.relative_to(REPO_ROOT)} is populated; Sprint 1 review "
-                "must not create decision log entries"
+                f"{rel_path} explicit_boundary does not say 'no deck change is authorized'"
             )
-    check("no decision log entry has been created by review", errors)
+        source_candidate_id = decision_doc.get("source_candidate_id")
+        if source_candidate_id in needs_testing_candidate_ids:
+            errors.append(
+                f"{rel_path} references {source_candidate_id!r}, which is needs_testing; "
+                "needs_testing candidates may not have decision scaffolds"
+            )
+        elif source_candidate_id not in accepted_candidate_ids:
+            errors.append(
+                f"{rel_path} references {source_candidate_id!r}, which is not an "
+                "accepted_for_decision candidate in review-rec-002"
+            )
+    check("decision files are placeholders or non-authorizing scaffolds only", errors)
 
     # Check 20: no new deck version (v1.1) has been created by review.
     errors = []

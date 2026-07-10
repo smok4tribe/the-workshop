@@ -26,7 +26,7 @@
   "rationale": "Product Owner accepted Tezzeret the Seeker for the decision path because it is aligned with the artifact-engine plan and can function as tutor, untap engine, or artifact-scaling threat.",
   "required_next_step": "deck_change_design_before_v1.1",
   "explicit_boundary": {
-    "statement": "This decision scaffold does not change the deck. It does not create v1.1. It does not select outgoing cuts. It does not mark the recommendation candidate as implemented. A future task must design the actual deck change and create a new deck version before implementation.",
+    "statement": "This decision scaffold does not change the deck. No deck change is authorized. It does not create v1.1. It does not select outgoing cuts. It does not mark the recommendation candidate as implemented. A future task must design the actual deck change and create a new deck version before implementation.",
     "deck_change_authorized": false,
     "deck_change_implemented": false,
     "outgoing_cuts_selected": false,
