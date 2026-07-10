@@ -83,6 +83,19 @@ Standard library only; no external dependencies. Prints a per-check
 `[PASS]`/`[FAIL]` line for every check. Exits `0` with a PASS summary when
 all checks pass, exits `1` with failure details when any check fails.
 
+The validator defaults to `rec-001.json`/`rec-001.md`. To validate another
+recommendation set such as `rec-002`, point it at the files with environment
+variables:
+
+```bash
+WORKSHOP_RECOMMENDATION_JSON=workshop/projects/the-myr-singularity/recommendations/rec-002.json \
+WORKSHOP_RECOMMENDATION_MD=workshop/projects/the-myr-singularity/recommendations/rec-002.md \
+python workshop/tests/validation/validate_recommendation_schema.py
+```
+
+Both sets must pass: run once with defaults for `rec-001` and once with the
+variables for `rec-002`.
+
 ## What it checks
 
 - `rec-001.json` parses as JSON and has every required top-level field
