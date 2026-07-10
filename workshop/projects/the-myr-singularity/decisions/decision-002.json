@@ -1,0 +1,37 @@
+{
+  "decision_id": "decision-002",
+  "project_id": "the-myr-singularity",
+  "source_recommendation_id": "rec-002",
+  "source_candidate_id": "cand-007",
+  "source_review_file": "workshop/projects/the-myr-singularity/recommendations/review-rec-002.json",
+  "decision_status": "pending_deck_change_design",
+  "decision_type": "candidate_accepted_for_decision_path",
+  "created_at": "2026-07-10T19:28:09Z",
+  "decided_by": "Product Owner",
+  "candidate_summary": "City of Brass / Mana Confluence mana-fixing candidate: increase any-color land sources for a five-color identity whose colored-cast consistency the baseline flags as unverified.",
+  "candidate_status_at_review": "accepted_for_decision",
+  "deck_change_authorized": false,
+  "deck_change_implemented": false,
+  "creates_new_deck_version": false,
+  "target_deck_version": null,
+  "proposed_incoming_cards": [
+    "City of Brass",
+    "Mana Confluence"
+  ],
+  "proposed_outgoing_cards": [],
+  "unresolved_design_questions": [
+    "Which lands should be cut if City of Brass and Mana Confluence advance to v1.1?",
+    "Should both lands be added together or staged separately?",
+    "How much life-loss/pain-land pressure is acceptable for the deck?"
+  ],
+  "rationale": "Product Owner accepted the mana-fixing candidate for the decision path because the baseline analysis identified colored-cast consistency as a structural pressure point, and City of Brass / Mana Confluence directly address colored access.",
+  "required_next_step": "deck_change_design_before_v1.1",
+  "explicit_boundary": {
+    "statement": "This decision scaffold does not change the deck. It does not create v1.1. It does not select outgoing cuts. It does not mark the recommendation candidate as implemented. A future task must design the actual deck change and create a new deck version before implementation.",
+    "deck_change_authorized": false,
+    "deck_change_implemented": false,
+    "outgoing_cuts_selected": false,
+    "candidate_marked_implemented": false,
+    "new_deck_version_created": false
+  }
+}

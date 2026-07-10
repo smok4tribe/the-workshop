@@ -165,3 +165,18 @@ Product Owner review recorded for rec-002.
 - No decision logs were created.
 - No deck changes were made.
 - No v1.1 was created.
+
+## 2026-07-10 - Sprint 1 Decision Log Scaffold Checkpoint
+
+Decision-log scaffolds created for the accepted rec-002 candidates.
+
+- decision-002 (cand-007, City of Brass / Mana Confluence), decision-003
+  (cand-008, Urza's Saga), and decision-004 (cand-011, Tezzeret the
+  Seeker) created with status `pending_deck_change_design`.
+- cand-009 and cand-010 remain `needs_testing` and untouched.
+- No outgoing cuts selected; every `proposed_outgoing_cards` is empty.
+- No deck changes made; `deck_change_authorized` and
+  `deck_change_implemented` are false in every scaffold.
+- No v1.1 created; `target_deck_version` is null in every scaffold.
+- Next step is deck-change design for accepted candidates
+  (`deck_change_design_before_v1.1`).

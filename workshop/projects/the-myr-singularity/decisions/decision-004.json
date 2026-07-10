@@ -1,0 +1,36 @@
+{
+  "decision_id": "decision-004",
+  "project_id": "the-myr-singularity",
+  "source_recommendation_id": "rec-002",
+  "source_candidate_id": "cand-011",
+  "source_review_file": "workshop/projects/the-myr-singularity/recommendations/review-rec-002.json",
+  "decision_status": "pending_deck_change_design",
+  "decision_type": "candidate_accepted_for_decision_path",
+  "created_at": "2026-07-10T19:28:09Z",
+  "decided_by": "Product Owner",
+  "candidate_summary": "Tezzeret the Seeker artifact planeswalker engine candidate: battlefield artifact tutoring, a repeatable two-artifact untap, and an artifact-scaling threat in the planeswalker slot.",
+  "candidate_status_at_review": "accepted_for_decision",
+  "deck_change_authorized": false,
+  "deck_change_implemented": false,
+  "creates_new_deck_version": false,
+  "target_deck_version": null,
+  "proposed_incoming_cards": [
+    "Tezzeret the Seeker"
+  ],
+  "proposed_outgoing_cards": [],
+  "unresolved_design_questions": [
+    "Which noncreature spell or engine slot should Tezzeret the Seeker compete with?",
+    "Is Tezzeret primarily a tutor, untap engine, or alternate artifact-scaling threat in this deck?",
+    "Is five mana acceptable for the expected role?"
+  ],
+  "rationale": "Product Owner accepted Tezzeret the Seeker for the decision path because it is aligned with the artifact-engine plan and can function as tutor, untap engine, or artifact-scaling threat.",
+  "required_next_step": "deck_change_design_before_v1.1",
+  "explicit_boundary": {
+    "statement": "This decision scaffold does not change the deck. It does not create v1.1. It does not select outgoing cuts. It does not mark the recommendation candidate as implemented. A future task must design the actual deck change and create a new deck version before implementation.",
+    "deck_change_authorized": false,
+    "deck_change_implemented": false,
+    "outgoing_cuts_selected": false,
+    "candidate_marked_implemented": false,
+    "new_deck_version_created": false
+  }
+}
