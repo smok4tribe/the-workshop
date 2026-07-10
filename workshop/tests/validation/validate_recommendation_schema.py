@@ -14,10 +14,15 @@ The validator supports two modes:
   recommendation_type == "candidate_set", status == "candidates_proposed",
   and candidates contains proposed, non-actionable records.
 
+Task 18A adds source-qualified card reference support for future external
+recommendation candidates while preserving rec-001's legacy internal-only
+behavior.
+
 Standard library only. No external dependencies.
 """
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -25,12 +30,24 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 PROJECT_DIR = REPO_ROOT / "workshop" / "projects" / "the-myr-singularity"
-REC_JSON_PATH = PROJECT_DIR / "recommendations" / "rec-001.json"
-REC_MD_PATH = PROJECT_DIR / "recommendations" / "rec-001.md"
+REC_JSON_PATH = Path(
+    os.environ.get(
+        "WORKSHOP_RECOMMENDATION_JSON",
+        PROJECT_DIR / "recommendations" / "rec-001.json",
+    )
+)
+REC_MD_PATH = Path(
+    os.environ.get(
+        "WORKSHOP_RECOMMENDATION_MD",
+        PROJECT_DIR / "recommendations" / "rec-001.md",
+    )
+)
 CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "cards.json"
+CANDIDATE_CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "candidate_cards.json"
 ROLES_PATH = REPO_ROOT / "workshop" / "knowledge" / "role_taxonomy.json"
 PROJECT_PATH = PROJECT_DIR / "project.json"
 BRIEF_PATH = PROJECT_DIR / "brief" / "brief.json"
+DECK_VERSION_PATH = PROJECT_DIR / "versions" / "v1.0.json"
 
 REQUIRED_TOP_LEVEL_FIELDS = [
     "schema_version",
@@ -86,7 +103,7 @@ REQUIRED_STATUS_VALUES = [
     "needs_testing",
 ]
 
-REQUIRED_EVIDENCE_TYPES = [
+SCHEMA_EVIDENCE_TYPES = [
     "baseline_analysis",
     "card_facts",
     "functional_roles",
@@ -95,6 +112,8 @@ REQUIRED_EVIDENCE_TYPES = [
     "simulation_result",
     "user_preference",
 ]
+
+VALIDATOR_EVIDENCE_TYPES = SCHEMA_EVIDENCE_TYPES + ["candidate_card_facts"]
 
 REQUIRED_CONFIDENCE_VALUES = ["low", "medium", "high"]
 
@@ -138,7 +157,12 @@ def load_real_card_names():
 
 
 def find_real_card_names(text, names):
-    return sorted(name for name in names if name in text)
+    matches = []
+    for name in names:
+        pattern = r"(?<![\w'])" + re.escape(name) + r"(?![\w'])"
+        if re.search(pattern, text):
+            matches.append(name)
+    return sorted(matches)
 
 
 def allowed_values(schema, group, field):
@@ -160,9 +184,91 @@ def resolve_analysis(doc):
     return load_json(path)
 
 
+def card_name_values(card):
+    values = set()
+    for field in ("name", "original_decklist_name", "display_name", "normalized_name"):
+        value = card.get(field)
+        if value:
+            values.add(value)
+    return values
+
+
+def load_playable_deck_scryfall_ids(deck_cards_by_name):
+    errors = []
+    version = load_json(DECK_VERSION_PATH)
+    playable_entries = []
+    commander = version.get("commander")
+    if isinstance(commander, dict):
+        playable_entries.append(commander)
+    else:
+        errors.append("versions/v1.0.json commander entry is missing or not an object")
+
+    main_deck = version.get("main_deck")
+    if isinstance(main_deck, list):
+        playable_entries.extend(main_deck)
+    else:
+        errors.append("versions/v1.0.json main_deck is missing or not an array")
+
+    playable_ids = set()
+    for entry in playable_entries:
+        name = entry.get("name") if isinstance(entry, dict) else None
+        if not name:
+            errors.append(f"playable deck entry lacks name: {entry!r}")
+            continue
+        matching_ids = deck_cards_by_name.get(name)
+        if not matching_ids:
+            errors.append(
+                f"playable deck card {name!r} cannot be resolved through cards.json "
+                "name/original_decklist_name/display_name fields"
+            )
+            continue
+        playable_ids.update(matching_ids)
+
+    return playable_ids, errors
+
+
+def load_commander_color_identity(deck_cards_by_name, deck_cards_by_id):
+    version = load_json(DECK_VERSION_PATH)
+    commander = version.get("commander")
+    if not isinstance(commander, dict) or not commander.get("name"):
+        return set(), ["versions/v1.0.json commander entry is missing or lacks name"]
+
+    commander_name = commander["name"]
+    matching_ids = deck_cards_by_name.get(commander_name)
+    if not matching_ids:
+        return set(), [f"commander {commander_name!r} cannot be resolved through cards.json"]
+    if len(matching_ids) > 1:
+        return set(), [f"commander {commander_name!r} resolves to multiple Scryfall IDs"]
+
+    commander_card = deck_cards_by_id[next(iter(matching_ids))]
+    return set(commander_card.get("color_identity") or []), []
+
+
 def load_reference_sets():
-    cards = load_json(CARDS_PATH).get("cards", [])
-    scryfall_ids = {card.get("scryfall_id") for card in cards if card.get("scryfall_id")}
+    deck_cards = load_json(CARDS_PATH).get("cards", [])
+    candidate_cards = load_json(CANDIDATE_CARDS_PATH).get("candidate_cards", [])
+
+    deck_cards_by_id = {
+        card.get("scryfall_id"): card
+        for card in deck_cards
+        if card.get("scryfall_id")
+    }
+    candidate_cards_by_id = {
+        card.get("scryfall_id"): card
+        for card in candidate_cards
+        if card.get("scryfall_id")
+    }
+
+    deck_cards_by_name = {}
+    for card in deck_cards:
+        scryfall_id = card.get("scryfall_id")
+        if not scryfall_id:
+            continue
+        for name in card_name_values(card):
+            deck_cards_by_name.setdefault(name, set()).add(scryfall_id)
+
+    playable_ids, playable_errors = load_playable_deck_scryfall_ids(deck_cards_by_name)
+    commander_colors, commander_errors = load_commander_color_identity(deck_cards_by_name, deck_cards_by_id)
 
     taxonomy = load_json(ROLES_PATH)
     role_ids = {role.get("role_id") for role in taxonomy.get("roles", []) if role.get("role_id")}
@@ -177,11 +283,67 @@ def load_reference_sets():
     goals.update(brief.get("improvement_areas", []))
 
     return {
-        "scryfall_ids": scryfall_ids,
+        "deck_cards_by_id": deck_cards_by_id,
+        "candidate_cards_by_id": candidate_cards_by_id,
+        "playable_deck_scryfall_ids": playable_ids,
+        "commander_color_identity": commander_colors,
+        "setup_errors": playable_errors + commander_errors,
         "role_ids": role_ids,
         "category_ids": category_ids,
         "goals": goals,
     }
+
+
+def parse_card_ref(card_ref):
+    if not isinstance(card_ref, str):
+        return None, None
+    if card_ref.startswith("deck:scryfall:"):
+        return "deck", card_ref.removeprefix("deck:scryfall:")
+    if card_ref.startswith("candidate:scryfall:"):
+        return "candidate", card_ref.removeprefix("candidate:scryfall:")
+    if card_ref.startswith("scryfall:"):
+        return "legacy_deck", card_ref.removeprefix("scryfall:")
+    return None, None
+
+
+def resolve_card_ref(card_ref, recommendation_set_id, references):
+    kind, scryfall_id = parse_card_ref(card_ref)
+    if kind is None or not scryfall_id:
+        return None, [f"unsupported card reference grammar: {card_ref!r}"]
+
+    if kind == "legacy_deck":
+        if recommendation_set_id != "rec-001":
+            return None, [f"legacy bare Scryfall reference is only allowed in rec-001: {card_ref!r}"]
+        card = references["deck_cards_by_id"].get(scryfall_id)
+        if not card:
+            return None, [f"legacy deck reference not found in cards.json: {card_ref!r}"]
+        return {"kind": kind, "scryfall_id": scryfall_id, "card": card}, []
+
+    if kind == "deck":
+        card = references["deck_cards_by_id"].get(scryfall_id)
+        if not card:
+            return None, [f"deck reference not found in cards.json: {card_ref!r}"]
+        return {"kind": kind, "scryfall_id": scryfall_id, "card": card}, []
+
+    if kind == "candidate":
+        errors = []
+        card = references["candidate_cards_by_id"].get(scryfall_id)
+        if not card:
+            errors.append(f"candidate reference not found in candidate_cards.json: {card_ref!r}")
+        if scryfall_id in references["deck_cards_by_id"]:
+            errors.append(f"candidate reference also exists in cards.json: {card_ref!r}")
+        if card and card.get("recommendation_status") != "facts_only":
+            errors.append(f"candidate reference is not facts_only: {card_ref!r}")
+        if errors:
+            return None, errors
+        return {"kind": kind, "scryfall_id": scryfall_id, "card": card}, []
+
+    return None, [f"unsupported card reference grammar: {card_ref!r}"]
+
+
+def internal_current_card_facts_only(doc):
+    limitation = doc.get("candidate_scope_limitation") or {}
+    return limitation.get("scope_type") == "internal_current_card_facts_only"
 
 
 def check_candidate_required_fields(candidate, index):
@@ -211,6 +373,114 @@ def check_candidate_required_fields(candidate, index):
     return [f"{label} missing required field {field!r}" for field in required_fields if field not in candidate]
 
 
+def directional_cards(candidate):
+    errors = []
+    candidate_id = candidate.get("candidate_id")
+    result = {}
+    for field in ("affected_cards", "incoming_cards", "outgoing_cards"):
+        if field in candidate:
+            value = candidate.get(field)
+            if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+                errors.append(f"{candidate_id} {field} must be an array of strings")
+                value = []
+        else:
+            value = []
+        result[field] = value
+    return result, errors
+
+
+def check_directional_card_rules(candidate, doc, references):
+    errors = []
+    candidate_id = candidate.get("candidate_id")
+    candidate_type = candidate.get("candidate_type")
+    recommendation_set_id = doc.get("recommendation_set_id")
+    scoped_internal_only = internal_current_card_facts_only(doc)
+
+    cards, field_errors = directional_cards(candidate)
+    errors.extend(field_errors)
+
+    affected_cards = set(cards["affected_cards"])
+    incoming_cards = set(cards["incoming_cards"])
+    outgoing_cards = set(cards["outgoing_cards"])
+
+    missing_from_affected = (incoming_cards | outgoing_cards) - affected_cards
+    for ref in sorted(missing_from_affected):
+        errors.append(f"{candidate_id} affected_cards must include directional ref {ref!r}")
+
+    resolved_by_ref = {}
+    for field, refs in cards.items():
+        for ref in refs:
+            resolved, ref_errors = resolve_card_ref(ref, recommendation_set_id, references)
+            errors.extend(f"{candidate_id} {field}: {error}" for error in ref_errors)
+            if resolved:
+                resolved_by_ref[ref] = resolved
+                if scoped_internal_only and resolved["kind"] == "candidate":
+                    errors.append(
+                        f"{candidate_id} {field}: candidate refs are rejected while "
+                        "candidate_scope_limitation.scope_type is internal_current_card_facts_only"
+                    )
+
+    for ref in cards["incoming_cards"]:
+        resolved = resolved_by_ref.get(ref)
+        if not ref.startswith("candidate:scryfall:"):
+            errors.append(f"{candidate_id} incoming_cards ref must use candidate:scryfall:<id>: {ref!r}")
+            continue
+        if not resolved:
+            continue
+        card = resolved["card"]
+        if (card.get("legalities") or {}).get("commander") != "legal":
+            errors.append(f"{candidate_id} incoming card is not Commander legal: {ref!r}")
+        color_identity = set(card.get("color_identity") or [])
+        if not color_identity.issubset(references["commander_color_identity"]):
+            errors.append(
+                f"{candidate_id} incoming card color_identity {sorted(color_identity)!r} is not a subset "
+                f"of commander color_identity {sorted(references['commander_color_identity'])!r}: {ref!r}"
+            )
+
+    for ref in cards["outgoing_cards"]:
+        resolved = resolved_by_ref.get(ref)
+        if not ref.startswith("deck:scryfall:"):
+            errors.append(f"{candidate_id} outgoing_cards ref must use deck:scryfall:<id>: {ref!r}")
+            continue
+        if not resolved:
+            continue
+        if resolved["scryfall_id"] not in references["playable_deck_scryfall_ids"]:
+            errors.append(
+                f"{candidate_id} outgoing_cards ref is not in playable v1.0 commander/main deck: {ref!r}"
+            )
+
+    affected_candidate_refs = {
+        ref for ref in cards["affected_cards"]
+        if parse_card_ref(ref)[0] == "candidate"
+    }
+    for ref in sorted(affected_candidate_refs - incoming_cards):
+        if candidate_type in {"package_candidate", "mana_base_adjustment_candidate"}:
+            errors.append(f"{candidate_id} candidate affected_cards ref must appear in incoming_cards: {ref!r}")
+
+    if candidate_type == "add_candidate":
+        if not incoming_cards:
+            errors.append(f"{candidate_id} add_candidate requires incoming_cards")
+        if outgoing_cards:
+            errors.append(f"{candidate_id} add_candidate requires outgoing_cards to be empty")
+    elif candidate_type == "cut_candidate":
+        if not outgoing_cards:
+            errors.append(f"{candidate_id} cut_candidate requires outgoing_cards")
+        if incoming_cards:
+            errors.append(f"{candidate_id} cut_candidate requires incoming_cards to be empty")
+    elif candidate_type == "swap_candidate":
+        if not incoming_cards:
+            errors.append(f"{candidate_id} swap_candidate requires incoming_cards")
+        if not outgoing_cards:
+            errors.append(f"{candidate_id} swap_candidate requires outgoing_cards")
+    elif candidate_type in {"knowledge_review_candidate", "role_coverage_candidate"}:
+        if incoming_cards:
+            errors.append(f"{candidate_id} {candidate_type} requires incoming_cards to be empty")
+        if outgoing_cards:
+            errors.append(f"{candidate_id} {candidate_type} requires outgoing_cards to be empty")
+
+    return errors
+
+
 def main():
     checks = []
 
@@ -226,7 +496,7 @@ def main():
         errors.append(f"{REC_JSON_PATH} not found")
     except json.JSONDecodeError as exc:
         errors.append(f"{REC_JSON_PATH} is not valid JSON: {exc}")
-    check("rec-001.json parses as JSON", errors)
+    check("recommendation JSON parses as JSON", errors)
     if doc is None:
         return report(checks)
 
@@ -296,8 +566,8 @@ def main():
     # Check 10: evidence_type allowed values.
     evidence_items = (schema.get("evidence_fields") or {}).get("evidence_items") or {}
     got = ((evidence_items.get("item_fields") or {}).get("evidence_type") or {}).get("allowed_values") or []
-    errors = [f"evidence_type allowed_values missing {value!r}" for value in REQUIRED_EVIDENCE_TYPES if value not in got]
-    check("evidence_type allowed values include all required types", errors)
+    errors = [f"evidence_type allowed_values missing {value!r}" for value in SCHEMA_EVIDENCE_TYPES if value not in got]
+    check("embedded evidence_type allowed values include all rec-001 schema types", errors)
 
     # Check 11: confidence allowed values.
     got = allowed_values(schema, "evidence_fields", "confidence")
@@ -402,15 +672,16 @@ def main():
             if not isinstance(item, dict):
                 errors.append(f"{candidate_id} evidence_items[{item_index}] is not an object")
                 continue
-            if item.get("evidence_type") not in REQUIRED_EVIDENCE_TYPES:
+            if item.get("evidence_type") not in VALIDATOR_EVIDENCE_TYPES:
                 errors.append(f"{candidate_id} evidence_items[{item_index}] has invalid evidence_type")
             if not item.get("reference"):
                 errors.append(f"{candidate_id} evidence_items[{item_index}] lacks reference")
     check("every candidate has analysis, evidence, and project-goal traceability", errors)
 
-    # Check 19: references resolve.
+    # Check 19: references resolve, including Task 18A qualified card refs.
     errors = []
     references = load_reference_sets()
+    errors.extend(references["setup_errors"])
     analysis = resolve_analysis(doc)
     pressure_count = len((analysis or {}).get("structural_pressure_points", []))
     question_count = len((analysis or {}).get("open_questions", []))
@@ -436,14 +707,8 @@ def main():
         for goal in candidate.get("related_project_goals") or []:
             if goal not in references["goals"]:
                 errors.append(f"{candidate_id} has unknown project goal {goal!r}")
-        for card_ref in candidate.get("affected_cards") or []:
-            if not str(card_ref).startswith("scryfall:"):
-                errors.append(f"{candidate_id} affected_cards entry is not a Scryfall ref: {card_ref!r}")
-                continue
-            scryfall_id = str(card_ref).split(":", 1)[1]
-            if scryfall_id not in references["scryfall_ids"]:
-                errors.append(f"{candidate_id} affected_cards ref not found in cards.json: {card_ref!r}")
-    check("candidate references resolve to analysis, goals, cards, roles, and categories", errors)
+        errors.extend(check_directional_card_rules(candidate, doc, references))
+    check("candidate references resolve with qualified card reference model", errors)
 
     # Check 20: candidate text has no forbidden evaluative or external-data language.
     errors = []
@@ -487,7 +752,7 @@ def main():
         ]:
             if not re.search(pattern, md_lower):
                 errors.append(f"rec-001.md missing candidate-set boundary pattern {pattern!r}")
-    check("rec-001.md reflects the active recommendation mode", errors)
+    check("recommendation markdown reflects the active recommendation mode", errors)
 
     return report(checks)
 

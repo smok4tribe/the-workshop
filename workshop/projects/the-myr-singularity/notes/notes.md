@@ -91,3 +91,14 @@ Candidate Card Facts intake created for six external cards.
 - No recommendation candidates were created.
 - No deck changes were made.
 - Future external recommendation candidates can be built in a later task after validator support is updated.
+
+## 2026-07-09 - Sprint 1 External Recommendation Reference Model Checkpoint
+
+External recommendation reference model added to the recommendation validator.
+
+- Qualified references are supported: `deck:scryfall:<id>`, `candidate:scryfall:<id>`, and legacy `scryfall:<id>` for `rec-001` only.
+- `incoming_cards` and `outgoing_cards` groundwork was added for future deck-changing candidates.
+- `rec-001` remains internal-only and unchanged.
+- No external candidates were created.
+- No deck changes were made.
+- Future `rec-002` should carry an updated candidate schema, likely schema version `1.1`.
