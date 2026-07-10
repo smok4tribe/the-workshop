@@ -424,15 +424,26 @@ def main():
         ("proposed_outgoing_cards", []),
         ("required_next_step", "deck_change_design_before_v1.1"),
     ]
-    design_required_values = [
+    design_common_required_values = [
         ("design_type", "pre_version_deck_change_design"),
-        ("design_status", "proposed_for_product_owner_review"),
         ("deck_change_authorized", False),
         ("deck_change_implemented", False),
         ("creates_new_deck_version", False),
-        ("product_owner_review_required", True),
-        ("required_next_step", "product_owner_approval_before_v1.1"),
     ]
+    # Per design_status, the extra fields a non-implementing design must carry.
+    # Proposed designs await Product Owner review; approved designs record the
+    # approval but still implement nothing — only a future task creates v1.1.
+    design_state_required_values = {
+        "proposed_for_product_owner_review": [
+            ("product_owner_review_required", True),
+            ("required_next_step", "product_owner_approval_before_v1.1"),
+        ],
+        "product_owner_approved": [
+            ("product_owner_approved", True),
+            ("product_owner_approval_required", False),
+            ("required_next_step", "create_deck_version_v1.1"),
+        ],
+    }
     for decision_path in sorted(DECISIONS_DIR.glob("*.json")):
         try:
             decision_doc = load_json(decision_path)
@@ -443,7 +454,18 @@ def main():
             continue
         rel_path = decision_path.relative_to(REPO_ROOT)
         if decision_doc.get("design_type") == "pre_version_deck_change_design":
-            # Non-authorizing pre-version design artifact.
+            # Non-authorizing pre-version design artifact (proposed or approved).
+            design_status = decision_doc.get("design_status")
+            if design_status not in design_state_required_values:
+                errors.append(
+                    f"{rel_path} design_status {design_status!r} is not one of "
+                    f"{sorted(design_state_required_values)}"
+                )
+                design_required_values = design_common_required_values
+            else:
+                design_required_values = (
+                    design_common_required_values + design_state_required_values[design_status]
+                )
             for field, expected in design_required_values:
                 if field not in decision_doc:
                     errors.append(f"{rel_path} design is missing required field {field!r}")
@@ -453,9 +475,20 @@ def main():
                         f"found {decision_doc.get(field)!r}"
                     )
             design_boundary = decision_doc.get("explicit_boundary")
+            boundary_text = (
+                json.dumps(design_boundary, ensure_ascii=False).lower()
+                if isinstance(design_boundary, dict)
+                else ""
+            )
             if not isinstance(design_boundary, dict):
                 errors.append(f"{rel_path} design is missing an explicit_boundary object")
-            elif "no deck change is authorized" not in json.dumps(design_boundary, ensure_ascii=False).lower():
+            elif design_status == "product_owner_approved":
+                if "approv" not in boundary_text or "not implemented" not in boundary_text:
+                    errors.append(
+                        f"{rel_path} explicit_boundary must state the design is approved "
+                        "but not implemented"
+                    )
+            elif "no deck change is authorized" not in boundary_text:
                 errors.append(
                     f"{rel_path} explicit_boundary does not say 'no deck change is authorized'"
                 )
