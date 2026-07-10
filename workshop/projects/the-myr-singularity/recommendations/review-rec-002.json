@@ -5,10 +5,10 @@
   "deck_version_id": "v1.0",
   "recommendation_set_id": "rec-002",
   "source_recommendation_file": "workshop/projects/the-myr-singularity/recommendations/rec-002.json",
-  "review_status": "pending_product_owner_review",
+  "review_status": "in_progress",
   "explicit_boundary": {
-    "statement": "This artifact is a Product Owner review scaffold for rec-002. No candidate has been accepted, rejected, or deferred by this artifact yet. No deck change is authorized. No decision log entry is created. No new deck version is created. rec-002.json and rec-002.md remain unmodified by this artifact.",
-    "accepted_or_rejected_or_deferred": false,
+    "statement": "This artifact records Product Owner review states for rec-002. accepted_for_decision entries exist, but accepted_for_decision only means the candidate may proceed to a future decision log task; needs_testing only means testing is required before any decision-log task. No deck change is authorized. No decision log entry is created. No new deck version is created. rec-002.json and rec-002.md remain unmodified by this artifact.",
+    "accepted_or_rejected_or_deferred": true,
     "deck_change_authorized": false,
     "decision_log_created": false,
     "new_deck_version_created": false
@@ -17,67 +17,67 @@
     {
       "candidate_id": "cand-007",
       "recommendation_set_id": "rec-002",
-      "review_status": "under_review",
+      "review_status": "accepted_for_decision",
       "reviewer_role": "Product Owner",
       "reviewer_notes": "",
-      "rationale": "",
-      "testing_required": null,
-      "testing_notes": "",
+      "rationale": "Product Owner accepts this candidate for the decision-log path because the baseline identifies colored-cast consistency as a structural pressure point, and City of Brass / Mana Confluence directly address colored access without changing the deck yet.",
+      "testing_required": false,
+      "testing_notes": "No separate testing gate is required before decision-log drafting, but final add/swap details still require a decision log and new deck version.",
       "decision_log_required": true,
       "creates_new_deck_version_if_accepted": true,
-      "reviewed_at": null
+      "reviewed_at": "2026-07-10T12:03:05Z"
     },
     {
       "candidate_id": "cand-008",
       "recommendation_set_id": "rec-002",
-      "review_status": "under_review",
+      "review_status": "accepted_for_decision",
       "reviewer_role": "Product Owner",
       "reviewer_notes": "",
-      "rationale": "",
-      "testing_required": null,
-      "testing_notes": "",
+      "rationale": "Product Owner accepts this candidate for the decision-log path because Urza's Saga is aligned with the artifact-engine identity and supports artifact utility without itself authorizing a deck change.",
+      "testing_required": false,
+      "testing_notes": "No separate testing gate is required before decision-log drafting, but final add/swap details still require a decision log and new deck version.",
       "decision_log_required": true,
       "creates_new_deck_version_if_accepted": true,
-      "reviewed_at": null
+      "reviewed_at": "2026-07-10T12:03:05Z"
     },
     {
       "candidate_id": "cand-009",
       "recommendation_set_id": "rec-002",
-      "review_status": "under_review",
+      "review_status": "needs_testing",
       "reviewer_role": "Product Owner",
       "reviewer_notes": "",
-      "rationale": "",
-      "testing_required": null,
-      "testing_notes": "",
+      "rationale": "Product Owner wants testing before advancing Krark-Clan Ironworks because it may significantly increase combo-engine explosiveness and shift the deck identity.",
+      "testing_required": true,
+      "testing_notes": "Test whether KCI improves explosive turns without making the deck feel too deterministic or drifting away from the intended Myr artifact identity.",
       "decision_log_required": true,
       "creates_new_deck_version_if_accepted": true,
-      "reviewed_at": null
+      "reviewed_at": "2026-07-10T12:03:05Z"
     },
     {
       "candidate_id": "cand-010",
       "recommendation_set_id": "rec-002",
-      "review_status": "under_review",
+      "review_status": "needs_testing",
       "reviewer_role": "Product Owner",
       "reviewer_notes": "",
-      "rationale": "",
-      "testing_required": null,
-      "testing_notes": "",
+      "rationale": "Product Owner wants testing before advancing Mana Echoes because it is highly synergistic with Myr density but may be board-dependent or win-more.",
+      "testing_required": true,
+      "testing_notes": "Test whether Mana Echoes consistently creates meaningful Myr-driven mana bursts or only performs when the board is already developed.",
       "decision_log_required": true,
       "creates_new_deck_version_if_accepted": true,
-      "reviewed_at": null
+      "reviewed_at": "2026-07-10T12:03:05Z"
     },
     {
       "candidate_id": "cand-011",
       "recommendation_set_id": "rec-002",
-      "review_status": "under_review",
+      "review_status": "accepted_for_decision",
       "reviewer_role": "Product Owner",
       "reviewer_notes": "",
-      "rationale": "",
-      "testing_required": null,
-      "testing_notes": "",
+      "rationale": "Product Owner accepts this candidate for the decision-log path because Tezzeret the Seeker is aligned with the artifact-engine plan and can act as tutor, untap engine, or artifact-scaling threat without changing the deck yet.",
+      "testing_required": false,
+      "testing_notes": "No separate testing gate is required before decision-log drafting, but final add/swap details still require a decision log and new deck version.",
       "decision_log_required": true,
       "creates_new_deck_version_if_accepted": true,
-      "reviewed_at": null
+      "reviewed_at": "2026-07-10T12:03:05Z"
     }
   ]
 }
