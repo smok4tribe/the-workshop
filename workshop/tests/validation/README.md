@@ -10,7 +10,8 @@ Automated consistency checks for Sprint 1. Four validators live here:
 - `validate_candidate_card_facts.py` — guards the external candidate Card Facts
   intake layer (see "Candidate Card Facts Validation" below).
 - `validate_recommendation_review.py` — guards the Product Owner review
-  scaffold layer (see "Recommendation Review Validation" below).
+  layer, scaffold and progressed states alike (see "Recommendation Review
+  Validation" below).
 
 # Knowledge Layer Validation
 
@@ -226,10 +227,11 @@ files.
 # Recommendation Review Validation
 
 `validate_recommendation_review.py` validates the Product Owner review
-scaffold layer: `workshop/projects/the-myr-singularity/recommendations/
+layer: `workshop/projects/the-myr-singularity/recommendations/
 review_schema.json` (the review artifact contract) and
 `review-rec-002.json`/`review-rec-002.md` (the first review artifact,
-scoped to rec-002).
+scoped to rec-002). It supports both the initial scaffold and reviews the
+Product Owner has progressed with non-neutral states.
 
 ## What the review artifact is
 
@@ -274,6 +276,22 @@ Standard library only; no external dependencies. Prints a per-check
 `[PASS]`/`[FAIL]` line for every check. Exits `0` with a PASS summary when
 all checks pass, exits `1` with failure details when any check fails.
 
+## Artifact states
+
+The validator supports two artifact states:
+
+- **Scaffold state**: every entry is `under_review` and the top-level
+  `review_status` is `not_started` or `pending_product_owner_review`.
+- **Progressed state**: the Product Owner has recorded non-neutral entry
+  states (`needs_testing`, `deferred`, `accepted_for_decision`,
+  `rejected`) and the top-level `review_status` is `in_progress` or
+  `completed` (`completed` requires that no entry remain `under_review`).
+
+In both states the same boundaries hold: `accepted_for_decision` and
+`needs_testing` do not change the deck, no decision log entry is created,
+no new deck version (v1.1) is created, and no candidate record is
+modified.
+
 ## What it checks
 
 - `review_schema.json` and `review-rec-002.json` parse as JSON, and
@@ -289,15 +307,34 @@ all checks pass, exits `1` with failure details when any check fails.
   `reviewer_notes`, `rationale`, `testing_required`, `testing_notes`,
   `decision_log_required`, `creates_new_deck_version_if_accepted`,
   `reviewed_at`).
-- Every initial review entry has `review_status: "under_review"`, no entry
-  is `accepted_for_decision`, `rejected`, `deferred`, or `needs_testing`
-  yet, and no `reviewed_at` value is set yet.
-- The artifact's `explicit_boundary` states that no candidate has been
-  accepted/rejected/deferred, no decision log was created, no new deck
-  version was created, and no deck change is authorized.
+- Every entry `review_status` is one of the five allowed Product Owner
+  review states, and the top-level `review_status` is consistent with the
+  recorded entry states (see "Artifact states" above).
+- Every non-neutral entry records a non-null ISO 8601 `reviewed_at`, a
+  non-empty `rationale`, and a resolved (non-null) `testing_required`;
+  `needs_testing` entries additionally require `testing_required: true`
+  and non-empty `testing_notes`.
+- `accepted_for_decision` and `needs_testing` entries keep
+  `decision_log_required` and `creates_new_deck_version_if_accepted` true
+  for deck-changing candidates: progressing a review never bypasses the
+  decision-log and new-deck-version path.
+- The artifact's `explicit_boundary` keeps `deck_change_authorized`,
+  `decision_log_created`, and `new_deck_version_created` false, states
+  that no deck change is authorized, and its
+  `accepted_or_rejected_or_deferred` flag matches whether any entry is
+  `accepted_for_decision`, `rejected`, or `deferred`.
 - `decision_log_required` and `creates_new_deck_version_if_accepted` are
   `true` on review entries for candidates whose own `decision_log_required`
   / `creates_new_deck_version` fields are `true` in `rec-002.json`.
+- No review entry carries decision-layer fields (`decision_id`,
+  `user_decision`), and no decision file in
+  `workshop/projects/the-myr-singularity/decisions/` is populated while
+  only review states exist.
+- No deck version file beyond `v1.0.json` is populated: review states
+  never create v1.1.
+- rec-002 candidate records remain unmodified: every candidate stays
+  `proposed`, `is_actionable: false`, `user_decision: null`, and
+  `decision_id: null` regardless of review states.
 - The validator does not modify `rec-002.json` or `review-rec-002.json`.
 - `review-rec-002.md` states the no-deck-change boundary, mentions Product
   Owner review, and mentions every candidate ID from rec-002.
@@ -307,4 +344,6 @@ all checks pass, exits `1` with failure details when any check fails.
 This validator does not accept, reject, or defer any candidate, does not
 create a decision log entry or a new deck version, does not modify
 `rec-001.json`/`rec-001.md`/`rec-002.json`/`rec-002.md`, and does not
-alter card-data, Knowledge, analysis, decision, or report files.
+alter card-data, Knowledge, analysis, decision, or report files. Recording
+an actual review state is a Product Owner action performed by editing
+`review-rec-002.json`; this validator only checks the result.

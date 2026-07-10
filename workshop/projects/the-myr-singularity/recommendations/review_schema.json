@@ -122,6 +122,25 @@
       }
     }
   },
+  "review_progression_rules": {
+    "description": "Rules for review artifacts once the Product Owner starts recording non-neutral review states. A scaffold artifact has every entry 'under_review' and a top-level review_status of 'not_started' or 'pending_product_owner_review'; a progressed artifact uses 'in_progress' or 'completed'.",
+    "allowed_top_level_statuses": [
+      "not_started",
+      "pending_product_owner_review",
+      "in_progress",
+      "completed"
+    ],
+    "rules": [
+      "If any entry is needs_testing, deferred, accepted_for_decision, or rejected, the top-level review_status must be 'in_progress' or 'completed'.",
+      "The top-level review_status may be 'completed' only when no entry remains 'under_review'.",
+      "Every non-neutral entry must record a non-null ISO 8601 reviewed_at, a non-empty rationale, and a resolved (non-null) testing_required.",
+      "needs_testing entries must have testing_required true and non-empty testing_notes.",
+      "accepted_for_decision and needs_testing never change the deck: the entry keeps decision_log_required and creates_new_deck_version_if_accepted true for deck-changing candidates, and no deck change happens until a decision log entry and a new deck version exist.",
+      "Review entries never carry decision-layer fields (decision_id, user_decision); those belong to decisions/.",
+      "explicit_boundary.accepted_or_rejected_or_deferred is true exactly when at least one entry is accepted_for_decision, rejected, or deferred; deck_change_authorized, decision_log_created, and new_deck_version_created remain false.",
+      "Progressing a review never modifies the reviewed candidate records: rec-002 candidates remain proposed, non-actionable, and undecided."
+    ]
+  },
   "boundary_rules": [
     "Review entries cannot modify candidate records. The recommendation file being reviewed (for example rec-002.json) is never edited by a review artifact.",
     "Review entries cannot modify deck versions. No versions/*.json file is created or edited by a review artifact.",
@@ -135,7 +154,10 @@
     "Every review_entries candidate_id exists in the referenced recommendation set.",
     "Every candidate in the referenced recommendation set has exactly one review entry.",
     "No review entry references a candidate_id absent from the recommendation set.",
-    "Newly scaffolded review entries have review_status 'under_review', reviewed_at null, and are not accepted_for_decision, rejected, deferred, or needs_testing.",
+    "Newly scaffolded review entries have review_status 'under_review' and reviewed_at null; progressed entries may use any allowed review status but must follow review_progression_rules.",
+    "Non-neutral entries record reviewed_at, rationale, and a resolved testing_required; needs_testing entries additionally require testing_required true and testing_notes.",
+    "No review state creates a decision log entry or a new deck version: decisions/ entries and versions beyond v1.0 remain empty while only review states exist.",
+    "Reviewed candidate records remain unmodified: rec-002 candidates stay proposed, non-actionable, and undecided regardless of review states.",
     "decision_log_required and creates_new_deck_version_if_accepted mirror the candidate's own boundary fields for candidates that could lead to deck changes.",
     "The review artifact's explicit_boundary states that no deck change is authorized.",
     "The review markdown companion states the Product Owner review purpose, the no-deck-change boundary, and mentions every candidate ID it covers."
