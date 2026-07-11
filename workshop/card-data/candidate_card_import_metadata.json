@@ -6,14 +6,6 @@
   "imported_card_count": 6,
   "unresolved_card_count": 0,
   "unresolved_cards": [],
-  "candidate_card_names": [
-    "City of Brass",
-    "Mana Confluence",
-    "Urza's Saga",
-    "Krark-Clan Ironworks",
-    "Mana Echoes",
-    "Tezzeret the Seeker"
-  ],
   "candidate_intake_scryfall_ids": [
     "c21565d0-fc40-4d89-9b27-87c03385e0af",
     "504a69eb-3c2d-4bb1-b117-252b15acf0c2",
@@ -51,25 +43,27 @@
     "Active candidate facts are facts_only and are not deck recommendations."
   ],
   "active_candidate_card_count": 2,
-  "active_candidate_card_names": [
-    "Krark-Clan Ironworks",
-    "Mana Echoes"
-  ],
-  "active_candidate_scryfall_ids": [
-    "c60174d6-1f9d-4870-b3db-34d6fcb3f6ab",
-    "bd079929-fa58-4484-91b7-31305b87ee43"
-  ],
   "promoted_candidate_card_count": 4,
-  "promoted_candidate_card_names": [
-    "City of Brass",
-    "Mana Confluence",
-    "Urza's Saga",
-    "Tezzeret the Seeker"
-  ],
-  "promoted_candidate_scryfall_ids": [
-    "c21565d0-fc40-4d89-9b27-87c03385e0af",
-    "504a69eb-3c2d-4bb1-b117-252b15acf0c2",
-    "c1e0f201-42cb-46a1-901a-65bb4fc18f6c",
-    "cf339735-eb1a-46f0-8c3e-eae06f278eca"
+  "promoted_candidate_records": [
+    {
+      "scryfall_id": "c21565d0-fc40-4d89-9b27-87c03385e0af",
+      "card_name": "City of Brass",
+      "status": "promoted"
+    },
+    {
+      "scryfall_id": "504a69eb-3c2d-4bb1-b117-252b15acf0c2",
+      "card_name": "Mana Confluence",
+      "status": "promoted"
+    },
+    {
+      "scryfall_id": "c1e0f201-42cb-46a1-901a-65bb4fc18f6c",
+      "card_name": "Urza's Saga",
+      "status": "promoted"
+    },
+    {
+      "scryfall_id": "cf339735-eb1a-46f0-8c3e-eae06f278eca",
+      "card_name": "Tezzeret the Seeker",
+      "status": "promoted"
+    }
   ]
 }

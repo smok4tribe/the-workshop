@@ -303,11 +303,11 @@ class ValidationArchitectureRegressionTests(unittest.TestCase):
         active_names = {card["name"] for card in candidates["candidate_cards"]}
         self.assertEqual(active_names, {"Krark-Clan Ironworks", "Mana Echoes"})
         self.assertTrue(active_names.isdisjoint(expected_ids))
-        self.assertEqual(set(metadata["promoted_candidate_scryfall_ids"]), set(expected_ids.values()))
-        self.assertEqual(set(metadata["active_candidate_scryfall_ids"]), {
-            "c60174d6-1f9d-4870-b3db-34d6fcb3f6ab",
-            "bd079929-fa58-4484-91b7-31305b87ee43",
-        })
+        promoted_by_id = {
+            record["scryfall_id"]: record["card_name"]
+            for record in metadata["promoted_candidate_records"]
+        }
+        self.assertEqual(promoted_by_id, {scryfall_id: name for name, scryfall_id in expected_ids.items()})
 
         assignment_ids = [entry["card_source_ref"]["id"] for entry in assignments["assignments"]]
         for scryfall_id in expected_ids.values():
@@ -358,6 +358,54 @@ class ValidationArchitectureRegressionTests(unittest.TestCase):
         )
 
         self.assert_validation_fails(result, "conflicting canonical and candidate facts")
+
+    def test_promoted_name_to_id_mismatch_fails(self):
+        metadata_path = self.repo / "workshop" / "card-data" / "candidate_card_import_metadata.json"
+        metadata = self.load_json(metadata_path)
+        records = metadata["promoted_candidate_records"]
+        records[0]["card_name"], records[1]["card_name"] = (
+            records[1]["card_name"],
+            records[0]["card_name"],
+        )
+        self.write_json(metadata_path, metadata)
+
+        result = self.run_validator("validate_candidate_card_facts.py")
+
+        self.assert_validation_fails(
+            result,
+            "promoted candidate metadata name does not match canonical Card Facts",
+        )
+
+    def test_canonical_promotion_metadata_mismatch_fails(self):
+        metadata_path = self.repo / "workshop" / "card-data" / "card_import_metadata.json"
+        metadata = self.load_json(metadata_path)
+        metadata["promoted_candidate_records"][0].update(
+            {
+                "scryfall_id": "a95b7645-154f-4904-bf71-db7eb24d4df2",
+                "card_name": "Academy Ruins",
+            }
+        )
+        self.write_json(metadata_path, metadata)
+
+        result = self.run_validator("validate_knowledge_layer.py")
+
+        self.assert_validation_fails(
+            result,
+            "canonical promotion metadata does not match candidate lifecycle metadata",
+        )
+
+    def test_duplicate_promoted_id_fails(self):
+        metadata_path = self.repo / "workshop" / "card-data" / "candidate_card_import_metadata.json"
+        metadata = self.load_json(metadata_path)
+        metadata["promoted_candidate_records"].append(
+            dict(metadata["promoted_candidate_records"][0])
+        )
+        metadata["promoted_candidate_card_count"] = 5
+        self.write_json(metadata_path, metadata)
+
+        result = self.run_validator("validate_candidate_card_facts.py")
+
+        self.assert_validation_fails(result, "duplicate promoted Scryfall ID")
 
 
 if __name__ == "__main__":

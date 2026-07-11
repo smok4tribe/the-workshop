@@ -62,6 +62,11 @@ its stable intake manifest, promoted canonical identities, metadata counts,
 required canonical fields, unique identities, facts-only status, and
 non-actionable boundary.
 
+The candidate validator owns the active/promoted partition and the promoted
+name-to-ID mapping. The Knowledge validator owns the canonical metadata summary
+and verifies that it exactly agrees with the candidate lifecycle mapping and
+canonical Card Facts.
+
 It does not import, recommend, or implement cards.
 
 ## Recommendation validation

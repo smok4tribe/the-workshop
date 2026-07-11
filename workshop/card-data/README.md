@@ -21,6 +21,12 @@ also retains promoted identities so prior `candidate:scryfall:<id>` references
 remain resolvable through canonical facts without treating promoted cards as
 active candidate records.
 
+The intake manifest is authoritative for the original candidate identity set.
+Active status comes from `candidate_cards.json`; promoted storage comes from
+canonical `cards.json`. Both metadata files carry a validated summary of the
+same promoted name-to-ID records and do not independently define lifecycle
+state.
+
 Candidate Card Facts are not recommendations. They do not authorize deck
 changes, create recommendation candidates, modify deck versions, or record
 decisions. Future recommendation candidates can reference candidate facts only

@@ -41,6 +41,35 @@ def load_json(path):
         return json.load(handle)
 
 
+def promoted_record_mapping(records, label):
+    mapping = {}
+    errors = []
+    if not isinstance(records, list):
+        return mapping, [f"{label} must be an array"]
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            errors.append(f"{label}[{index}] must be an object")
+            continue
+        scryfall_id = record.get("scryfall_id")
+        card_name = record.get("card_name")
+        if not isinstance(scryfall_id, str) or not scryfall_id:
+            errors.append(f"{label}[{index}] is missing scryfall_id")
+            continue
+        if not isinstance(card_name, str) or not card_name:
+            errors.append(f"{label}[{index}] is missing card_name")
+            continue
+        if record.get("status") != "promoted":
+            errors.append(f"{label}[{index}] status must be 'promoted'")
+        if scryfall_id in mapping:
+            errors.append(f"duplicate promoted Scryfall ID {scryfall_id!r}")
+            continue
+        if card_name in mapping.values():
+            errors.append(f"duplicate promoted card name {card_name!r}")
+            continue
+        mapping[scryfall_id] = card_name
+    return mapping, errors
+
+
 def main():
     checks = []
 
@@ -114,15 +143,18 @@ def main():
         errors.append(f"unresolved_cards is {unresolved_cards!r}, expected []")
     check("metadata unresolved_cards is empty", errors)
 
-    # Check 7: active candidate names and IDs match lifecycle metadata.
+    # Check 7: active candidate records expose unique name-to-ID identities.
     errors = []
-    actual_names = [record.get("name") for record in records if isinstance(record, dict)]
-    actual_ids = [record.get("scryfall_id") for record in records if isinstance(record, dict)]
-    if actual_names != metadata.get("active_candidate_card_names"):
-        errors.append("active candidate names do not match lifecycle metadata")
-    if actual_ids != metadata.get("active_candidate_scryfall_ids"):
-        errors.append("active candidate Scryfall IDs do not match lifecycle metadata")
-    check("active candidate records match lifecycle metadata", errors)
+    active_names = []
+    for index, record in enumerate(records):
+        name = record.get("name") if isinstance(record, dict) else None
+        if not name:
+            errors.append(f"candidate_cards[{index}] is missing name")
+            continue
+        if name in active_names:
+            errors.append(f"duplicate active candidate card name {name!r}")
+        active_names.append(name)
+    check("active candidate records expose unique names", errors)
 
     # Check 8: every record has a Scryfall ID.
     errors = []
@@ -169,29 +201,39 @@ def main():
     # Check 12: active and promoted identities partition the stable intake manifest.
     errors = []
     active_ids = {record.get("scryfall_id") for record in records if record.get("scryfall_id")}
-    promoted_ids = metadata.get("promoted_candidate_scryfall_ids")
-    if not isinstance(promoted_ids, list) or not all(isinstance(value, str) and value for value in promoted_ids):
-        errors.append("promoted_candidate_scryfall_ids must be an array of non-empty strings")
-        promoted_ids = []
-    elif len(promoted_ids) != len(set(promoted_ids)):
-        errors.append("promoted_candidate_scryfall_ids contains duplicate Scryfall IDs")
-    if active_ids & set(promoted_ids):
+    promoted_records = metadata.get("promoted_candidate_records")
+    promoted_by_id, mapping_errors = promoted_record_mapping(
+        promoted_records, "promoted_candidate_records"
+    )
+    errors.extend(mapping_errors)
+    promoted_ids = set(promoted_by_id)
+    if metadata.get("promoted_candidate_card_count") != len(promoted_records or []):
+        errors.append("promoted_candidate_card_count does not match promoted_candidate_records")
+    if active_ids & promoted_ids:
         errors.append("active and promoted candidate identities overlap")
-    if active_ids | set(promoted_ids) != set(intake_ids):
+    if active_ids | promoted_ids != set(intake_ids):
         errors.append("active and promoted candidate identities do not partition the intake manifest")
-    if metadata.get("promoted_candidate_card_count") != len(promoted_ids):
-        errors.append("promoted_candidate_card_count does not match promoted_candidate_scryfall_ids")
-    check("candidate intake manifest preserves active and promoted identities", errors)
+    check("candidate intake manifest preserves active and promoted identity mappings", errors)
 
-    # Check 13: promoted identities exist in canonical Card Facts.
+    # Check 13: promoted metadata maps exactly to canonical Card Facts.
     errors = []
     deck_cards = load_json(DECK_CARDS_PATH).get("cards", [])
-    deck_ids = {card.get("scryfall_id") for card in deck_cards if card.get("scryfall_id")}
+    deck_cards_by_id = {
+        card.get("scryfall_id"): card for card in deck_cards if card.get("scryfall_id")
+    }
+    deck_ids = set(deck_cards_by_id)
     deck_names = {card.get("name") for card in deck_cards if card.get("name")}
-    missing_promoted_ids = sorted(set(promoted_ids) - deck_ids)
+    missing_promoted_ids = sorted(promoted_ids - deck_ids)
     if missing_promoted_ids:
         errors.append(f"promoted candidate IDs are missing from cards.json: {missing_promoted_ids}")
-    check("promoted candidate identities resolve in canonical Card Facts", errors)
+    for scryfall_id, card_name in promoted_by_id.items():
+        canonical = deck_cards_by_id.get(scryfall_id)
+        if canonical and canonical.get("name") != card_name:
+            errors.append(
+                "promoted candidate metadata name does not match canonical Card Facts "
+                f"for Scryfall ID {scryfall_id!r}"
+            )
+    check("promoted candidate metadata maps exactly to canonical Card Facts", errors)
 
     # Check 14: no active candidate card already exists in deck Card Facts.
     errors = []
