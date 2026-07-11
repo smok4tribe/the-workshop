@@ -249,13 +249,14 @@ DeckVersion v1.1 created and implemented from the approved design.
   through candidate Card Facts.
 - Next natural step: post-implementation validation/report for v1.1.
 
-## 2026-07-10 - Sprint 1 v1.1 Implementation Complete
+## 2026-07-10 - Sprint 1 v1.1 Implementation Checkpoint
 
-Sprint 1 v1.1 implementation complete.
+DeckVersion v1.1 implementation is complete and traceable through rec-002,
+Product Owner review, decisions, deck-change design, approval, and implementation
+(PRs #20-#27).
 
-- The full pipeline ran end to end: rec-002 candidates -> Product Owner
-  review -> decision scaffolds -> deck-change design -> Product Owner
-  approval -> DeckVersion v1.1 implementation (PRs #20-#27).
+- Final knowledge alignment and post-implementation reporting remain pending
+  before Sprint 1 end-to-end certification.
 - v1.1 is live: `deck/current.txt` and `versions/v1.1.json` agree
   (1 commander + 99 main + 7 sideboard, 34 lands).
 - Open threads: cand-009/cand-010 testing gate; dedicated

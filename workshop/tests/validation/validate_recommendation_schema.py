@@ -193,6 +193,34 @@ def card_name_values(card):
     return values
 
 
+CARD_IDENTITY_FIELDS = (
+    "name",
+    "type_line",
+    "oracle_text",
+    "mana_cost",
+    "color_identity",
+    "legalities",
+)
+
+
+def card_identity_signature(card):
+    return {field: card.get(field) for field in CARD_IDENTITY_FIELDS}
+
+
+def index_cards_by_id(cards, store_name):
+    indexed = {}
+    errors = []
+    for card in cards:
+        scryfall_id = card.get("scryfall_id")
+        if not scryfall_id:
+            continue
+        if scryfall_id in indexed:
+            errors.append(f"duplicate Scryfall ID {scryfall_id!r} in {store_name}")
+            continue
+        indexed[scryfall_id] = card
+    return indexed, errors
+
+
 def load_playable_deck_scryfall_ids(deck_cards_by_name):
     errors = []
     version = load_json(DECK_VERSION_PATH)
@@ -248,16 +276,19 @@ def load_reference_sets():
     deck_cards = load_json(CARDS_PATH).get("cards", [])
     candidate_cards = load_json(CANDIDATE_CARDS_PATH).get("candidate_cards", [])
 
-    deck_cards_by_id = {
-        card.get("scryfall_id"): card
-        for card in deck_cards
-        if card.get("scryfall_id")
-    }
-    candidate_cards_by_id = {
-        card.get("scryfall_id"): card
-        for card in candidate_cards
-        if card.get("scryfall_id")
-    }
+    deck_cards_by_id, deck_index_errors = index_cards_by_id(deck_cards, "cards.json")
+    candidate_cards_by_id, candidate_index_errors = index_cards_by_id(
+        candidate_cards, "candidate_cards.json"
+    )
+
+    lifecycle_errors = []
+    for scryfall_id in sorted(set(deck_cards_by_id) & set(candidate_cards_by_id)):
+        canonical = deck_cards_by_id[scryfall_id]
+        staged = candidate_cards_by_id[scryfall_id]
+        if card_identity_signature(canonical) != card_identity_signature(staged):
+            lifecycle_errors.append(
+                f"conflicting canonical and candidate facts for Scryfall ID {scryfall_id!r}"
+            )
 
     deck_cards_by_name = {}
     for card in deck_cards:
@@ -287,7 +318,13 @@ def load_reference_sets():
         "candidate_cards_by_id": candidate_cards_by_id,
         "playable_deck_scryfall_ids": playable_ids,
         "commander_color_identity": commander_colors,
-        "setup_errors": playable_errors + commander_errors,
+        "setup_errors": (
+            deck_index_errors
+            + candidate_index_errors
+            + lifecycle_errors
+            + playable_errors
+            + commander_errors
+        ),
         "role_ids": role_ids,
         "category_ids": category_ids,
         "goals": goals,
@@ -327,15 +364,23 @@ def resolve_card_ref(card_ref, recommendation_set_id, references):
 
     if kind == "candidate":
         errors = []
-        card = references["candidate_cards_by_id"].get(scryfall_id)
-        if not card:
-            errors.append(f"candidate reference not found in candidate_cards.json: {card_ref!r}")
-        if scryfall_id in references["deck_cards_by_id"]:
-            errors.append(f"candidate reference also exists in cards.json: {card_ref!r}")
-        if card and card.get("recommendation_status") != "facts_only":
+        staged_card = references["candidate_cards_by_id"].get(scryfall_id)
+        canonical_card = references["deck_cards_by_id"].get(scryfall_id)
+        if not staged_card and not canonical_card:
+            errors.append(
+                "candidate reference not found in candidate or canonical Card Facts: "
+                f"{card_ref!r}"
+            )
+        if staged_card and staged_card.get("recommendation_status") != "facts_only":
             errors.append(f"candidate reference is not facts_only: {card_ref!r}")
+        if staged_card and canonical_card:
+            if card_identity_signature(staged_card) != card_identity_signature(canonical_card):
+                errors.append(f"candidate reference resolves to conflicting Card Facts: {card_ref!r}")
         if errors:
             return None, errors
+        # The Scryfall ID is the stable identity. A historical candidate reference
+        # remains valid after the facts record moves from staging to canonical data.
+        card = canonical_card or staged_card
         return {"kind": kind, "scryfall_id": scryfall_id, "card": card}, []
 
     return None, [f"unsupported card reference grammar: {card_ref!r}"]
