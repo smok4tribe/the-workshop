@@ -8,9 +8,9 @@ The Myr Singularity records DeckVersion v1.1 from baseline v1.0. Implementation 
 
 - Format: Commander
 - Commander: Urtet, Remnant of Memnarch
-- Identity: An artifact combo-control engine disguised as a Myr tribal deck.
-- Resource model: Myr and artifact bodies are used as resources, not merely as attackers.
-- Constraint: Preserve the unusual Myr identity.
+- Curated identity summary: An artifact combo-control engine disguised as a Myr tribal deck.
+- Curated resource model: Myr and artifact bodies are used as resources, not merely as attackers.
+- Curated constraint: Preserve the unusual Myr identity.
 
 ## Design Brief
 
@@ -51,9 +51,9 @@ Baseline analysis `baseline_v1.0` examined DeckVersion `v1.0` structurally.
 
 ## Decisions
 
-- `decision-002`: IN City of Brass, Mana Confluence; OUT Urza's Mine, Urza's Power Plant. Expected to replace two colorless-only lands with any-color lands.
-- `decision-003`: IN Urza's Saga; OUT Urza's Tower. Expected to add a land-slot artifact search and Construct-token capability.
-- `decision-004`: IN Tezzeret the Seeker; OUT Nevinyrral's Disk. Expected to add artifact tutoring and repeatable artifact untapping.
+- `decision-002`: IN City of Brass, Mana Confluence; OUT Urza's Mine, Urza's Power Plant. Recorded rationale: approved mana fixing update from v1.1 design
+- `decision-003`: IN Urza's Saga; OUT Urza's Tower. Recorded rationale: approved artifact land / utility update from v1.1 design
+- `decision-004`: IN Tezzeret the Seeker; OUT Nevinyrral's Disk. Recorded rationale: approved artifact-engine nonland update from v1.1 design
 
 ## Approved Deck-Change Design
 
@@ -61,7 +61,7 @@ Baseline analysis `baseline_v1.0` examined DeckVersion `v1.0` structurally.
 
 ## Implemented DeckVersion v1.1
 
-implementation traceability and DeckVersion integrity are verified by existing validators.
+Validation status: implementation_verified.
 
 ## Exact Version Change
 
@@ -129,6 +129,7 @@ Immediate: Task 28 - Sprint 1 Final Certification.
 
 ## Structured Sources
 
+- active_candidate_facts: workshop/card-data/candidate_cards.json
 - baseline_analysis: workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json
 - baseline_deck_version: workshop/projects/the-myr-singularity/versions/v1.0.json
 - brief: workshop/projects/the-myr-singularity/brief/brief.json

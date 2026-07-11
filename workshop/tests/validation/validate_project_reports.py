@@ -20,7 +20,7 @@ REQUIRED_SOURCES = {
     "project", "brief", "baseline_deck_version", "resulting_deck_version",
     "current_decklist", "baseline_analysis", "recommendation", "product_owner_review",
     "decisions", "deck_change_design", "card_facts", "functional_knowledge",
-    "candidate_lifecycle_metadata",
+    "candidate_lifecycle_metadata", "active_candidate_facts",
 }
 DECK_ZONES = ("commander", "main_deck", "sideboard")
 
@@ -100,9 +100,9 @@ def report_delta_counter(items, deck):
     return result, indexed, errors
 
 
-def card_indexes():
-    canonical = load_json(REPO_ROOT / "workshop" / "card-data" / "cards.json").get("cards", [])
-    active = load_json(REPO_ROOT / "workshop" / "card-data" / "candidate_cards.json").get("candidate_cards", [])
+def card_indexes(canonical_card_facts, active_candidate_facts):
+    canonical = canonical_card_facts.get("cards", [])
+    active = active_candidate_facts.get("candidate_cards", [])
     by_id = {card.get("scryfall_id"): card for card in canonical + active if card.get("scryfall_id")}
     return canonical, active, by_id
 
@@ -219,6 +219,7 @@ def main():
         review_path, review = load_source(sources["product_owner_review"], "product_owner_review", errors)
         design_path, design = load_source(sources["deck_change_design"], "deck_change_design", errors)
         card_facts_path, card_facts = load_source(sources["card_facts"], "card_facts", errors)
+        active_facts_path, active_facts = load_source(sources["active_candidate_facts"], "active_candidate_facts", errors)
         roles_path, roles = load_source(sources["functional_knowledge"], "functional_knowledge", errors)
         lifecycle_path, lifecycle = load_source(sources["candidate_lifecycle_metadata"], "candidate_lifecycle_metadata", errors)
         current_path = source_path(sources["current_decklist"])
@@ -249,12 +250,43 @@ def main():
             errors.append("Product Owner review source identity does not match recommendation")
         if design and (design.get("design_id") != sources["deck_change_design"].get("id") or design.get("project_id") != project_id or design.get("implemented_version_id") != resulting_id or design.get("product_owner_approved") is not True):
             errors.append("deck-change design source identity or approval does not match report")
-        if card_facts and (not isinstance(card_facts.get("cards"), list) or card_facts_path.name != "cards.json"):
+        if card_facts and not isinstance(card_facts.get("cards"), list):
             errors.append("card facts source has wrong artifact shape")
+        if active_facts and not isinstance(active_facts.get("candidate_cards"), list):
+            errors.append("active candidate facts source has wrong artifact shape")
         if roles and (roles.get("name") != "Functional Role Assignments" or not isinstance(roles.get("assignments"), list)):
             errors.append("functional knowledge source has wrong artifact shape")
         if lifecycle and (not isinstance(lifecycle.get("candidate_intake_scryfall_ids"), list) or not isinstance(lifecycle.get("promoted_candidate_records"), list)):
             errors.append("candidate lifecycle source has wrong artifact shape")
+        identity = doc.get("project_identity", {})
+        if source_project and identity.get("name") != source_project.get("name"):
+            errors.append("report project name does not match project metadata")
+        if source_project and identity.get("format") != source_project.get("format"):
+            errors.append("report project format does not match project metadata")
+        if source_project and identity.get("commander") != source_project.get("commander"):
+            errors.append("report project commander does not match project metadata")
+        if not isinstance(identity.get("curated_summary"), dict):
+            errors.append("report project narrative must be explicitly marked curated")
+        if source_project and doc.get("brief_summary", {}).get("goals") != source_project.get("goals"):
+            errors.append("report brief goals do not match authoritative project goals")
+        baseline_summary = doc.get("baseline_summary", {})
+        if analysis and baseline_summary.get("analysis_id") != analysis.get("analysis_id"):
+            errors.append("report baseline analysis ID does not match source analysis")
+        if analysis and baseline_summary.get("deck_version_id") != analysis.get("deck_version_id"):
+            errors.append("report baseline DeckVersion summary does not match source analysis")
+        implementation = doc.get("implementation_summary", {})
+        if design and resulting and (implementation.get("design_id") != design.get("design_id") or implementation.get("design_id") not in {resulting.get("approved_design_id"), resulting.get("implementation_source")}):
+            errors.append("implementation summary design_id does not match approved design")
+        if design and implementation.get("product_owner_approved") is not design.get("product_owner_approved"):
+            errors.append("implementation summary approval state does not match design")
+        if design and implementation.get("approval_by") != design.get("approved_by"):
+            errors.append("implementation summary approver does not match design")
+        if resulting and (implementation.get("parent_version_id") != resulting.get("parent_version_id") or implementation.get("parent_version_id") != baseline_id):
+            errors.append("implementation summary parent version does not match resulting DeckVersion")
+        if design and (implementation.get("resulting_version_id") != resulting_id or implementation.get("resulting_version_id") != design.get("implemented_version_id")):
+            errors.append("implementation summary resulting version does not match sources")
+        if implementation.get("validation_status") not in {"implementation_verified", "implementation_not_verified"}:
+            errors.append("implementation summary validation_status is unsupported")
         check(f"{label} validates every structured source by identity and relationship", errors)
         if errors:
             continue
@@ -277,8 +309,16 @@ def main():
         playable_total = sum(resulting_counters["commander"].values()) + sum(resulting_counters["main_deck"].values())
         if delta.get("playable_total") != playable_total:
             errors.append("report playable_total does not match resulting DeckVersion")
-        facts_by_name, fact_errors = deck.facts_index()
-        singleton_errors = list(fact_errors)
+        facts_by_name = {}
+        singleton_errors = []
+        for card in card_facts.get("cards", []) + active_facts.get("candidate_cards", []):
+            for field in ("name", "original_decklist_name", "display_name", "normalized_name"):
+                if card.get(field):
+                    key = deck.normalize_name(card[field])
+                    existing = facts_by_name.get(key)
+                    if existing and existing.get("scryfall_id") != card.get("scryfall_id"):
+                        singleton_errors.append(f"duplicate Card Facts identity for {card[field]!r}")
+                    facts_by_name[key] = card
         playable = resulting_counters["commander"] + resulting_counters["main_deck"]
         for name, quantity in playable.items():
             if quantity > 1 and not re.search(r"\bBasic\b", str(facts_by_name.get(name, {}).get("type_line", ""))):
@@ -295,6 +335,8 @@ def main():
                 errors.append(f"current deck {zone} differs from report resulting DeckVersion {resulting_id}")
         if delta.get("current_decklist_matches_resulting_version") is not (not parse_errors and parsed_current == resulting_counters):
             errors.append("report current decklist alignment claim does not match exact parsed deck content")
+        if doc.get("implementation_summary", {}).get("current_decklist_matches_resulting_version") is not (not parse_errors and parsed_current == resulting_counters):
+            errors.append("implementation summary current-deck alignment does not match exact parsed deck content")
         check(f"{label} derives version, singleton, and exact current-deck claims", errors)
 
         errors = []
@@ -314,7 +356,10 @@ def main():
             errors.append("decision summary IDs do not match referenced decisions")
         for decision_id, decision in decisions.items():
             summary = summaries.get(decision_id, {})
-            if summary.get("candidate_id") != decision.get("source_candidate_id") or summary.get("incoming_cards") != decision.get("incoming_cards") or summary.get("outgoing_cards") != decision.get("outgoing_cards"):
+            if (summary.get("candidate_id") != decision.get("source_candidate_id")
+                    or summary.get("incoming_cards") != decision.get("incoming_cards")
+                    or summary.get("outgoing_cards") != decision.get("outgoing_cards")
+                    or summary.get("source_rationale") != decision.get("implementation_rationale")):
                 errors.append(f"decision summary for {decision_id!r} does not match source decision")
         design_added, design_added_errors = deck.zoned_item_counters(design.get("incoming_cards"), "incoming")
         design_removed, design_removed_errors = deck.zoned_item_counters(design.get("proposed_outgoing_cards"), "outgoing")
@@ -324,7 +369,7 @@ def main():
         check(f"{label} validates decision provenance and summaries for every delta item", errors)
 
         errors = []
-        _, active_cards, cards_by_id = card_indexes()
+        _, active_cards, cards_by_id = card_indexes(card_facts, active_facts)
         candidates = {item.get("candidate_id"): item for item in recommendation.get("candidates", []) if isinstance(item, dict)}
         review_statuses = {item.get("candidate_id"): item.get("review_status") for item in review.get("review_entries", []) if isinstance(item, dict)}
         dispositions = {item.get("candidate_id"): item for item in doc.get("candidate_dispositions", []) if isinstance(item, dict)}
@@ -353,17 +398,34 @@ def main():
         reported_names = sorted(deck.normalize_name(name) for name in doc.get("knowledge_alignment", {}).get("implemented_cards_in_canonical_facts", []))
         if reported_names != implemented_names:
             errors.append("implemented-card Knowledge set does not match derived additions")
-        canonical, active_cards, cards_by_id = card_indexes()
+        canonical, active_cards, cards_by_id = card_indexes(card_facts, active_facts)
+        canonical_ids = [card.get("scryfall_id") for card in canonical]
+        canonical_names = [deck.normalize_name(card.get("name")) for card in canonical if card.get("name")]
+        active_ids_list = [card.get("scryfall_id") for card in active_cards]
+        if len(canonical_ids) != len(set(canonical_ids)) or len(canonical_names) != len(set(canonical_names)):
+            errors.append("referenced canonical Card Facts have duplicate Scryfall IDs or names")
+        if len(active_ids_list) != len(set(active_ids_list)):
+            errors.append("referenced active candidate facts have duplicate Scryfall IDs")
         canonical_by_name = {deck.normalize_name(card.get("name")): card for card in canonical}
         assignments = {item.get("card_source_ref", {}).get("id"): item for item in roles.get("assignments", []) if isinstance(item, dict)}
         promoted_ids = {item.get("scryfall_id") for item in lifecycle.get("promoted_candidate_records", [])}
         active_ids = {item.get("scryfall_id") for item in active_cards}
+        if active_ids & promoted_ids:
+            errors.append("active candidate facts overlap promoted lifecycle records")
         for name in implemented_names:
             card = canonical_by_name.get(name)
             if not card or not card.get("scryfall_id") or card["scryfall_id"] not in assignments:
                 errors.append(f"implemented card {name!r} lacks canonical facts or Functional Knowledge")
             elif card["scryfall_id"] not in promoted_ids or card["scryfall_id"] in active_ids:
                 errors.append(f"implemented card {name!r} lacks promoted historical candidate provenance")
+            expected_reference = next(
+                (item.get("reference") for item in design.get("incoming_cards", [])
+                 if deck.normalize_name(item.get("name")) == name),
+                None,
+            )
+            expected_match = re.fullmatch(r"candidate:scryfall:([0-9a-f-]+)", str(expected_reference))
+            if expected_match and card and card.get("scryfall_id") != expected_match.group(1):
+                errors.append(f"implemented card {card.get('name')!r} has wrong referenced Card Facts identity")
         for candidate_id, candidate in candidates.items():
             if review_statuses.get(candidate_id) == "needs_testing":
                 for reference in candidate.get("incoming_cards", []):

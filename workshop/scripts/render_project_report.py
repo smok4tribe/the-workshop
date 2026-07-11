@@ -106,9 +106,9 @@ def render_report(report):
         "",
         f"- Format: {identity['format']}",
         f"- Commander: {identity['commander']}",
-        f"- Identity: {identity['identity']}",
-        f"- Resource model: {identity['resource_model']}",
-        f"- Constraint: {identity['identity_constraint']}",
+        f"- Curated identity summary: {identity['curated_summary']['identity']}",
+        f"- Curated resource model: {identity['curated_summary']['resource_model']}",
+        f"- Curated constraint: {identity['curated_summary']['identity_constraint']}",
         "",
         "## Design Brief",
         "",
@@ -139,7 +139,8 @@ def render_report(report):
     for decision in report["decision_summary"]:
         lines.append(
             f"- `{decision['decision_id']}`: IN {', '.join(decision['incoming_cards'])}; "
-            f"OUT {', '.join(decision['outgoing_cards'])}. {decision['expected_effect']}"
+            f"OUT {', '.join(decision['outgoing_cards'])}. Recorded rationale: "
+            f"{decision['source_rationale']}"
         )
     implementation = report["implementation_summary"]
     lines.extend([
@@ -151,7 +152,7 @@ def render_report(report):
         "",
         f"## Implemented DeckVersion {resulting_id}",
         "",
-        implementation["validation_status"],
+        f"Validation status: {implementation['validation_status']}.",
         "",
         "## Exact Version Change",
         "",

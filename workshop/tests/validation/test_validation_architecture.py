@@ -478,6 +478,13 @@ class ValidationArchitectureRegressionTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(
+            result,
+            "committed Markdown differs from deterministic renderer output",
+        )
+
     def regenerate_report(self, report_path):
         renderer = self.repo / "workshop" / "scripts" / "render_project_report.py"
         result = subprocess.run(
@@ -496,13 +503,6 @@ class ValidationArchitectureRegressionTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
-
-        result = self.run_validator("validate_project_reports.py")
-
-        self.assert_validation_fails(
-            result,
-            "committed Markdown differs from deterministic renderer output",
-        )
 
     def test_report_missing_source_fails(self):
         report_path = self.project / "reports" / "project_report_v1.1.json"
@@ -658,6 +658,97 @@ class ValidationArchitectureRegressionTests(unittest.TestCase):
         self.regenerate_report(report_path)
         result = self.run_validator("validate_project_reports.py")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_report_referenced_card_facts_missing_implemented_card_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        alternate = self.repo / "workshop" / "card-data" / "alternate_cards.json"
+        cards = self.load_json(self.repo / "workshop" / "card-data" / "cards.json")
+        cards["cards"] = [card for card in cards["cards"] if card["name"] != "Tezzeret the Seeker"]
+        self.write_json(alternate, cards)
+        report = self.load_json(report_path)
+        report["source_references"]["card_facts"]["path"] = "workshop/card-data/alternate_cards.json"
+        self.write_json(report_path, report); self.regenerate_report(report_path)
+        self.assert_validation_fails(self.run_validator("validate_project_reports.py"), "implemented card 'tezzeret the seeker' lacks canonical facts")
+
+    def test_report_referenced_card_facts_wrong_identity_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        alternate = self.repo / "workshop" / "card-data" / "alternate_cards.json"
+        cards = self.load_json(self.repo / "workshop" / "card-data" / "cards.json")
+        next(card for card in cards["cards"] if card["name"] == "Tezzeret the Seeker")["scryfall_id"] = "00000000-0000-0000-0000-000000000000"
+        self.write_json(alternate, cards)
+        report = self.load_json(report_path)
+        report["source_references"]["card_facts"]["path"] = "workshop/card-data/alternate_cards.json"
+        self.write_json(report_path, report); self.regenerate_report(report_path)
+        self.assert_validation_fails(self.run_validator("validate_project_reports.py"), "has wrong referenced Card Facts identity")
+
+    def test_report_active_candidate_source_missing_needs_testing_card_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        alternate = self.repo / "workshop" / "card-data" / "alternate_candidates.json"
+        cards = self.load_json(self.repo / "workshop" / "card-data" / "candidate_cards.json")
+        cards["candidate_cards"] = cards["candidate_cards"][:1]
+        self.write_json(alternate, cards)
+        report = self.load_json(report_path)
+        report["source_references"]["active_candidate_facts"]["path"] = "workshop/card-data/alternate_candidates.json"
+        self.write_json(report_path, report); self.regenerate_report(report_path)
+        self.assert_validation_fails(self.run_validator("validate_project_reports.py"), "needs-testing candidate 'cand-010' is not an active candidate fact")
+
+    def test_report_active_candidate_source_promoted_overlap_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        alternate = self.repo / "workshop" / "card-data" / "alternate_candidates.json"
+        active = self.load_json(self.repo / "workshop" / "card-data" / "candidate_cards.json")
+        canonical = self.load_json(self.repo / "workshop" / "card-data" / "cards.json")
+        active["candidate_cards"].append(next(card for card in canonical["cards"] if card["name"] == "City of Brass"))
+        self.write_json(alternate, active)
+        report = self.load_json(report_path)
+        report["source_references"]["active_candidate_facts"]["path"] = "workshop/card-data/alternate_candidates.json"
+        self.write_json(report_path, report); self.regenerate_report(report_path)
+        self.assert_validation_fails(self.run_validator("validate_project_reports.py"), "active candidate facts overlap promoted lifecycle records")
+
+    def test_report_implementation_summary_claims_fail(self):
+        cases = [
+            ("design_id", "wrong-design", "implementation summary design_id does not match approved design"),
+            ("product_owner_approved", False, "implementation summary approval state does not match design"),
+            ("approval_by", "Invented", "implementation summary approver does not match design"),
+            ("parent_version_id", "v9.9", "implementation summary parent version does not match resulting DeckVersion"),
+            ("resulting_version_id", "v9.9", "implementation summary resulting version does not match sources"),
+            ("current_decklist_matches_resulting_version", False, "implementation summary current-deck alignment does not match exact parsed deck content"),
+        ]
+        for field, value, expected in cases:
+            with self.subTest(field=field):
+                report_path = self.project / "reports" / "project_report_v1.1.json"
+                report = self.load_json(report_path)
+                report["implementation_summary"][field] = value
+                self.write_json(report_path, report); self.regenerate_report(report_path)
+                self.assert_validation_fails(self.run_validator("validate_project_reports.py"), expected)
+                self.tearDown(); self.setUp()
+
+    def test_report_project_brief_baseline_claims_fail(self):
+        cases = [
+            (lambda report: report["project_identity"].update({"commander": "Wrong"}), "report project commander does not match project metadata"),
+            (lambda report: report["project_identity"].update({"format": "Legacy"}), "report project format does not match project metadata"),
+            (lambda report: report["project_identity"].update({"name": "Wrong"}), "report project name does not match project metadata"),
+            (lambda report: report["brief_summary"].update({"goals": ["Wrong"]}), "report brief goals do not match authoritative project goals"),
+            (lambda report: report["baseline_summary"].update({"analysis_id": "wrong"}), "report baseline analysis ID does not match source analysis"),
+            (lambda report: report["baseline_summary"].update({"deck_version_id": "wrong"}), "report baseline DeckVersion summary does not match source analysis"),
+        ]
+        for mutate, expected in cases:
+            with self.subTest(expected=expected):
+                report_path = self.project / "reports" / "project_report_v1.1.json"
+                report = self.load_json(report_path)
+                mutate(report)
+                self.write_json(report_path, report); self.regenerate_report(report_path)
+                self.assert_validation_fails(self.run_validator("validate_project_reports.py"), expected)
+                self.tearDown(); self.setUp()
+
+    def test_report_decision_rationale_is_source_derived(self):
+        for value in ("Wrong rationale", "Tournament wins prove this change."):
+            with self.subTest(value=value):
+                report_path = self.project / "reports" / "project_report_v1.1.json"
+                report = self.load_json(report_path)
+                report["decision_summary"][0]["source_rationale"] = value
+                self.write_json(report_path, report); self.regenerate_report(report_path)
+                self.assert_validation_fails(self.run_validator("validate_project_reports.py"), "decision summary for 'decision-002' does not match source decision")
+                self.tearDown(); self.setUp()
 
 
 if __name__ == "__main__":

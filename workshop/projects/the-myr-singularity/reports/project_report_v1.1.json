@@ -62,6 +62,9 @@
     "card_facts": {
       "path": "workshop/card-data/cards.json"
     },
+    "active_candidate_facts": {
+      "path": "workshop/card-data/candidate_cards.json"
+    },
     "functional_knowledge": {
       "path": "workshop/knowledge/functional_roles.json"
     },
@@ -73,9 +76,11 @@
     "name": "The Myr Singularity",
     "format": "Commander",
     "commander": "Urtet, Remnant of Memnarch",
-    "identity": "An artifact combo-control engine disguised as a Myr tribal deck.",
-    "resource_model": "Myr and artifact bodies are used as resources, not merely as attackers.",
-    "identity_constraint": "Preserve the unusual Myr identity."
+    "curated_summary": {
+      "identity": "An artifact combo-control engine disguised as a Myr tribal deck.",
+      "resource_model": "Myr and artifact bodies are used as resources, not merely as attackers.",
+      "identity_constraint": "Preserve the unusual Myr identity."
+    }
   },
   "brief_summary": {
     "goals": [
@@ -124,7 +129,7 @@
         "Urza's Mine",
         "Urza's Power Plant"
       ],
-      "expected_effect": "Expected to replace two colorless-only lands with any-color lands."
+      "source_rationale": "approved mana fixing update from v1.1 design"
     },
     {
       "decision_id": "decision-003",
@@ -135,7 +140,7 @@
       "outgoing_cards": [
         "Urza's Tower"
       ],
-      "expected_effect": "Expected to add a land-slot artifact search and Construct-token capability."
+      "source_rationale": "approved artifact land / utility update from v1.1 design"
     },
     {
       "decision_id": "decision-004",
@@ -146,7 +151,7 @@
       "outgoing_cards": [
         "Nevinyrral's Disk"
       ],
-      "expected_effect": "Expected to add artifact tutoring and repeatable artifact untapping."
+      "source_rationale": "approved artifact-engine nonland update from v1.1 design"
     }
   ],
   "implementation_summary": {
@@ -156,7 +161,7 @@
     "parent_version_id": "v1.0",
     "resulting_version_id": "v1.1",
     "current_decklist_matches_resulting_version": true,
-    "validation_status": "implementation traceability and DeckVersion integrity are verified by existing validators."
+    "validation_status": "implementation_verified"
   },
   "version_delta": {
     "added": [

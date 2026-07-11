@@ -177,6 +177,20 @@ it does not certify Sprint 1.
 The renderer uses only report JSON. Version headings, delta counts, candidate
 groups, evidence status, and next actions are all data-driven and deterministic.
 
+| Source | Authoritative for |
+| --- | --- |
+| project | exact project identity and current version |
+| brief | project relationship and commander consistency |
+| baseline/resulting DeckVersions | parent and implemented state |
+| current decklist | live zone-aware deck representation |
+| baseline analysis | baseline IDs and findings context |
+| recommendation and review | candidate definitions and Product Owner dispositions |
+| decisions and deck-change design | implemented lineage, approval, and recorded rationale |
+| card facts | canonical identities of implemented cards |
+| active candidate facts | active external candidates still under review |
+| functional knowledge | canonical role assignments |
+| lifecycle metadata | intake and promoted provenance partition |
+
 ## Regression tests
 
 Run the committed mutation suite with:
