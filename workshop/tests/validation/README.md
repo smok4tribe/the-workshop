@@ -159,11 +159,23 @@ exceptions such as basic lands.
 `project_report_v*.json` document to its same-name Markdown file. The renderer
 is deterministic: a clean render must leave the committed Markdown unchanged.
 
-`validate_project_reports.py` checks report identity and DeckVersion references,
-required structured sources, the quantity-aware parent/child delta, candidate
-dispositions, and explicit evidence status. It verifies implementation and
-traceability only; it does not treat unrun analysis, simulation, or gameplay as
-measured performance outcomes, and it does not certify Sprint 1.
+`validate_project_reports.py` discovers reports under project metadata rather
+than assuming a particular project. `WORKSHOP_PROJECT_ID` may focus validation
+on one project. It validates each referenced source by identity and relationship,
+parses the referenced current decklist using the DeckVersion parser, compares all
+three zones and quantities with the resulting version, and derives the exact
+parent/child delta.
+
+The report validator also verifies per-card decision attribution, decision
+summaries, source-derived candidate dispositions, canonical Card Facts,
+Functional Knowledge, and retained candidate provenance. Evidence entries use a
+generic status/source model: unmeasured states have no evidence source, while
+completed, validated, or measured states must resolve to matching structured
+post-implementation evidence. It verifies implementation and traceability only;
+it does not certify Sprint 1.
+
+The renderer uses only report JSON. Version headings, delta counts, candidate
+groups, evidence status, and next actions are all data-driven and deterministic.
 
 ## Regression tests
 
@@ -189,5 +201,10 @@ The tests use isolated temporary repository copies. They prove that validation:
 - Rejects invalid report DeckVersion references, incorrect reported deltas,
   measured-outcome claims without evidence, candidate disposition drift,
   Markdown drift, and missing required source artifacts.
+- Rejects current-deck divergence, false decision attribution, decision-summary
+  drift, wrong existing source types, false Knowledge/provenance claims, and
+  missing implemented Knowledge cards.
+- Proves relationship-driven candidate IDs, dynamic renderer labels/counts/
+  candidate groups, and valid future evidence references in isolated fixtures.
 
 No regression test mutates committed project data.

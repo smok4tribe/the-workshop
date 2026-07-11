@@ -59,10 +59,6 @@
       "path": "workshop/projects/the-myr-singularity/decisions/deck-change-design-v1.1.json",
       "id": "deck-change-design-v1.1"
     },
-    "design_approval": {
-      "path": "workshop/projects/the-myr-singularity/decisions/deck-change-design-v1.1.json",
-      "approved_by": "Product Owner"
-    },
     "card_facts": {
       "path": "workshop/card-data/cards.json"
     },
@@ -107,38 +103,6 @@
   "recommendation_summary": {
     "recommendation_id": "rec-002",
     "problem_statement": "External candidates were proposed to address recorded colored-mana, artifact access, and engine pressure points.",
-    "candidate_dispositions": [
-      {
-        "candidate_id": "cand-007",
-        "name": "City of Brass and Mana Confluence",
-        "review_status": "accepted_for_decision",
-        "implementation_status": "implemented"
-      },
-      {
-        "candidate_id": "cand-008",
-        "name": "Urza's Saga",
-        "review_status": "accepted_for_decision",
-        "implementation_status": "implemented"
-      },
-      {
-        "candidate_id": "cand-009",
-        "name": "Krark-Clan Ironworks",
-        "review_status": "needs_testing",
-        "implementation_status": "not_implemented"
-      },
-      {
-        "candidate_id": "cand-010",
-        "name": "Mana Echoes",
-        "review_status": "needs_testing",
-        "implementation_status": "not_implemented"
-      },
-      {
-        "candidate_id": "cand-011",
-        "name": "Tezzeret the Seeker",
-        "review_status": "accepted_for_decision",
-        "implementation_status": "implemented"
-      }
-    ],
     "expected_benefits": [
       "Expected to improve access to colored mana.",
       "Expected to add artifact-tutor, token, and artifact-untap capabilities."
@@ -147,18 +111,6 @@
       "City of Brass and Mana Confluence can cost life when used for mana.",
       "The design records a lower board-wipe count and ongoing questions about Tezzeret's survivability and Urza's Saga's self-sacrifice."
     ]
-  },
-  "product_owner_review_summary": {
-    "accepted_candidate_ids": [
-      "cand-007",
-      "cand-008",
-      "cand-011"
-    ],
-    "needs_testing_candidate_ids": [
-      "cand-009",
-      "cand-010"
-    ],
-    "review_boundary": "The Product Owner review recorded disposition and did not directly modify the deck."
   },
   "decision_summary": [
     {
@@ -277,6 +229,7 @@
   "candidate_dispositions": [
     {
       "candidate_id": "cand-007",
+      "candidate_name": "City of Brass and Mana Confluence",
       "review_status": "accepted_for_decision",
       "implementation_status": "implemented",
       "source_decision_ids": [
@@ -285,6 +238,7 @@
     },
     {
       "candidate_id": "cand-008",
+      "candidate_name": "Urza's Saga",
       "review_status": "accepted_for_decision",
       "implementation_status": "implemented",
       "source_decision_ids": [
@@ -293,18 +247,21 @@
     },
     {
       "candidate_id": "cand-009",
+      "candidate_name": "Krark-Clan Ironworks",
       "review_status": "needs_testing",
       "implementation_status": "not_implemented",
       "source_decision_ids": []
     },
     {
       "candidate_id": "cand-010",
+      "candidate_name": "Mana Echoes",
       "review_status": "needs_testing",
       "implementation_status": "not_implemented",
       "source_decision_ids": []
     },
     {
       "candidate_id": "cand-011",
+      "candidate_name": "Tezzeret the Seeker",
       "review_status": "accepted_for_decision",
       "implementation_status": "implemented",
       "source_decision_ids": [
@@ -319,19 +276,26 @@
       "Urza's Saga",
       "Tezzeret the Seeker"
     ],
-    "implemented_cards_have_functional_knowledge": true,
-    "historical_candidate_provenance": "resolvable",
-    "active_needs_testing_candidates": [
-      "Krark-Clan Ironworks",
-      "Mana Echoes"
-    ]
+    "historical_candidate_provenance": "resolvable"
   },
   "evidence_status": {
     "implementation_result": "verified",
-    "post_implementation_analysis": "not_run",
-    "post_implementation_simulation": "not_run",
-    "gameplay_validation": "not_recorded",
-    "performance_claim_status": "not_measured"
+    "post_implementation_analysis": {
+      "status": "not_run",
+      "source": null
+    },
+    "post_implementation_simulation": {
+      "status": "not_run",
+      "source": null
+    },
+    "gameplay_validation": {
+      "status": "not_recorded",
+      "source": null
+    },
+    "performance_claim": {
+      "status": "not_measured",
+      "sources": []
+    }
   },
   "expected_impacts": [
     "Expected to improve access to colored mana.",

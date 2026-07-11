@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The Myr Singularity implemented DeckVersion v1.1 from baseline v1.0. Implementation and traceability are verified; post-implementation outcomes are not measured.
+The Myr Singularity records DeckVersion v1.1 from baseline v1.0. Implementation evidence is verified; performance claims are not_measured.
 
 ## Project Identity
 
@@ -34,15 +34,20 @@ Baseline analysis `baseline_v1.0` examined DeckVersion `v1.0` structurally.
 
 ## Recommendation
 
-`rec-002` proposed external candidates for recorded mana, artifact-access, and engine pressure points.
+`rec-002`: External candidates were proposed to address recorded colored-mana, artifact access, and engine pressure points.
 
-## Product Owner Review
+## Candidate Dispositions
 
-Accepted for decision: cand-007, cand-008, cand-011.
+### accepted_for_decision
 
-Needs testing: cand-009, cand-010.
+- City of Brass and Mana Confluence: accepted_for_decision; implemented.
+- Urza's Saga: accepted_for_decision; implemented.
+- Tezzeret the Seeker: accepted_for_decision; implemented.
 
-The Product Owner review recorded disposition and did not directly modify the deck.
+### needs_testing
+
+- Krark-Clan Ironworks: needs_testing; not_implemented.
+- Mana Echoes: needs_testing; not_implemented.
 
 ## Decisions
 
@@ -59,6 +64,8 @@ The Product Owner review recorded disposition and did not directly modify the de
 implementation traceability and DeckVersion integrity are verified by existing validators.
 
 ## Exact Version Change
+
+The report records 4 additions and 4 removals.
 
 ### IN
 
@@ -78,15 +85,15 @@ Commander unchanged: true. Sideboard unchanged: true. Playable total: 100.
 
 ## Knowledge and Provenance State
 
-Implemented cards are present in canonical Card Facts and have canonical Functional Knowledge: City of Brass, Mana Confluence, Urza's Saga, Tezzeret the Seeker.
+Implemented cards in canonical Card Facts: City of Brass, Mana Confluence, Urza's Saga, Tezzeret the Seeker.
 
-Historical candidate provenance remains resolvable. Active needs-testing candidates: Krark-Clan Ironworks, Mana Echoes.
+Historical candidate provenance: resolvable.
 
 ## What Is Verified
 
 - Implementation result: verified
-- The recorded decisions, approved design, resulting DeckVersion, and current decklist align.
-- The exact four-card IN and four-card OUT delta is recorded above.
+- Current deck alignment: true
+- Resulting version is current: true
 
 ## What Is Expected but Not Yet Measured
 
@@ -95,12 +102,12 @@ Historical candidate provenance remains resolvable. Active needs-testing candida
 - Adds a repeatable artifact-untap capability.
 - Replaces the incomplete Tron package with independently functional lands.
 
-These are expected effects from the recorded design, not measured performance outcomes.
+## Evidence Status
 
-## Deferred Candidates
-
-- Krark-Clan Ironworks: needs_testing; not implemented.
-- Mana Echoes: needs_testing; not implemented.
+- Post-implementation analysis: not_run
+- Post-implementation simulation: not_run
+- Gameplay validation: not_recorded
+- Performance claim: not_measured
 
 ## Limitations
 
@@ -122,17 +129,16 @@ Immediate: Task 28 - Sprint 1 Final Certification.
 
 ## Structured Sources
 
-- project: workshop/projects/the-myr-singularity/project.json
-- brief: workshop/projects/the-myr-singularity/brief/brief.json
-- baseline_deck_version: workshop/projects/the-myr-singularity/versions/v1.0.json
-- resulting_deck_version: workshop/projects/the-myr-singularity/versions/v1.1.json
-- current_decklist: workshop/projects/the-myr-singularity/deck/current.txt
 - baseline_analysis: workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json
-- recommendation: workshop/projects/the-myr-singularity/recommendations/rec-002.json
-- product_owner_review: workshop/projects/the-myr-singularity/recommendations/review-rec-002.json
+- baseline_deck_version: workshop/projects/the-myr-singularity/versions/v1.0.json
+- brief: workshop/projects/the-myr-singularity/brief/brief.json
+- candidate_lifecycle_metadata: workshop/card-data/candidate_card_import_metadata.json
+- card_facts: workshop/card-data/cards.json
+- current_decklist: workshop/projects/the-myr-singularity/deck/current.txt
 - decisions: workshop/projects/the-myr-singularity/decisions/decision-002.json, workshop/projects/the-myr-singularity/decisions/decision-003.json, workshop/projects/the-myr-singularity/decisions/decision-004.json
 - deck_change_design: workshop/projects/the-myr-singularity/decisions/deck-change-design-v1.1.json
-- design_approval: workshop/projects/the-myr-singularity/decisions/deck-change-design-v1.1.json
-- card_facts: workshop/card-data/cards.json
 - functional_knowledge: workshop/knowledge/functional_roles.json
-- candidate_lifecycle_metadata: workshop/card-data/candidate_card_import_metadata.json
+- product_owner_review: workshop/projects/the-myr-singularity/recommendations/review-rec-002.json
+- project: workshop/projects/the-myr-singularity/project.json
+- recommendation: workshop/projects/the-myr-singularity/recommendations/rec-002.json
+- resulting_deck_version: workshop/projects/the-myr-singularity/versions/v1.1.json
