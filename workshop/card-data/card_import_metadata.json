@@ -68,7 +68,8 @@
   "notes": [
     "This file tracks canonical card facts imported from Scryfall only.",
     "It does not contain card knowledge, functional roles, tags, synergies, analysis, or recommendations.",
-    "Exact-name matching was used against Scryfall; unmatched names were not guessed or substituted."
+    "Exact-name matching was used against Scryfall; unmatched names were not guessed or substituted.",
+    "The canonical population includes four candidate intake records promoted after DeckVersion v1.1 implementation; their stable identities remain in the candidate intake manifest for historical references."
   ],
   "imported_at": "2026-07-08T21:41:07Z",
   "alias_resolution_investigation": {
@@ -178,6 +179,30 @@
       "set": "fca",
       "collector_number": "51",
       "applied_at": "2026-07-08T22:13:29Z"
+    }
+  ],
+  "canonical_card_facts_count": 110,
+  "promoted_candidate_card_count": 4,
+  "promoted_candidate_records": [
+    {
+      "scryfall_id": "c21565d0-fc40-4d89-9b27-87c03385e0af",
+      "card_name": "City of Brass",
+      "status": "promoted"
+    },
+    {
+      "scryfall_id": "504a69eb-3c2d-4bb1-b117-252b15acf0c2",
+      "card_name": "Mana Confluence",
+      "status": "promoted"
+    },
+    {
+      "scryfall_id": "c1e0f201-42cb-46a1-901a-65bb4fc18f6c",
+      "card_name": "Urza's Saga",
+      "status": "promoted"
+    },
+    {
+      "scryfall_id": "cf339735-eb1a-46f0-8c3e-eae06f278eca",
+      "card_name": "Tezzeret the Seeker",
+      "status": "promoted"
     }
   ]
 }

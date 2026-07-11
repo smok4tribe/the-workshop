@@ -26,11 +26,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "cards.json"
+CARD_IMPORT_METADATA_PATH = REPO_ROOT / "workshop" / "card-data" / "card_import_metadata.json"
+CANDIDATE_METADATA_PATH = REPO_ROOT / "workshop" / "card-data" / "candidate_card_import_metadata.json"
 TAXONOMY_PATH = REPO_ROOT / "workshop" / "knowledge" / "role_taxonomy.json"
 ASSIGNMENTS_PATH = REPO_ROOT / "workshop" / "knowledge" / "functional_roles.json"
-
-EXPECTED_CARD_COUNT = 106
-EXPECTED_ASSIGNMENT_COUNT = 106
 
 ALLOWED_CONFIDENCE_VALUES = {"low", "medium", "high"}
 ALLOWED_SOURCE_TYPES = {"human_curated", "taxonomy_inference", "project_override"}
@@ -96,16 +95,47 @@ def find_language(patterns, text):
     return None
 
 
+def promoted_record_mapping(records, label):
+    mapping = {}
+    errors = []
+    if not isinstance(records, list):
+        return mapping, [f"{label} must be an array"]
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            errors.append(f"{label}[{index}] must be an object")
+            continue
+        scryfall_id = record.get("scryfall_id")
+        card_name = record.get("card_name")
+        if not isinstance(scryfall_id, str) or not scryfall_id:
+            errors.append(f"{label}[{index}] is missing scryfall_id")
+            continue
+        if not isinstance(card_name, str) or not card_name:
+            errors.append(f"{label}[{index}] is missing card_name")
+            continue
+        if record.get("status") != "promoted":
+            errors.append(f"{label}[{index}] status must be 'promoted'")
+        if scryfall_id in mapping:
+            errors.append(f"duplicate promoted Scryfall ID {scryfall_id!r} in {label}")
+            continue
+        if card_name in mapping.values():
+            errors.append(f"duplicate promoted card name {card_name!r} in {label}")
+            continue
+        mapping[scryfall_id] = card_name
+    return mapping, errors
+
+
 def main():
     checks = []  # list of (description, list_of_error_strings)
 
     def check(description, errors):
         checks.append((description, errors))
 
-    # Checks 1-3: files parse as JSON.
+    # Checks 1-5: files parse as JSON.
     parsed = {}
     for label, path in (
         ("cards.json", CARDS_PATH),
+        ("card_import_metadata.json", CARD_IMPORT_METADATA_PATH),
+        ("candidate_card_import_metadata.json", CANDIDATE_METADATA_PATH),
         ("role_taxonomy.json", TAXONOMY_PATH),
         ("functional_roles.json", ASSIGNMENTS_PATH),
     ):
@@ -122,6 +152,8 @@ def main():
         return report(checks)
 
     cards_doc = parsed["cards.json"]
+    card_import_metadata = parsed["card_import_metadata.json"]
+    candidate_metadata = parsed["candidate_card_import_metadata.json"]
     taxonomy_doc = parsed["role_taxonomy.json"]
     assignments_doc = parsed["functional_roles.json"]
 
@@ -131,22 +163,51 @@ def main():
         role.get("role_id") for role in taxonomy_doc.get("roles", [])
     }
 
-    # Check 4: exact card count.
+    # Check 5: canonical facts count is metadata-driven.
     errors = []
-    if len(cards) != EXPECTED_CARD_COUNT:
-        errors.append(f"expected {EXPECTED_CARD_COUNT} card records, found {len(cards)}")
-    check(f"cards.json contains exactly {EXPECTED_CARD_COUNT} card records", errors)
+    expected_card_count = card_import_metadata.get("canonical_card_facts_count")
+    if not isinstance(expected_card_count, int) or isinstance(expected_card_count, bool):
+        errors.append("card_import_metadata.json is missing integer canonical_card_facts_count")
+    elif len(cards) != expected_card_count:
+        errors.append(f"expected {expected_card_count} card records, found {len(cards)}")
+    check("cards.json count matches canonical Card Facts metadata", errors)
 
-    # Check 5: exact assignment count.
+    # Check 6: every canonical fact has one assignment record.
     errors = []
-    if len(assignments) != EXPECTED_ASSIGNMENT_COUNT:
-        errors.append(
-            f"expected {EXPECTED_ASSIGNMENT_COUNT} assignment records, found {len(assignments)}"
-        )
-    check(
-        f"functional_roles.json contains exactly {EXPECTED_ASSIGNMENT_COUNT} assignment records",
-        errors,
+    if len(assignments) != len(cards):
+        errors.append(f"expected {len(cards)} assignment records, found {len(assignments)}")
+    check("functional-role assignment count matches canonical Card Facts", errors)
+
+    # Check 7: canonical promotion summary agrees with the lifecycle summary.
+    errors = []
+    candidate_records = candidate_metadata.get("promoted_candidate_records")
+    canonical_records = card_import_metadata.get("promoted_candidate_records")
+    candidate_mapping, mapping_errors = promoted_record_mapping(
+        candidate_records, "candidate promoted_candidate_records"
     )
+    errors.extend(mapping_errors)
+    canonical_mapping, mapping_errors = promoted_record_mapping(
+        canonical_records, "canonical promoted_candidate_records"
+    )
+    errors.extend(mapping_errors)
+    if candidate_metadata.get("promoted_candidate_card_count") != len(candidate_records or []):
+        errors.append("candidate promoted count does not match promoted_candidate_records")
+    if card_import_metadata.get("promoted_candidate_card_count") != len(canonical_records or []):
+        errors.append("canonical promoted count does not match promoted_candidate_records")
+    if candidate_mapping != canonical_mapping:
+        errors.append("canonical promotion metadata does not match candidate lifecycle metadata")
+    cards_by_id = {card.get("scryfall_id"): card for card in cards if card.get("scryfall_id")}
+    for scryfall_id, card_name in canonical_mapping.items():
+        canonical_card = cards_by_id.get(scryfall_id)
+        if not canonical_card:
+            errors.append(
+                f"canonical promotion metadata ID {scryfall_id!r} is not present in cards.json"
+            )
+        elif canonical_card.get("name") != card_name:
+            errors.append(
+                f"canonical promotion metadata name does not match cards.json for {scryfall_id!r}"
+            )
+    check("canonical promotion metadata agrees with candidate lifecycle metadata and Card Facts", errors)
 
     card_ids = {card.get("scryfall_id") for card in cards}
 

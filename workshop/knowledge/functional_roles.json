@@ -2879,6 +2879,115 @@
         "Oracle text says creatures entering do not cause abilities to trigger."
       ],
       "assigned_at": "2026-07-09T00:00:00Z"
+    },
+    {
+      "card_name": "City of Brass",
+      "canonical_card_name": "City of Brass",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "c21565d0-fc40-4d89-9b27-87c03385e0af"
+      },
+      "roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "primary_roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds one mana of any color."
+      ],
+      "assigned_at": "2026-07-11T00:00:00Z"
+    },
+    {
+      "card_name": "Mana Confluence",
+      "canonical_card_name": "Mana Confluence",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "504a69eb-3c2d-4bb1-b117-252b15acf0c2"
+      },
+      "roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "primary_roles": [
+        "colored_source",
+        "fixing_land"
+      ],
+      "secondary_roles": [],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is land and oracle text adds one mana of any color."
+      ],
+      "assigned_at": "2026-07-11T00:00:00Z"
+    },
+    {
+      "card_name": "Urza's Saga",
+      "canonical_card_name": "Urza's Saga",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "c1e0f201-42cb-46a1-901a-65bb4fc18f6c"
+      },
+      "roles": [
+        "artifact_tutor",
+        "token_producer",
+        "utility_land",
+        "colorless_source"
+      ],
+      "primary_roles": [
+        "artifact_tutor",
+        "token_producer"
+      ],
+      "secondary_roles": [
+        "utility_land",
+        "colorless_source"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "Card type is an enchantment land and chapter I grants an ability to add colorless mana.",
+        "Chapter II creates a colorless Construct artifact creature token.",
+        "Chapter III searches your library for an artifact card with mana cost 0 or 1 and puts it onto the battlefield."
+      ],
+      "assigned_at": "2026-07-11T00:00:00Z"
+    },
+    {
+      "card_name": "Tezzeret the Seeker",
+      "canonical_card_name": "Tezzeret the Seeker",
+      "card_source_ref": {
+        "source": "scryfall",
+        "id": "cf339735-eb1a-46f0-8c3e-eae06f278eca"
+      },
+      "roles": [
+        "artifact_tutor",
+        "tutor",
+        "tap_untap_engine",
+        "enabler"
+      ],
+      "primary_roles": [
+        "artifact_tutor",
+        "tap_untap_engine"
+      ],
+      "secondary_roles": [
+        "tutor",
+        "enabler"
+      ],
+      "confidence": "high",
+      "source_type": "human_curated",
+      "source_note": "First-pass human-curated functional role assignment from stored Scryfall card facts.",
+      "evidence": [
+        "The -X loyalty ability searches your library for an artifact card with mana value X or less and puts it onto the battlefield.",
+        "The +1 loyalty ability untaps up to two target artifacts."
+      ],
+      "assigned_at": "2026-07-11T00:00:00Z"
     }
   ]
 }

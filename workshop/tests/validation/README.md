@@ -57,9 +57,15 @@ It does not analyze decks or produce recommendations.
 
 ## Candidate Card Facts validation
 
-`validate_candidate_card_facts.py` checks the six-card Sprint 1 external intake,
-its Scryfall provenance, metadata counts, required canonical fields, unique
-identities, facts-only status, and non-actionable boundary.
+`validate_candidate_card_facts.py` checks the active Sprint 1 external intake,
+its stable intake manifest, promoted canonical identities, metadata counts,
+required canonical fields, unique identities, facts-only status, and
+non-actionable boundary.
+
+The candidate validator owns the active/promoted partition and the promoted
+name-to-ID mapping. The Knowledge validator owns the canonical metadata summary
+and verifies that it exactly agrees with the candidate lifecycle mapping and
+canonical Card Facts.
 
 It does not import, recommend, or implement cards.
 
@@ -164,5 +170,7 @@ The tests use isolated temporary repository copies. They prove that validation:
   promotion.
 - Accepts an approved sideboard replacement and rejects an unapproved sideboard
   quantity change.
+- Requires promoted candidate identities to exist in canonical facts, rejects
+  conflicting duplicate facts, and verifies canonical role-assignment coverage.
 
 No regression test mutates committed project data.

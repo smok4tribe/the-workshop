@@ -255,8 +255,10 @@ DeckVersion v1.1 implementation is complete and traceable through rec-002,
 Product Owner review, decisions, deck-change design, approval, and implementation
 (PRs #20-#27).
 
-- Final knowledge alignment and post-implementation reporting remain pending
-  before Sprint 1 end-to-end certification.
+- Canonical Card Facts and functional-role alignment for the four implemented
+  v1.1 incoming cards is complete.
+- Post-implementation reporting remains pending before Sprint 1 end-to-end
+  certification.
 - v1.1 is live: `deck/current.txt` and `versions/v1.1.json` agree
   (1 commander + 99 main + 7 sideboard, 34 lands).
 - Open threads: cand-009/cand-010 testing gate; dedicated
