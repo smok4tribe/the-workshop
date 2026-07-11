@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import shutil
@@ -406,6 +407,373 @@ class ValidationArchitectureRegressionTests(unittest.TestCase):
         result = self.run_validator("validate_candidate_card_facts.py")
 
         self.assert_validation_fails(result, "duplicate promoted Scryfall ID")
+
+    def test_project_report_positive_validation_passes(self):
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_report_invalid_resulting_version_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["resulting_deck_version_id"] = "v9.9"
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(result, "resulting DeckVersion 'v9.9' does not resolve")
+
+    def test_report_incorrect_delta_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["version_delta"]["added"].pop()
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(
+            result,
+            "report version delta does not match the derived parent-child DeckVersion diff",
+        )
+
+    def test_report_measured_outcome_claim_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["evidence_status"]["performance_claim"]["status"] = "measured"
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(
+            result,
+            "measured evidence 'performance_claim' requires a structured source",
+        )
+
+    def test_report_candidate_disposition_mismatch_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        item = next(
+            entry
+            for entry in report["candidate_dispositions"]
+            if entry["candidate_id"] == "cand-009"
+        )
+        item["implementation_status"] = "implemented"
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(
+            result,
+            "candidate disposition for 'cand-009' does not match derived implementation state",
+        )
+
+    def test_report_markdown_drift_fails(self):
+        markdown_path = self.project / "reports" / "project_report_v1.1.md"
+        markdown_path.write_text(
+            markdown_path.read_text(encoding="utf-8") + "\nManual drift.\n",
+            encoding="utf-8",
+        )
+
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(
+            result,
+            "committed Markdown differs from deterministic renderer output",
+        )
+
+    def regenerate_report(self, report_path):
+        renderer = self.repo / "workshop" / "scripts" / "render_project_report.py"
+        result = subprocess.run(
+            [sys.executable, str(renderer), str(report_path)],
+            cwd=self.repo,
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def renderer_module(self):
+        renderer = self.repo / "workshop" / "scripts" / "render_project_report.py"
+        spec = importlib.util.spec_from_file_location("report_renderer_test", renderer)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_report_missing_source_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["source_references"]["baseline_analysis"]["path"] = "missing.json"
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(result, "source 'baseline_analysis' does not exist")
+
+    def test_report_current_deck_divergence_fails(self):
+        current = self.project / "deck" / "current.txt"
+        current.write_text(
+            current.read_text(encoding="utf-8").replace("1 City of Brass", "1 Academy Ruins"),
+            encoding="utf-8",
+        )
+        result = self.run_validator("validate_project_reports.py")
+        self.assert_validation_fails(result, "current deck main_deck differs from report resulting DeckVersion")
+
+    def test_report_wrong_decision_attribution_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["version_delta"]["added"][0]["source_decision_id"] = "decision-003"
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+        result = self.run_validator("validate_project_reports.py")
+        self.assert_validation_fails(result, "has wrong decision attribution")
+
+    def test_report_decision_summary_drift_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["decision_summary"][0]["incoming_cards"][0] = "Academy Ruins"
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+        result = self.run_validator("validate_project_reports.py")
+        self.assert_validation_fails(result, "decision summary for 'decision-002' does not match source decision")
+
+    def test_report_existing_wrong_source_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["source_references"]["brief"]["path"] = (
+            "workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json"
+        )
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+        result = self.run_validator("validate_project_reports.py")
+        self.assert_validation_fails(result, "brief source identity does not match project")
+
+    def test_report_false_knowledge_alignment_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["knowledge_alignment"]["implemented_cards_in_canonical_facts"].append("Academy Ruins")
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+        result = self.run_validator("validate_project_reports.py")
+        self.assert_validation_fails(result, "implemented-card Knowledge set does not match derived additions")
+
+    def test_report_missing_knowledge_alignment_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["knowledge_alignment"]["implemented_cards_in_canonical_facts"].pop()
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+        result = self.run_validator("validate_project_reports.py")
+        self.assert_validation_fails(result, "implemented-card Knowledge set does not match derived additions")
+
+    def test_report_false_provenance_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["knowledge_alignment"]["historical_candidate_provenance"] = "unresolvable"
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+        result = self.run_validator("validate_project_reports.py")
+        self.assert_validation_fails(result, "historical candidate provenance claim does not match lifecycle state")
+
+    def test_report_candidate_ids_are_relationship_driven(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        recommendation_path = self.project / "recommendations" / "rec-002.json"
+        review_path = self.project / "recommendations" / "review-rec-002.json"
+        decision_path = self.project / "decisions" / "decision-002.json"
+        recommendation = self.load_json(recommendation_path)
+        review = self.load_json(review_path)
+        decision = self.load_json(decision_path)
+        report = self.load_json(report_path)
+        for candidate in recommendation["candidates"]:
+            if candidate["candidate_id"] == "cand-007":
+                candidate["candidate_id"] = "cand-107"
+        for entry in review["review_entries"]:
+            if entry["candidate_id"] == "cand-007":
+                entry["candidate_id"] = "cand-107"
+        decision["source_candidate_id"] = "cand-107"
+        for entry in report["candidate_dispositions"]:
+            if entry["candidate_id"] == "cand-007":
+                entry["candidate_id"] = "cand-107"
+        for entry in report["decision_summary"]:
+            if entry["decision_id"] == "decision-002":
+                entry["candidate_id"] = "cand-107"
+        self.write_json(recommendation_path, recommendation)
+        self.write_json(review_path, review)
+        self.write_json(decision_path, decision)
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+        result = self.run_validator("validate_project_reports.py")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_renderer_uses_dynamic_version_labels(self):
+        report = self.load_json(self.project / "reports" / "project_report_v1.1.json")
+        report["report_version"] = "v9.3"
+        report["baseline_deck_version_id"] = "v8.1"
+        report["resulting_deck_version_id"] = "v9.3"
+        rendered = self.renderer_module().render_report(report)
+        self.assertIn("## Baseline v8.1", rendered)
+        self.assertIn("## Implemented DeckVersion v9.3", rendered)
+        self.assertNotIn("## Baseline v1.0", rendered)
+
+    def test_renderer_uses_dynamic_delta_counts(self):
+        report = self.load_json(self.project / "reports" / "project_report_v1.1.json")
+        report["version_delta"]["added"] = report["version_delta"]["added"][:2]
+        report["version_delta"]["removed"] = report["version_delta"]["removed"][:1]
+        rendered = self.renderer_module().render_report(report)
+        self.assertIn("The report records 2 additions and 1 removals.", rendered)
+        self.assertNotIn("four-card", rendered)
+
+    def test_renderer_uses_dynamic_candidate_dispositions(self):
+        report = self.load_json(self.project / "reports" / "project_report_v1.1.json")
+        report["candidate_dispositions"] = [{
+            "candidate_id": "cand-example", "candidate_name": "Example Candidate",
+            "review_status": "deferred", "implementation_status": "not_implemented",
+            "source_decision_ids": [],
+        }]
+        rendered = self.renderer_module().render_report(report)
+        self.assertIn("Example Candidate: deferred; not_implemented.", rendered)
+        self.assertNotIn("Krark-Clan Ironworks: needs_testing", rendered)
+
+    def test_report_measured_evidence_with_valid_source_passes(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        evidence_path = self.project / "analysis" / "fixture-performance-evidence.json"
+        report = self.load_json(report_path)
+        self.write_json(evidence_path, {
+            "artifact_type": "post_implementation_evidence",
+            "evidence_kind": "performance_measurement",
+            "project_id": "the-myr-singularity",
+            "deck_version_id": "v1.1",
+        })
+        report["evidence_status"]["performance_claim"] = {
+            "status": "measured",
+            "sources": [{"path": "workshop/projects/the-myr-singularity/analysis/fixture-performance-evidence.json"}],
+        }
+        report["report_status"] = "implementation_verified_outcomes_measured"
+        self.write_json(report_path, report)
+        self.regenerate_report(report_path)
+        result = self.run_validator("validate_project_reports.py")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_report_referenced_card_facts_missing_implemented_card_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        alternate = self.repo / "workshop" / "card-data" / "alternate_cards.json"
+        cards = self.load_json(self.repo / "workshop" / "card-data" / "cards.json")
+        cards["cards"] = [card for card in cards["cards"] if card["name"] != "Tezzeret the Seeker"]
+        self.write_json(alternate, cards)
+        report = self.load_json(report_path)
+        report["source_references"]["card_facts"]["path"] = "workshop/card-data/alternate_cards.json"
+        self.write_json(report_path, report); self.regenerate_report(report_path)
+        self.assert_validation_fails(self.run_validator("validate_project_reports.py"), "implemented card 'tezzeret the seeker' lacks canonical facts")
+
+    def test_report_referenced_card_facts_wrong_identity_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        alternate = self.repo / "workshop" / "card-data" / "alternate_cards.json"
+        cards = self.load_json(self.repo / "workshop" / "card-data" / "cards.json")
+        next(card for card in cards["cards"] if card["name"] == "Tezzeret the Seeker")["scryfall_id"] = "00000000-0000-0000-0000-000000000000"
+        self.write_json(alternate, cards)
+        report = self.load_json(report_path)
+        report["source_references"]["card_facts"]["path"] = "workshop/card-data/alternate_cards.json"
+        self.write_json(report_path, report); self.regenerate_report(report_path)
+        self.assert_validation_fails(self.run_validator("validate_project_reports.py"), "has wrong referenced Card Facts identity")
+
+    def test_report_active_candidate_source_missing_needs_testing_card_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        alternate = self.repo / "workshop" / "card-data" / "alternate_candidates.json"
+        cards = self.load_json(self.repo / "workshop" / "card-data" / "candidate_cards.json")
+        cards["candidate_cards"] = cards["candidate_cards"][:1]
+        self.write_json(alternate, cards)
+        report = self.load_json(report_path)
+        report["source_references"]["active_candidate_facts"]["path"] = "workshop/card-data/alternate_candidates.json"
+        self.write_json(report_path, report); self.regenerate_report(report_path)
+        self.assert_validation_fails(self.run_validator("validate_project_reports.py"), "needs-testing candidate 'cand-010' is not an active candidate fact")
+
+    def test_report_active_candidate_source_promoted_overlap_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        alternate = self.repo / "workshop" / "card-data" / "alternate_candidates.json"
+        active = self.load_json(self.repo / "workshop" / "card-data" / "candidate_cards.json")
+        canonical = self.load_json(self.repo / "workshop" / "card-data" / "cards.json")
+        active["candidate_cards"].append(next(card for card in canonical["cards"] if card["name"] == "City of Brass"))
+        self.write_json(alternate, active)
+        report = self.load_json(report_path)
+        report["source_references"]["active_candidate_facts"]["path"] = "workshop/card-data/alternate_candidates.json"
+        self.write_json(report_path, report); self.regenerate_report(report_path)
+        self.assert_validation_fails(self.run_validator("validate_project_reports.py"), "active candidate facts overlap promoted lifecycle records")
+
+    def test_report_implementation_summary_claims_fail(self):
+        cases = [
+            ("design_id", "wrong-design", "implementation summary design_id does not match approved design"),
+            ("product_owner_approved", False, "implementation summary approval state does not match design"),
+            ("approval_by", "Invented", "implementation summary approver does not match design"),
+            ("parent_version_id", "v9.9", "implementation summary parent version does not match resulting DeckVersion"),
+            ("resulting_version_id", "v9.9", "implementation summary resulting version does not match sources"),
+            ("current_decklist_matches_resulting_version", False, "implementation summary current-deck alignment does not match exact parsed deck content"),
+        ]
+        for field, value, expected in cases:
+            with self.subTest(field=field):
+                report_path = self.project / "reports" / "project_report_v1.1.json"
+                report = self.load_json(report_path)
+                report["implementation_summary"][field] = value
+                self.write_json(report_path, report); self.regenerate_report(report_path)
+                self.assert_validation_fails(self.run_validator("validate_project_reports.py"), expected)
+                self.tearDown(); self.setUp()
+
+    def test_report_project_brief_baseline_claims_fail(self):
+        cases = [
+            (lambda report: report["project_identity"].update({"commander": "Wrong"}), "report project commander does not match project metadata"),
+            (lambda report: report["project_identity"].update({"format": "Legacy"}), "report project format does not match project metadata"),
+            (lambda report: report["project_identity"].update({"name": "Wrong"}), "report project name does not match project metadata"),
+            (lambda report: report["brief_summary"].update({"goals": ["Wrong"]}), "report brief goals do not match authoritative project goals"),
+            (lambda report: report["baseline_summary"].update({"analysis_id": "wrong"}), "report baseline analysis ID does not match source analysis"),
+            (lambda report: report["baseline_summary"].update({"deck_version_id": "wrong"}), "report baseline DeckVersion summary does not match source analysis"),
+        ]
+        for mutate, expected in cases:
+            with self.subTest(expected=expected):
+                report_path = self.project / "reports" / "project_report_v1.1.json"
+                report = self.load_json(report_path)
+                mutate(report)
+                self.write_json(report_path, report); self.regenerate_report(report_path)
+                self.assert_validation_fails(self.run_validator("validate_project_reports.py"), expected)
+                self.tearDown(); self.setUp()
+
+    def test_report_decision_rationale_is_source_derived(self):
+        for value in ("Wrong rationale", "Tournament wins prove this change."):
+            with self.subTest(value=value):
+                report_path = self.project / "reports" / "project_report_v1.1.json"
+                report = self.load_json(report_path)
+                report["decision_summary"][0]["source_rationale"] = value
+                self.write_json(report_path, report); self.regenerate_report(report_path)
+                self.assert_validation_fails(self.run_validator("validate_project_reports.py"), "decision summary for 'decision-002' does not match source decision")
+                self.tearDown(); self.setUp()
+
+    def test_report_contradictory_implementation_status_fails(self):
+        cases = [
+            ("implementation_not_verified", "verified"),
+            ("implementation_verified", "not_verified"),
+        ]
+        for validation_status, implementation_result in cases:
+            with self.subTest(
+                validation_status=validation_status,
+                implementation_result=implementation_result,
+            ):
+                report_path = self.project / "reports" / "project_report_v1.1.json"
+                report = self.load_json(report_path)
+                report["implementation_summary"]["validation_status"] = validation_status
+                report["evidence_status"]["implementation_result"] = implementation_result
+                self.write_json(report_path, report)
+                self.regenerate_report(report_path)
+
+                result = self.run_validator("validate_project_reports.py")
+
+                self.assert_validation_fails(
+                    result,
+                    "implementation summary validation_status does not agree with evidence implementation_result",
+                )
+                self.tearDown(); self.setUp()
 
 
 if __name__ == "__main__":

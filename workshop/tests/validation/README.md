@@ -13,6 +13,7 @@ checks. Every validator is read-only and uses only the Python standard library.
 | `validate_recommendation_review.py` | Product Owner candidate-review artifacts and review-state transitions only |
 | `validate_decision_pipeline.py` | Recommendation, review, decisions, deck-change design, and Product Owner approval |
 | `validate_deck_versions.py` | Current deck, parent/child DeckVersions, quantity-aware diffs, and implementation integrity |
+| `validate_project_reports.py` | Structured project reports, source traceability, exact DeckVersion deltas, evidence status, and deterministic Markdown |
 
 `validate_recommendation_review.py` intentionally does not validate decisions,
 designs, approval, implementation, DeckVersions, or `deck/current.txt`.
@@ -28,6 +29,7 @@ python workshop/tests/validation/validate_recommendation_schema.py
 python workshop/tests/validation/validate_recommendation_review.py
 python workshop/tests/validation/validate_decision_pipeline.py
 python workshop/tests/validation/validate_deck_versions.py
+python workshop/tests/validation/validate_project_reports.py
 ```
 
 The recommendation validator defaults to `rec-001`. Validate `rec-002` in
@@ -151,6 +153,44 @@ Card names use deterministic Unicode NFKC, whitespace, and case normalization
 for comparisons. Card Facts aliases are used only to identify singleton
 exceptions such as basic lands.
 
+## Project report validation
+
+`workshop/scripts/render_project_report.py` renders each committed
+`project_report_v*.json` document to its same-name Markdown file. The renderer
+is deterministic: a clean render must leave the committed Markdown unchanged.
+
+`validate_project_reports.py` discovers reports under project metadata rather
+than assuming a particular project. `WORKSHOP_PROJECT_ID` may focus validation
+on one project. It validates each referenced source by identity and relationship,
+parses the referenced current decklist using the DeckVersion parser, compares all
+three zones and quantities with the resulting version, and derives the exact
+parent/child delta.
+
+The report validator also verifies per-card decision attribution, decision
+summaries, source-derived candidate dispositions, canonical Card Facts,
+Functional Knowledge, and retained candidate provenance. Evidence entries use a
+generic status/source model: unmeasured states have no evidence source, while
+completed, validated, or measured states must resolve to matching structured
+post-implementation evidence. It verifies implementation and traceability only;
+it does not certify Sprint 1.
+
+The renderer uses only report JSON. Version headings, delta counts, candidate
+groups, evidence status, and next actions are all data-driven and deterministic.
+
+| Source | Authoritative for |
+| --- | --- |
+| project | exact project identity and current version |
+| brief | project relationship and commander consistency |
+| baseline/resulting DeckVersions | parent and implemented state |
+| current decklist | live zone-aware deck representation |
+| baseline analysis | baseline IDs and findings context |
+| recommendation and review | candidate definitions and Product Owner dispositions |
+| decisions and deck-change design | implemented lineage, approval, and recorded rationale |
+| card facts | canonical identities of implemented cards |
+| active candidate facts | active external candidates still under review |
+| functional knowledge | canonical role assignments |
+| lifecycle metadata | intake and promoted provenance partition |
+
 ## Regression tests
 
 Run the committed mutation suite with:
@@ -172,5 +212,13 @@ The tests use isolated temporary repository copies. They prove that validation:
   quantity change.
 - Requires promoted candidate identities to exist in canonical facts, rejects
   conflicting duplicate facts, and verifies canonical role-assignment coverage.
+- Rejects invalid report DeckVersion references, incorrect reported deltas,
+  measured-outcome claims without evidence, candidate disposition drift,
+  Markdown drift, and missing required source artifacts.
+- Rejects current-deck divergence, false decision attribution, decision-summary
+  drift, wrong existing source types, false Knowledge/provenance claims, and
+  missing implemented Knowledge cards.
+- Proves relationship-driven candidate IDs, dynamic renderer labels/counts/
+  candidate groups, and valid future evidence references in isolated fixtures.
 
 No regression test mutates committed project data.

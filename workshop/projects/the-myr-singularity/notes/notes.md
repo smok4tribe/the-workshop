@@ -257,9 +257,11 @@ Product Owner review, decisions, deck-change design, approval, and implementatio
 
 - Canonical Card Facts and functional-role alignment for the four implemented
   v1.1 incoming cards is complete.
-- Post-implementation reporting remains pending before Sprint 1 end-to-end
-  certification.
+- The v1.1 structured and readable post-implementation project report is complete.
+- Implementation, traceability, validator reliability, canonical Knowledge alignment,
+  and report completeness are ready for final Sprint 1 certification review.
+- Sprint 1 is not yet declared certified; Task 28 remains pending.
 - v1.1 is live: `deck/current.txt` and `versions/v1.1.json` agree
   (1 commander + 99 main + 7 sideboard, 34 lands).
-- Open threads: cand-009/cand-010 testing gate; dedicated
-  post-implementation report/validation for v1.1 is the next task.
+- Open threads: cand-009/cand-010 testing gate; Task 28 final certification is the
+  next task.
