@@ -15,6 +15,7 @@ Main Deck
 1 Bridge of Khazad-dûm
 1 Buried Ruin
 1 Cascading Cataracts
+1 City of Brass
 1 Clock of Omens
 1 Cloud Key
 1 Command Tower
@@ -43,6 +44,7 @@ Main Deck
 1 Jhoira, Weatherlight Captain
 1 Kuldotha Forgemaster
 1 Lightning Greaves
+1 Mana Confluence
 1 Moonsnare Prototype
 1 Mountain
 1 Muddle the Mixture
@@ -52,7 +54,6 @@ Main Deck
 1 Myr Retriever
 1 Myr Welder
 1 Mystic Forge
-1 Nevinyrral's Disk
 1 Organic Extinction
 1 Palladium Myr
 1 Plague Myr
@@ -84,6 +85,7 @@ Main Deck
 1 Tarnished Citadel
 1 Tezzeret, Cruel Captain
 1 Tezzeret, Master of the Bridge
+1 Tezzeret the Seeker
 1 The Mycosynth Gardens
 1 Thoughtcast
 1 Three Tree City
@@ -94,9 +96,7 @@ Main Deck
 1 Urza, Lord High Artificer
 1 Urza's Cave
 1 Urza's Incubator
-1 Urza's Mine
-1 Urza's Power Plant
-1 Urza's Tower
+1 Urza's Saga
 1 Vault of Whispers
 1 Walking Ballista
 1 Whir of Invention

@@ -339,25 +339,41 @@ modified.
     `explicit_boundary` that says no deck change is authorized, and a
     `source_candidate_id` that is `accepted_for_decision` in
     review-rec-002 (never a `needs_testing` candidate);
-  - a non-authorizing pre-version design artifact (`design_type:
-    "pre_version_deck_change_design"`) with `deck_change_authorized`,
-    `deck_change_implemented`, and `creates_new_deck_version` all false
-    and `source_decision_ids` that resolve to existing decision files, in
-    one of two states:
+  - an implemented decision record (`decision_status:
+    "implemented_as_v1.1"`): `deck_change_authorized`,
+    `deck_change_implemented`, and `creates_new_deck_version` all true,
+    `target_deck_version` and `implemented_in_version` both `"v1.1"`,
+    `implementation_source: "deck-change-design-v1.1"`,
+    `required_next_step: "post_implementation_validation_or_report"`,
+    an `explicit_boundary` stating the decision was implemented as v1.1,
+    and a `source_candidate_id` that is `accepted_for_decision` in
+    review-rec-002 (never a `needs_testing` candidate);
+  - a pre-version design artifact (`design_type:
+    "pre_version_deck_change_design"`) with `source_decision_ids` that
+    resolve to existing decision files, in one of three states:
     - proposed: `design_status: "proposed_for_product_owner_review"`,
-      `product_owner_review_required: true`, `required_next_step:
-      "product_owner_approval_before_v1.1"`, and an `explicit_boundary`
-      that says no deck change is authorized;
+      non-authorizing flags all false, `product_owner_review_required:
+      true`, `required_next_step: "product_owner_approval_before_v1.1"`,
+      and an `explicit_boundary` that says no deck change is authorized;
     - approved: `design_status: "product_owner_approved"`,
-      `product_owner_approved: true`, `product_owner_approval_required:
-      false`, `required_next_step: "create_deck_version_v1.1"`, and an
-      `explicit_boundary` stating the design is approved but not
-      implemented. Approval never implements anything: only a future
-      task creates v1.1.
+      non-authorizing flags all false, `product_owner_approved: true`,
+      `product_owner_approval_required: false`, `required_next_step:
+      "create_deck_version_v1.1"`, and an `explicit_boundary` stating
+      the design is approved but not implemented;
+    - implemented: `design_status: "implemented_as_v1.1"`,
+      `deck_change_authorized`, `deck_change_implemented`, and
+      `creates_new_deck_version` all true, `product_owner_approved:
+      true`, `implemented_version_id: "v1.1"`, `required_next_step:
+      "post_implementation_validation_or_report"`, and an
+      `explicit_boundary` stating the design was implemented as v1.1.
     Design artifacts may propose outgoing cuts — proposing is not
-    authorizing.
-- No deck version file beyond `v1.0.json` is populated: review states
-  never create v1.1.
+    authorizing; only the implemented state records an executed change.
+- Deck version files beyond `v1.0.json` are either empty placeholders or
+  implemented-design outcomes: a populated version file must be recorded
+  as an implemented design's `implemented_version_id` and must be
+  structurally sound (matching `version_id`, `parent_version_id:
+  "v1.0"`, `version_status: "implemented"`, exactly 1 commander, 99
+  main-deck entries, and 7 sideboard entries).
 - rec-002 candidate records remain unmodified: every candidate stays
   `proposed`, `is_actionable: false`, `user_decision: null`, and
   `decision_id: null` regardless of review states.

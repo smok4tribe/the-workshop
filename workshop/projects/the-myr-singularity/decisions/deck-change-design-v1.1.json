@@ -8,7 +8,7 @@
   ],
   "source_recommendation_id": "rec-002",
   "source_review_file": "workshop/projects/the-myr-singularity/recommendations/review-rec-002.json",
-  "design_status": "product_owner_approved",
+  "design_status": "implemented_as_v1.1",
   "target_future_version": "v1.1",
   "created_at": "2026-07-10T20:13:16Z",
   "created_by": "Claude",
@@ -17,9 +17,9 @@
   "approved_at": "2026-07-10T20:28:30Z",
   "approval_rationale": "The Product Owner approves the design because it directly addresses colored mana consistency, removes the low-consistency Tron package, adds artifact-aligned utility and tutoring, preserves Myr identity, keeps Walking Ballista, keeps land count stable, and removes the most self-destructive board wipe rather than cutting core engine/ramp pieces.",
   "design_type": "pre_version_deck_change_design",
-  "deck_change_authorized": false,
-  "deck_change_implemented": false,
-  "creates_new_deck_version": false,
+  "deck_change_authorized": true,
+  "deck_change_implemented": true,
+  "creates_new_deck_version": true,
   "incoming_cards": [
     {
       "name": "City of Brass",
@@ -146,14 +146,21 @@
     "Does Prismatic Lens remain worth its slot after land-level fixing improves (a possible future v1.2 review, not part of this design)?"
   ],
   "product_owner_approval_required": false,
-  "required_next_step": "create_deck_version_v1.1",
+  "required_next_step": "post_implementation_validation_or_report",
   "explicit_boundary": {
-    "statement": "This design has Product Owner approval, but the deck change is approved and not implemented. This artifact still does not modify the deck: no deck change is implemented in this task. deck/current.txt remains unchanged. versions/v1.1.json remains an empty, unpopulated placeholder. A future task must create DeckVersion v1.1 before any implementation exists. This design does not mark any decision as implemented, does not mark any recommendation candidate as accepted or implemented, and does not promote candidate card facts into deck card facts.",
+    "statement": "This design has now been implemented as DeckVersion v1.1. deck/current.txt reflects v1.1 and versions/v1.1.json records the implemented version. Card Facts were not manually authored: incoming cards remain referenced through candidate Card Facts. cand-009 (Krark-Clan Ironworks) and cand-010 (Mana Echoes) remain needs_testing and untouched. rec-002 and review-rec-002 remain unchanged as historical artifacts.",
     "product_owner_approved": true,
-    "deck_change_authorized": false,
-    "deck_change_implemented": false,
-    "new_deck_version_created": false,
-    "decisions_marked_implemented": false,
-    "candidates_marked_implemented": false
-  }
+    "deck_change_authorized": true,
+    "deck_change_implemented": true,
+    "new_deck_version_created": true,
+    "implemented_version_id": "v1.1",
+    "card_facts_manually_authored": false,
+    "needs_testing_candidates_untouched": [
+      "cand-009",
+      "cand-010"
+    ]
+  },
+  "implemented_version_id": "v1.1",
+  "implemented_at": "2026-07-10T21:32:00Z",
+  "implementation_commit_pending": true
 }
