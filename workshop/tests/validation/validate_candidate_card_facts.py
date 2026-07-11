@@ -162,7 +162,24 @@ def main():
         seen_ids.add(scryfall_id)
     check("no duplicate Scryfall IDs", errors)
 
-    # Check 12: no candidate card already exists in deck Card Facts.
+    # Check 12: the stable intake manifest covers every active candidate identity.
+    errors = []
+    intake_ids = metadata.get("candidate_intake_scryfall_ids")
+    if not isinstance(intake_ids, list) or not all(isinstance(value, str) and value for value in intake_ids):
+        errors.append("candidate_intake_scryfall_ids must be an array of non-empty strings")
+        intake_ids = []
+    if len(intake_ids) != len(set(intake_ids)):
+        errors.append("candidate_intake_scryfall_ids contains duplicate Scryfall IDs")
+    active_ids = {record.get("scryfall_id") for record in records if record.get("scryfall_id")}
+    missing_active_ids = sorted(active_ids - set(intake_ids))
+    if missing_active_ids:
+        errors.append(
+            "candidate_intake_scryfall_ids is missing active candidate IDs: "
+            f"{missing_active_ids}"
+        )
+    check("candidate intake manifest preserves active candidate identities", errors)
+
+    # Check 13: no candidate card already exists in deck Card Facts.
     errors = []
     deck_cards = load_json(DECK_CARDS_PATH).get("cards", [])
     deck_ids = {card.get("scryfall_id") for card in deck_cards if card.get("scryfall_id")}
@@ -174,14 +191,14 @@ def main():
             errors.append(f"{record.get('name')} already exists in cards.json by exact name")
     check("candidate cards do not already exist in deck Card Facts", errors)
 
-    # Check 13: recommendation_status is facts_only for every record.
+    # Check 14: recommendation_status is facts_only for every record.
     errors = []
     for record in records:
         if record.get("recommendation_status") != "facts_only":
             errors.append(f"{record.get('name', '<unknown>')} recommendation_status is not 'facts_only'")
     check("recommendation_status is facts_only for every record", errors)
 
-    # Check 14: no recommendation/actionable language appears in facts or metadata.
+    # Check 15: no recommendation/actionable language appears in facts or metadata.
     errors = []
     combined_text = json.dumps(candidate_doc, ensure_ascii=False) + "\n" + json.dumps(metadata, ensure_ascii=False)
     for pattern in FORBIDDEN_LANGUAGE_PATTERNS:
@@ -190,7 +207,7 @@ def main():
             errors.append(f"forbidden language found: {match.group(0)!r}")
     check("no recommendation/actionable language appears in candidate facts or metadata", errors)
 
-    # Check 15: validator is read-only by design.
+    # Check 16: validator is read-only by design.
     errors = []
     for path in (CANDIDATE_CARDS_PATH, CANDIDATE_METADATA_PATH, DECK_CARDS_PATH):
         if not path.is_file():

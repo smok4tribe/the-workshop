@@ -14,6 +14,15 @@
     "Mana Echoes",
     "Tezzeret the Seeker"
   ],
+  "candidate_intake_scryfall_ids": [
+    "c21565d0-fc40-4d89-9b27-87c03385e0af",
+    "504a69eb-3c2d-4bb1-b117-252b15acf0c2",
+    "c1e0f201-42cb-46a1-901a-65bb4fc18f6c",
+    "c60174d6-1f9d-4870-b3db-34d6fcb3f6ab",
+    "bd079929-fa58-4484-91b7-31305b87ee43",
+    "cf339735-eb1a-46f0-8c3e-eae06f278eca"
+  ],
+  "candidate_intake_provenance": "Stable intake manifest for candidate:scryfall references. An ID remains in this manifest after its facts record is promoted to cards.json, preserving only known candidate history.",
   "boundary_statement": "These records are Card Facts only. No recommendations are created, no deck changes are authorized, and future recommendation candidates may reference these facts only after validator support exists.",
   "exact_scryfall_lookup_method_used": {
     "endpoint": "https://api.scryfall.com/cards/named",

@@ -4,6 +4,7 @@
   "format": "Commander",
   "commander": "Urtet, Remnant of Memnarch",
   "sprint": "Sprint 1",
+  "current_version_id": "v1.1",
   "local_first": true,
   "identity": {
     "summary": "An artifact combo-control engine disguised as a Myr tribal deck.",
