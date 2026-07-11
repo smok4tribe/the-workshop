@@ -44,6 +44,7 @@ REC_MD_PATH = Path(
 )
 CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "cards.json"
 CANDIDATE_CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "candidate_cards.json"
+CANDIDATE_METADATA_PATH = REPO_ROOT / "workshop" / "card-data" / "candidate_card_import_metadata.json"
 ROLES_PATH = REPO_ROOT / "workshop" / "knowledge" / "role_taxonomy.json"
 PROJECT_PATH = PROJECT_DIR / "project.json"
 BRIEF_PATH = PROJECT_DIR / "brief" / "brief.json"
@@ -221,6 +222,29 @@ def index_cards_by_id(cards, store_name):
     return indexed, errors
 
 
+def load_candidate_intake_ids():
+    try:
+        metadata = load_json(CANDIDATE_METADATA_PATH)
+    except (OSError, json.JSONDecodeError) as exc:
+        return set(), [f"candidate intake metadata cannot be loaded: {exc}"]
+
+    values = metadata.get("candidate_intake_scryfall_ids")
+    if not isinstance(values, list):
+        return set(), ["candidate intake metadata is missing candidate_intake_scryfall_ids"]
+
+    intake_ids = set()
+    errors = []
+    for index, value in enumerate(values):
+        if not isinstance(value, str) or not value:
+            errors.append(f"candidate intake manifest entry {index} is not a non-empty Scryfall ID")
+            continue
+        if value in intake_ids:
+            errors.append(f"duplicate Scryfall ID {value!r} in candidate intake manifest")
+            continue
+        intake_ids.add(value)
+    return intake_ids, errors
+
+
 def load_playable_deck_scryfall_ids(deck_cards_by_name):
     errors = []
     version = load_json(DECK_VERSION_PATH)
@@ -280,6 +304,7 @@ def load_reference_sets():
     candidate_cards_by_id, candidate_index_errors = index_cards_by_id(
         candidate_cards, "candidate_cards.json"
     )
+    candidate_intake_ids, provenance_errors = load_candidate_intake_ids()
 
     lifecycle_errors = []
     for scryfall_id in sorted(set(deck_cards_by_id) & set(candidate_cards_by_id)):
@@ -316,11 +341,13 @@ def load_reference_sets():
     return {
         "deck_cards_by_id": deck_cards_by_id,
         "candidate_cards_by_id": candidate_cards_by_id,
+        "candidate_intake_ids": candidate_intake_ids,
         "playable_deck_scryfall_ids": playable_ids,
         "commander_color_identity": commander_colors,
         "setup_errors": (
             deck_index_errors
             + candidate_index_errors
+            + provenance_errors
             + lifecycle_errors
             + playable_errors
             + commander_errors
@@ -368,7 +395,12 @@ def resolve_card_ref(card_ref, recommendation_set_id, references):
         canonical_card = references["deck_cards_by_id"].get(scryfall_id)
         if not staged_card and not canonical_card:
             errors.append(
-                "candidate reference not found in candidate or canonical Card Facts: "
+                "candidate reference not found in candidate Card Facts or historical provenance: "
+                f"{card_ref!r}"
+            )
+        if canonical_card and not staged_card and scryfall_id not in references["candidate_intake_ids"]:
+            errors.append(
+                "candidate reference has no candidate intake provenance: "
                 f"{card_ref!r}"
             )
         if staged_card and staged_card.get("recommendation_status") != "facts_only":
@@ -378,9 +410,8 @@ def resolve_card_ref(card_ref, recommendation_set_id, references):
                 errors.append(f"candidate reference resolves to conflicting Card Facts: {card_ref!r}")
         if errors:
             return None, errors
-        # The Scryfall ID is the stable identity. A historical candidate reference
-        # remains valid after the facts record moves from staging to canonical data.
-        card = canonical_card or staged_card
+        # Canonical fallback is allowed only for a known candidate intake identity.
+        card = staged_card or canonical_card
         return {"kind": kind, "scryfall_id": scryfall_id, "card": card}, []
 
     return None, [f"unsupported card reference grammar: {card_ref!r}"]

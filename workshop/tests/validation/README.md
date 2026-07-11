@@ -69,10 +69,12 @@ It does not import, recommend, or implement cards.
 candidate lifecycle fields, evidence, project traceability, qualified card
 references, Commander legality, color identity, and non-actionable boundaries.
 
-Card references use Scryfall IDs as stable identity. A historical
-`candidate:scryfall:<id>` reference resolves from candidate staging or canonical
-Card Facts after promotion. If both stores contain the ID, their canonical facts
-must agree; conflicting or duplicate identities fail validation. Moving a facts
+Card references use Scryfall IDs as stable identity. A
+`candidate:scryfall:<id>` reference resolves from active candidate staging, or
+from canonical Card Facts only when the ID is retained in the candidate intake
+manifest after promotion. An arbitrary canonical-only ID is not a candidate
+reference. If both stores contain the ID, their canonical facts must agree;
+conflicting or duplicate identities fail validation. Moving a known intake facts
 record between lifecycle stores therefore does not invalidate history.
 
 Legacy bare `scryfall:<id>` references remain limited to `rec-001`.
@@ -130,10 +132,12 @@ Checks include:
 - Quantities are positive integers and singleton rules are quantity-aware.
 - The commander is not duplicated in the main deck.
 - `deck/current.txt` exactly matches the resolved current DeckVersion.
+- Parent/child additions and removals are matched by commander, main-deck, and
+  sideboard zones, with quantities preserved in every zone.
 - Sideboard names and quantities remain unchanged without an approved
-  sideboard change.
-- The exact quantity-aware parent/child diff matches the design, decisions, and
-  DeckVersion change metadata.
+  sideboard change; approved sideboard additions and removals must match exactly.
+- The exact zone-aware, quantity-aware parent/child diff matches the design,
+  decisions, and DeckVersion change metadata.
 - Unapproved candidate changes are absent.
 - Cards outside the approved diff remain unchanged.
 
@@ -155,7 +159,10 @@ The tests use isolated temporary repository copies. They prove that validation:
 - Rejects quantity-only main-deck corruption.
 - Rejects a same-count sideboard replacement.
 - Rejects a `needs_testing` candidate inserted into the design.
+- Rejects a canonical-only ID masquerading as a candidate reference.
 - Preserves historical candidate references after canonical Card Facts
   promotion.
+- Accepts an approved sideboard replacement and rejects an unapproved sideboard
+  quantity change.
 
 No regression test mutates committed project data.

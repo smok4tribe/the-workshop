@@ -19,6 +19,7 @@ DECISIONS_DIR = PROJECT_DIR / "decisions"
 RECOMMENDATIONS_DIR = PROJECT_DIR / "recommendations"
 CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "cards.json"
 CANDIDATE_CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "candidate_cards.json"
+CANDIDATE_METADATA_PATH = REPO_ROOT / "workshop" / "card-data" / "candidate_card_import_metadata.json"
 
 ALLOWED_REVIEW_STATUSES = {
     "under_review",
@@ -47,35 +48,72 @@ def card_signature(card):
     return {field: card.get(field) for field in fields}
 
 
+def index_cards_by_id(records, store_name):
+    indexed = {}
+    errors = []
+    for card in records:
+        scryfall_id = card.get("scryfall_id")
+        if not scryfall_id:
+            continue
+        if scryfall_id in indexed:
+            errors.append(f"duplicate Scryfall ID {scryfall_id!r} in {store_name}")
+            continue
+        indexed[scryfall_id] = card
+    return indexed, errors
+
+
+def load_candidate_intake_ids():
+    try:
+        metadata = load_json(CANDIDATE_METADATA_PATH)
+    except (OSError, json.JSONDecodeError) as exc:
+        return set(), [f"candidate intake metadata cannot be loaded: {exc}"]
+    values = metadata.get("candidate_intake_scryfall_ids")
+    if not isinstance(values, list):
+        return set(), ["candidate intake metadata is missing candidate_intake_scryfall_ids"]
+    intake_ids = set()
+    errors = []
+    for index, value in enumerate(values):
+        if not isinstance(value, str) or not value:
+            errors.append(f"candidate intake manifest entry {index} is not a non-empty Scryfall ID")
+        elif value in intake_ids:
+            errors.append(f"duplicate Scryfall ID {value!r} in candidate intake manifest")
+        else:
+            intake_ids.add(value)
+    return intake_ids, errors
+
+
 def load_card_identity_index():
     canonical = load_json(CARDS_PATH).get("cards", [])
     staged = load_json(CANDIDATE_CARDS_PATH).get("candidate_cards", [])
-    by_id = {}
-    errors = []
-    for store_name, records in (("cards.json", canonical), ("candidate_cards.json", staged)):
-        for card in records:
-            scryfall_id = card.get("scryfall_id")
-            if not scryfall_id:
-                continue
-            previous = by_id.get(scryfall_id)
-            if previous and card_signature(previous) != card_signature(card):
-                errors.append(
-                    f"Scryfall ID {scryfall_id!r} has conflicting facts across Card Facts stores"
-                )
-            elif previous and previous.get("_store") == store_name:
-                errors.append(f"duplicate Scryfall ID {scryfall_id!r} in {store_name}")
-            else:
-                indexed = dict(card)
-                indexed["_store"] = store_name
-                by_id[scryfall_id] = indexed
-    return by_id, errors
+    canonical_by_id, canonical_errors = index_cards_by_id(canonical, "cards.json")
+    candidate_by_id, candidate_errors = index_cards_by_id(staged, "candidate_cards.json")
+    intake_ids, provenance_errors = load_candidate_intake_ids()
+    errors = canonical_errors + candidate_errors + provenance_errors
+    for scryfall_id in sorted(set(canonical_by_id) & set(candidate_by_id)):
+        if card_signature(canonical_by_id[scryfall_id]) != card_signature(candidate_by_id[scryfall_id]):
+            errors.append(
+                f"Scryfall ID {scryfall_id!r} has conflicting facts across Card Facts stores"
+            )
+    return {
+        "canonical_by_id": canonical_by_id,
+        "candidate_by_id": candidate_by_id,
+        "candidate_intake_ids": intake_ids,
+    }, errors
 
 
-def resolve_card_reference(card_ref, cards_by_id):
-    match = re.fullmatch(r"(?:candidate|deck):scryfall:([0-9a-f-]+)", str(card_ref))
+def resolve_card_reference(card_ref, references):
+    match = re.fullmatch(r"(candidate|deck):scryfall:([0-9a-f-]+)", str(card_ref))
     if not match:
         return None
-    return cards_by_id.get(match.group(1))
+    kind, scryfall_id = match.groups()
+    if kind == "deck":
+        return references["canonical_by_id"].get(scryfall_id)
+    staged_card = references["candidate_by_id"].get(scryfall_id)
+    if staged_card:
+        return staged_card
+    if scryfall_id in references["candidate_intake_ids"]:
+        return references["canonical_by_id"].get(scryfall_id)
+    return None
 
 
 def report(checks):
@@ -133,7 +171,7 @@ def main():
         errors.append("no deck-change design artifact exists")
     check("decision and design artifacts parse with unique IDs", errors)
 
-    cards_by_id, card_errors = load_card_identity_index()
+    card_references, card_errors = load_card_identity_index()
     check("Card Facts identities used by the pipeline are unambiguous", card_errors)
 
     for design_path, design in designs:
@@ -285,7 +323,7 @@ def main():
             candidate = candidates.get(candidate_id) or {}
             candidate_names = []
             for card_ref in candidate.get("incoming_cards", []):
-                card = resolve_card_reference(card_ref, cards_by_id)
+                card = resolve_card_reference(card_ref, card_references)
                 if not card:
                     errors.append(f"{candidate_id} incoming reference cannot be resolved: {card_ref!r}")
                 else:

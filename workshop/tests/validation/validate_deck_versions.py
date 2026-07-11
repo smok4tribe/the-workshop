@@ -21,6 +21,15 @@ RECOMMENDATIONS_DIR = PROJECT_DIR / "recommendations"
 CURRENT_DECK_PATH = PROJECT_DIR / "deck" / "current.txt"
 CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "cards.json"
 CANDIDATE_CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "candidate_cards.json"
+DECK_ZONES = ("commander", "main_deck", "sideboard")
+SLOT_TO_ZONE = {
+    "commander": "commander",
+    "main": "main_deck",
+    "main_deck": "main_deck",
+    "land": "main_deck",
+    "nonland": "main_deck",
+    "sideboard": "sideboard",
+}
 
 
 def load_json(path):
@@ -75,7 +84,7 @@ def parse_current_deck(path):
         "sideboard:": "sideboard",
         "sideboard": "sideboard",
     }
-    counters = {section: Counter() for section in ("commander", "main_deck", "sideboard")}
+    counters = {section: Counter() for section in DECK_ZONES}
     errors = []
     section = None
     for line_number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
@@ -130,6 +139,44 @@ def item_counter(items):
             continue
         result[normalize_name(item["name"])] += quantity
     return result, errors
+
+
+def design_change_zone(item, direction):
+    zone_field = "target_zone" if direction == "incoming" else "source_zone"
+    raw_zone = item.get(zone_field, item.get("slot"))
+    zone = SLOT_TO_ZONE.get(raw_zone)
+    if not zone:
+        return None, (
+            f"change item {item.get('name')!r} has unsupported {zone_field}/slot "
+            f"value {raw_zone!r}"
+        )
+    return zone, None
+
+
+def zoned_item_counters(items, direction):
+    counters = {zone: Counter() for zone in DECK_ZONES}
+    errors = []
+    for index, item in enumerate(items or []):
+        if not isinstance(item, dict) or not item.get("name"):
+            errors.append(f"change item {index} is missing a card name")
+            continue
+        quantity = item.get("quantity", 1)
+        if not valid_quantity(quantity):
+            errors.append(f"change item {item.get('name')!r} has invalid quantity {quantity!r}")
+            continue
+        zone, zone_error = design_change_zone(item, direction)
+        if zone_error:
+            errors.append(zone_error)
+            continue
+        counters[zone][normalize_name(item["name"])] += quantity
+    return counters, errors
+
+
+def flatten_zone_counters(counters):
+    flattened = Counter()
+    for counter in counters.values():
+        flattened += counter
+    return flattened
 
 
 def report(checks):
@@ -264,36 +311,45 @@ def main():
         errors.append("approved design lacks Product Owner approval")
     check("current DeckVersion resolves to an approved implemented design", errors)
 
-    expected_added, errors = item_counter(design.get("incoming_cards"))
-    expected_removed, item_errors = item_counter(design.get("proposed_outgoing_cards"))
+    expected_added_by_zone, errors = zoned_item_counters(design.get("incoming_cards"), "incoming")
+    expected_removed_by_zone, item_errors = zoned_item_counters(
+        design.get("proposed_outgoing_cards"), "outgoing"
+    )
     errors.extend(item_errors)
-    parent_playable = parent_counters["commander"] + parent_counters["main_deck"]
-    child_playable = current_counters["commander"] + current_counters["main_deck"]
-    actual_added = child_playable - parent_playable
-    actual_removed = parent_playable - child_playable
-    if actual_added != expected_added:
-        errors.append(
-            f"parent-child additions do not exactly match approved incoming changes: "
-            f"actual={dict(actual_added)}, expected={dict(expected_added)}"
-        )
-    if actual_removed != expected_removed:
-        errors.append(
-            f"parent-child removals do not exactly match approved outgoing changes: "
-            f"actual={dict(actual_removed)}, expected={dict(expected_removed)}"
-        )
-    check("parent-child diff is exact and quantity-aware", errors)
+    actual_added_by_zone = {
+        zone: current_counters[zone] - parent_counters[zone] for zone in DECK_ZONES
+    }
+    actual_removed_by_zone = {
+        zone: parent_counters[zone] - current_counters[zone] for zone in DECK_ZONES
+    }
+    for zone in DECK_ZONES:
+        if actual_added_by_zone[zone] != expected_added_by_zone[zone]:
+            errors.append(
+                f"{zone} additions do not exactly match approved incoming changes: "
+                f"actual={dict(actual_added_by_zone[zone])}, "
+                f"expected={dict(expected_added_by_zone[zone])}"
+            )
+        if actual_removed_by_zone[zone] != expected_removed_by_zone[zone]:
+            errors.append(
+                f"{zone} removals do not exactly match approved outgoing changes: "
+                f"actual={dict(actual_removed_by_zone[zone])}, "
+                f"expected={dict(expected_removed_by_zone[zone])}"
+            )
+    actual_added = flatten_zone_counters(actual_added_by_zone)
+    actual_removed = flatten_zone_counters(actual_removed_by_zone)
+    check("parent-child diffs are exact, zone-aware, and quantity-aware", errors)
 
     errors = []
-    sideboard_changes = [
-        item
-        for item in (design.get("incoming_cards", []) + design.get("proposed_outgoing_cards", []))
-        if item.get("slot") == "sideboard"
-    ]
-    if not sideboard_changes and parent_counters["sideboard"] != current_counters["sideboard"]:
-        errors.append("sideboard differs from parent despite no approved sideboard change")
-    if sum(current_counters["sideboard"].values()) != sum(parent_counters["sideboard"].values()):
-        errors.append("sideboard quantity total changed without matching approved changes")
-    check("sideboard names and quantities match the approved design", errors)
+    if not expected_added_by_zone["sideboard"] and not expected_removed_by_zone["sideboard"]:
+        if actual_added_by_zone["sideboard"] or actual_removed_by_zone["sideboard"]:
+            errors.append("sideboard differs from parent despite no approved sideboard change")
+    parent_sideboard_total = sum(parent_counters["sideboard"].values())
+    current_sideboard_total = sum(current_counters["sideboard"].values())
+    if current_sideboard_total != parent_sideboard_total:
+        errors.append(
+            f"sideboard quantity total is {current_sideboard_total}, expected {parent_sideboard_total}"
+        )
+    check("sideboard diff matches approved changes and preserves its quantity invariant", errors)
 
     change_field = f"changes_from_{parent_id}"
     recorded_changes = current_version.get(change_field)
@@ -368,15 +424,16 @@ def main():
     check("unapproved candidate changes are absent from the implemented version", errors)
 
     errors = []
-    changed_names = set(actual_added) | set(actual_removed)
-    for name in set(parent_playable) | set(child_playable):
-        if name in changed_names:
-            continue
-        if parent_playable[name] != child_playable[name]:
-            errors.append(
-                f"unchanged card {name!r} changed quantity from "
-                f"{parent_playable[name]} to {child_playable[name]}"
-            )
+    for zone in DECK_ZONES:
+        changed_names = set(actual_added_by_zone[zone]) | set(actual_removed_by_zone[zone])
+        for name in set(parent_counters[zone]) | set(current_counters[zone]):
+            if name in changed_names:
+                continue
+            if parent_counters[zone][name] != current_counters[zone][name]:
+                errors.append(
+                    f"unchanged {zone} card {name!r} changed quantity from "
+                    f"{parent_counters[zone][name]} to {current_counters[zone][name]}"
+                )
     check("cards outside the approved diff remain unchanged", errors)
 
     return report(checks)

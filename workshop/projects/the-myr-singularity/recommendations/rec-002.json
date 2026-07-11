@@ -36,7 +36,7 @@
     "pressure_point_id": "Format '<analysis_id>:pressure_point:<index>' where <index> is the zero-based position in the structural_pressure_points array of the referenced analysis file. Example: 'baseline_v1.0:pressure_point:0'.",
     "open_question_id": "Format '<analysis_id>:open_question:<index>' where <index> is the zero-based position in the open_questions array of the referenced analysis file. Example: 'baseline_v1.0:open_question:2'.",
     "project_goal": "Verbatim goal string from project.json 'goals' or brief.json 'improvement_areas'.",
-    "card_reference": "Qualified references only. deck:scryfall:<id> resolves against workshop/card-data/cards.json. candidate:scryfall:<id> resolves against workshop/card-data/candidate_cards.json, must not exist in cards.json, and the fact record must remain recommendation_status facts_only. Legacy bare scryfall:<id> is reserved for rec-001 and is not allowed in this set.",
+    "card_reference": "Qualified references only. deck:scryfall:<id> resolves against workshop/card-data/cards.json. candidate:scryfall:<id> resolves against active workshop/card-data/candidate_cards.json facts_only records, or a canonical record whose ID is retained in candidate_card_import_metadata.json as known candidate intake provenance after promotion. Legacy bare scryfall:<id> is reserved for rec-001 and is not allowed in this set.",
     "role_reference": "role_id values from workshop/knowledge/role_taxonomy.json.",
     "category_reference": "category_id values from workshop/knowledge/role_taxonomy.json.",
     "incoming_cards": "Cards entering the deck if a candidate is later accepted; candidate:scryfall:<id> references only.",
