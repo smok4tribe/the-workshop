@@ -750,6 +750,31 @@ class ValidationArchitectureRegressionTests(unittest.TestCase):
                 self.assert_validation_fails(self.run_validator("validate_project_reports.py"), "decision summary for 'decision-002' does not match source decision")
                 self.tearDown(); self.setUp()
 
+    def test_report_contradictory_implementation_status_fails(self):
+        cases = [
+            ("implementation_not_verified", "verified"),
+            ("implementation_verified", "not_verified"),
+        ]
+        for validation_status, implementation_result in cases:
+            with self.subTest(
+                validation_status=validation_status,
+                implementation_result=implementation_result,
+            ):
+                report_path = self.project / "reports" / "project_report_v1.1.json"
+                report = self.load_json(report_path)
+                report["implementation_summary"]["validation_status"] = validation_status
+                report["evidence_status"]["implementation_result"] = implementation_result
+                self.write_json(report_path, report)
+                self.regenerate_report(report_path)
+
+                result = self.run_validator("validate_project_reports.py")
+
+                self.assert_validation_fails(
+                    result,
+                    "implementation summary validation_status does not agree with evidence implementation_result",
+                )
+                self.tearDown(); self.setUp()
+
 
 if __name__ == "__main__":
     unittest.main()

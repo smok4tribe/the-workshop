@@ -440,6 +440,17 @@ def main():
         evidence = doc.get("evidence_status", {})
         if evidence.get("implementation_result") not in {"verified", "not_verified"}:
             errors.append("implementation_result has unsupported status")
+        implementation_status = doc.get("implementation_summary", {}).get("validation_status")
+        expected_implementation_result = {
+            "implementation_verified": "verified",
+            "implementation_not_verified": "not_verified",
+        }.get(implementation_status)
+        if (expected_implementation_result is not None
+                and evidence.get("implementation_result") in {"verified", "not_verified"}
+                and evidence.get("implementation_result") != expected_implementation_result):
+            errors.append(
+                "implementation summary validation_status does not agree with evidence implementation_result"
+            )
         for evidence_label in ("post_implementation_analysis", "post_implementation_simulation", "gameplay_validation", "performance_claim"):
             validate_evidence(evidence.get(evidence_label), evidence_label, project_id, resulting_id, errors)
         measured = evidence.get("performance_claim", {}).get("status") == "measured"
