@@ -13,6 +13,7 @@ checks. Every validator is read-only and uses only the Python standard library.
 | `validate_recommendation_review.py` | Product Owner candidate-review artifacts and review-state transitions only |
 | `validate_decision_pipeline.py` | Recommendation, review, decisions, deck-change design, and Product Owner approval |
 | `validate_deck_versions.py` | Current deck, parent/child DeckVersions, quantity-aware diffs, and implementation integrity |
+| `validate_project_reports.py` | Structured project reports, source traceability, exact DeckVersion deltas, evidence status, and deterministic Markdown |
 
 `validate_recommendation_review.py` intentionally does not validate decisions,
 designs, approval, implementation, DeckVersions, or `deck/current.txt`.
@@ -28,6 +29,7 @@ python workshop/tests/validation/validate_recommendation_schema.py
 python workshop/tests/validation/validate_recommendation_review.py
 python workshop/tests/validation/validate_decision_pipeline.py
 python workshop/tests/validation/validate_deck_versions.py
+python workshop/tests/validation/validate_project_reports.py
 ```
 
 The recommendation validator defaults to `rec-001`. Validate `rec-002` in
@@ -151,6 +153,18 @@ Card names use deterministic Unicode NFKC, whitespace, and case normalization
 for comparisons. Card Facts aliases are used only to identify singleton
 exceptions such as basic lands.
 
+## Project report validation
+
+`workshop/scripts/render_project_report.py` renders each committed
+`project_report_v*.json` document to its same-name Markdown file. The renderer
+is deterministic: a clean render must leave the committed Markdown unchanged.
+
+`validate_project_reports.py` checks report identity and DeckVersion references,
+required structured sources, the quantity-aware parent/child delta, candidate
+dispositions, and explicit evidence status. It verifies implementation and
+traceability only; it does not treat unrun analysis, simulation, or gameplay as
+measured performance outcomes, and it does not certify Sprint 1.
+
 ## Regression tests
 
 Run the committed mutation suite with:
@@ -172,5 +186,8 @@ The tests use isolated temporary repository copies. They prove that validation:
   quantity change.
 - Requires promoted candidate identities to exist in canonical facts, rejects
   conflicting duplicate facts, and verifies canonical role-assignment coverage.
+- Rejects invalid report DeckVersion references, incorrect reported deltas,
+  measured-outcome claims without evidence, candidate disposition drift,
+  Markdown drift, and missing required source artifacts.
 
 No regression test mutates committed project data.

@@ -407,6 +407,89 @@ class ValidationArchitectureRegressionTests(unittest.TestCase):
 
         self.assert_validation_fails(result, "duplicate promoted Scryfall ID")
 
+    def test_project_report_positive_validation_passes(self):
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_report_invalid_resulting_version_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["resulting_deck_version_id"] = "v9.9"
+        self.write_json(report_path, report)
+
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(result, "resulting DeckVersion 'v9.9' does not resolve")
+
+    def test_report_incorrect_delta_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["version_delta"]["added"].pop()
+        self.write_json(report_path, report)
+
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(
+            result,
+            "report version delta does not match the derived parent-child DeckVersion diff",
+        )
+
+    def test_report_measured_outcome_claim_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["evidence_status"]["performance_claim_status"] = "measured"
+        self.write_json(report_path, report)
+
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(
+            result,
+            "evidence status 'performance_claim_status' must be 'not_measured'",
+        )
+
+    def test_report_candidate_disposition_mismatch_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        item = next(
+            entry
+            for entry in report["candidate_dispositions"]
+            if entry["candidate_id"] == "cand-009"
+        )
+        item["implementation_status"] = "implemented"
+        self.write_json(report_path, report)
+
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(
+            result,
+            "cand-009 disposition does not preserve needs_testing/non-implemented state",
+        )
+
+    def test_report_markdown_drift_fails(self):
+        markdown_path = self.project / "reports" / "project_report_v1.1.md"
+        markdown_path.write_text(
+            markdown_path.read_text(encoding="utf-8") + "\nManual drift.\n",
+            encoding="utf-8",
+        )
+
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(
+            result,
+            "committed Markdown differs from deterministic renderer output",
+        )
+
+    def test_report_missing_source_fails(self):
+        report_path = self.project / "reports" / "project_report_v1.1.json"
+        report = self.load_json(report_path)
+        report["source_references"]["baseline_analysis"]["path"] = "missing.json"
+        self.write_json(report_path, report)
+
+        result = self.run_validator("validate_project_reports.py")
+
+        self.assert_validation_fails(result, "source 'baseline_analysis' does not exist")
+
 
 if __name__ == "__main__":
     unittest.main()

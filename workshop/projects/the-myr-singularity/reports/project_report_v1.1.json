@@ -1,0 +1,359 @@
+{
+  "schema_version": "1.0",
+  "report_id": "project-report-v1.1",
+  "report_type": "post_implementation_project_report",
+  "project_id": "the-myr-singularity",
+  "report_version": "v1.1",
+  "generated_at": "2026-07-11T20:30:00Z",
+  "report_status": "implementation_verified_outcomes_not_measured",
+  "baseline_deck_version_id": "v1.0",
+  "resulting_deck_version_id": "v1.1",
+  "resulting_version_is_current": true,
+  "source_references": {
+    "project": {
+      "path": "workshop/projects/the-myr-singularity/project.json",
+      "id": "the-myr-singularity"
+    },
+    "brief": {
+      "path": "workshop/projects/the-myr-singularity/brief/brief.json",
+      "project_id": "the-myr-singularity"
+    },
+    "baseline_deck_version": {
+      "path": "workshop/projects/the-myr-singularity/versions/v1.0.json",
+      "id": "v1.0"
+    },
+    "resulting_deck_version": {
+      "path": "workshop/projects/the-myr-singularity/versions/v1.1.json",
+      "id": "v1.1"
+    },
+    "current_decklist": {
+      "path": "workshop/projects/the-myr-singularity/deck/current.txt"
+    },
+    "baseline_analysis": {
+      "path": "workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json",
+      "id": "baseline_v1.0"
+    },
+    "recommendation": {
+      "path": "workshop/projects/the-myr-singularity/recommendations/rec-002.json",
+      "id": "rec-002"
+    },
+    "product_owner_review": {
+      "path": "workshop/projects/the-myr-singularity/recommendations/review-rec-002.json",
+      "recommendation_id": "rec-002"
+    },
+    "decisions": [
+      {
+        "path": "workshop/projects/the-myr-singularity/decisions/decision-002.json",
+        "id": "decision-002"
+      },
+      {
+        "path": "workshop/projects/the-myr-singularity/decisions/decision-003.json",
+        "id": "decision-003"
+      },
+      {
+        "path": "workshop/projects/the-myr-singularity/decisions/decision-004.json",
+        "id": "decision-004"
+      }
+    ],
+    "deck_change_design": {
+      "path": "workshop/projects/the-myr-singularity/decisions/deck-change-design-v1.1.json",
+      "id": "deck-change-design-v1.1"
+    },
+    "design_approval": {
+      "path": "workshop/projects/the-myr-singularity/decisions/deck-change-design-v1.1.json",
+      "approved_by": "Product Owner"
+    },
+    "card_facts": {
+      "path": "workshop/card-data/cards.json"
+    },
+    "functional_knowledge": {
+      "path": "workshop/knowledge/functional_roles.json"
+    },
+    "candidate_lifecycle_metadata": {
+      "path": "workshop/card-data/candidate_card_import_metadata.json"
+    }
+  },
+  "project_identity": {
+    "name": "The Myr Singularity",
+    "format": "Commander",
+    "commander": "Urtet, Remnant of Memnarch",
+    "identity": "An artifact combo-control engine disguised as a Myr tribal deck.",
+    "resource_model": "Myr and artifact bodies are used as resources, not merely as attackers.",
+    "identity_constraint": "Preserve the unusual Myr identity."
+  },
+  "brief_summary": {
+    "goals": [
+      "Preserve the Myr identity.",
+      "Improve explosiveness.",
+      "Improve consistency.",
+      "Improve mana fixing.",
+      "Improve resilience."
+    ],
+    "outcome_boundary": "These are recorded project goals, not verified post-implementation outcomes."
+  },
+  "baseline_summary": {
+    "analysis_id": "baseline_v1.0",
+    "deck_version_id": "v1.0",
+    "relevant_pressure_points": [
+      "Colored-cast consistency for the five-color identity was unverified in the baseline structural analysis.",
+      "The baseline recorded a small card-advantage layer and a mana base with substantial colorless production.",
+      "Myr typal density and the reliability of the commander's Myr triggers remained untested."
+    ],
+    "limitations": [
+      "Baseline analysis was structural only.",
+      "It reported no simulation, matchup, gameplay, or performance results."
+    ]
+  },
+  "recommendation_summary": {
+    "recommendation_id": "rec-002",
+    "problem_statement": "External candidates were proposed to address recorded colored-mana, artifact access, and engine pressure points.",
+    "candidate_dispositions": [
+      {
+        "candidate_id": "cand-007",
+        "name": "City of Brass and Mana Confluence",
+        "review_status": "accepted_for_decision",
+        "implementation_status": "implemented"
+      },
+      {
+        "candidate_id": "cand-008",
+        "name": "Urza's Saga",
+        "review_status": "accepted_for_decision",
+        "implementation_status": "implemented"
+      },
+      {
+        "candidate_id": "cand-009",
+        "name": "Krark-Clan Ironworks",
+        "review_status": "needs_testing",
+        "implementation_status": "not_implemented"
+      },
+      {
+        "candidate_id": "cand-010",
+        "name": "Mana Echoes",
+        "review_status": "needs_testing",
+        "implementation_status": "not_implemented"
+      },
+      {
+        "candidate_id": "cand-011",
+        "name": "Tezzeret the Seeker",
+        "review_status": "accepted_for_decision",
+        "implementation_status": "implemented"
+      }
+    ],
+    "expected_benefits": [
+      "Expected to improve access to colored mana.",
+      "Expected to add artifact-tutor, token, and artifact-untap capabilities."
+    ],
+    "tradeoffs_and_risks": [
+      "City of Brass and Mana Confluence can cost life when used for mana.",
+      "The design records a lower board-wipe count and ongoing questions about Tezzeret's survivability and Urza's Saga's self-sacrifice."
+    ]
+  },
+  "product_owner_review_summary": {
+    "accepted_candidate_ids": [
+      "cand-007",
+      "cand-008",
+      "cand-011"
+    ],
+    "needs_testing_candidate_ids": [
+      "cand-009",
+      "cand-010"
+    ],
+    "review_boundary": "The Product Owner review recorded disposition and did not directly modify the deck."
+  },
+  "decision_summary": [
+    {
+      "decision_id": "decision-002",
+      "candidate_id": "cand-007",
+      "incoming_cards": [
+        "City of Brass",
+        "Mana Confluence"
+      ],
+      "outgoing_cards": [
+        "Urza's Mine",
+        "Urza's Power Plant"
+      ],
+      "expected_effect": "Expected to replace two colorless-only lands with any-color lands."
+    },
+    {
+      "decision_id": "decision-003",
+      "candidate_id": "cand-008",
+      "incoming_cards": [
+        "Urza's Saga"
+      ],
+      "outgoing_cards": [
+        "Urza's Tower"
+      ],
+      "expected_effect": "Expected to add a land-slot artifact search and Construct-token capability."
+    },
+    {
+      "decision_id": "decision-004",
+      "candidate_id": "cand-011",
+      "incoming_cards": [
+        "Tezzeret the Seeker"
+      ],
+      "outgoing_cards": [
+        "Nevinyrral's Disk"
+      ],
+      "expected_effect": "Expected to add artifact tutoring and repeatable artifact untapping."
+    }
+  ],
+  "implementation_summary": {
+    "design_id": "deck-change-design-v1.1",
+    "product_owner_approved": true,
+    "approval_by": "Product Owner",
+    "parent_version_id": "v1.0",
+    "resulting_version_id": "v1.1",
+    "current_decklist_matches_resulting_version": true,
+    "validation_status": "implementation traceability and DeckVersion integrity are verified by existing validators."
+  },
+  "version_delta": {
+    "added": [
+      {
+        "direction": "in",
+        "card_name": "City of Brass",
+        "quantity": 1,
+        "zone": "main_deck",
+        "source_decision_id": "decision-002"
+      },
+      {
+        "direction": "in",
+        "card_name": "Mana Confluence",
+        "quantity": 1,
+        "zone": "main_deck",
+        "source_decision_id": "decision-002"
+      },
+      {
+        "direction": "in",
+        "card_name": "Urza's Saga",
+        "quantity": 1,
+        "zone": "main_deck",
+        "source_decision_id": "decision-003"
+      },
+      {
+        "direction": "in",
+        "card_name": "Tezzeret the Seeker",
+        "quantity": 1,
+        "zone": "main_deck",
+        "source_decision_id": "decision-004"
+      }
+    ],
+    "removed": [
+      {
+        "direction": "out",
+        "card_name": "Urza's Mine",
+        "quantity": 1,
+        "zone": "main_deck",
+        "source_decision_id": "decision-002"
+      },
+      {
+        "direction": "out",
+        "card_name": "Urza's Power Plant",
+        "quantity": 1,
+        "zone": "main_deck",
+        "source_decision_id": "decision-002"
+      },
+      {
+        "direction": "out",
+        "card_name": "Urza's Tower",
+        "quantity": 1,
+        "zone": "main_deck",
+        "source_decision_id": "decision-003"
+      },
+      {
+        "direction": "out",
+        "card_name": "Nevinyrral's Disk",
+        "quantity": 1,
+        "zone": "main_deck",
+        "source_decision_id": "decision-004"
+      }
+    ],
+    "commander_unchanged": true,
+    "sideboard_unchanged": true,
+    "playable_total": 100,
+    "singleton_state": "valid",
+    "baseline_version_unchanged": true,
+    "current_decklist_matches_resulting_version": true
+  },
+  "candidate_dispositions": [
+    {
+      "candidate_id": "cand-007",
+      "review_status": "accepted_for_decision",
+      "implementation_status": "implemented",
+      "source_decision_ids": [
+        "decision-002"
+      ]
+    },
+    {
+      "candidate_id": "cand-008",
+      "review_status": "accepted_for_decision",
+      "implementation_status": "implemented",
+      "source_decision_ids": [
+        "decision-003"
+      ]
+    },
+    {
+      "candidate_id": "cand-009",
+      "review_status": "needs_testing",
+      "implementation_status": "not_implemented",
+      "source_decision_ids": []
+    },
+    {
+      "candidate_id": "cand-010",
+      "review_status": "needs_testing",
+      "implementation_status": "not_implemented",
+      "source_decision_ids": []
+    },
+    {
+      "candidate_id": "cand-011",
+      "review_status": "accepted_for_decision",
+      "implementation_status": "implemented",
+      "source_decision_ids": [
+        "decision-004"
+      ]
+    }
+  ],
+  "knowledge_alignment": {
+    "implemented_cards_in_canonical_facts": [
+      "City of Brass",
+      "Mana Confluence",
+      "Urza's Saga",
+      "Tezzeret the Seeker"
+    ],
+    "implemented_cards_have_functional_knowledge": true,
+    "historical_candidate_provenance": "resolvable",
+    "active_needs_testing_candidates": [
+      "Krark-Clan Ironworks",
+      "Mana Echoes"
+    ]
+  },
+  "evidence_status": {
+    "implementation_result": "verified",
+    "post_implementation_analysis": "not_run",
+    "post_implementation_simulation": "not_run",
+    "gameplay_validation": "not_recorded",
+    "performance_claim_status": "not_measured"
+  },
+  "expected_impacts": [
+    "Expected to improve access to colored mana.",
+    "Adds an additional artifact-tutor capability.",
+    "Adds a repeatable artifact-untap capability.",
+    "Replaces the incomplete Tron package with independently functional lands."
+  ],
+  "limitations_and_open_items": [
+    "Post-implementation analysis has not been run.",
+    "Gameplay and simulation outcomes are not measured.",
+    "Krark-Clan Ironworks remains needs_testing.",
+    "Mana Echoes remains needs_testing.",
+    "Generic version-state cleanup and append-only transition history remain future work.",
+    "Final Sprint 1 certification remains pending Task 28."
+  ],
+  "next_actions": {
+    "immediate": "Task 28 - Sprint 1 Final Certification",
+    "future": [
+      "Post-v1.1 structural analysis.",
+      "Focused mana/color simulation.",
+      "Krark-Clan Ironworks testing.",
+      "Mana Echoes testing."
+    ]
+  }
+}
