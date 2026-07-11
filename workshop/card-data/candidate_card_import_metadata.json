@@ -22,7 +22,7 @@
     "bd079929-fa58-4484-91b7-31305b87ee43",
     "cf339735-eb1a-46f0-8c3e-eae06f278eca"
   ],
-  "candidate_intake_provenance": "Stable intake manifest for candidate:scryfall references. An ID remains in this manifest after its facts record is promoted to cards.json, preserving only known candidate history.",
+  "candidate_intake_provenance": "Stable intake manifest for candidate:scryfall references. Active candidate IDs remain in candidate_cards.json; promoted IDs remain in this manifest and resolve through canonical cards.json as historical candidate references.",
   "boundary_statement": "These records are Card Facts only. No recommendations are created, no deck changes are authorized, and future recommendation candidates may reference these facts only after validator support exists.",
   "exact_scryfall_lookup_method_used": {
     "endpoint": "https://api.scryfall.com/cards/named",
@@ -46,8 +46,30 @@
   },
   "warnings": [],
   "notes": [
-    "This intake layer is separate from workshop/card-data/cards.json.",
-    "The existing 106-card deck Card Facts layer was not modified.",
-    "Candidate facts are facts_only and are not deck recommendations."
+    "This intake layer retains only active candidate facts; promoted records live in workshop/card-data/cards.json.",
+    "The candidate intake manifest preserves stable Scryfall identity and historical candidate provenance.",
+    "Active candidate facts are facts_only and are not deck recommendations."
+  ],
+  "active_candidate_card_count": 2,
+  "active_candidate_card_names": [
+    "Krark-Clan Ironworks",
+    "Mana Echoes"
+  ],
+  "active_candidate_scryfall_ids": [
+    "c60174d6-1f9d-4870-b3db-34d6fcb3f6ab",
+    "bd079929-fa58-4484-91b7-31305b87ee43"
+  ],
+  "promoted_candidate_card_count": 4,
+  "promoted_candidate_card_names": [
+    "City of Brass",
+    "Mana Confluence",
+    "Urza's Saga",
+    "Tezzeret the Seeker"
+  ],
+  "promoted_candidate_scryfall_ids": [
+    "c21565d0-fc40-4d89-9b27-87c03385e0af",
+    "504a69eb-3c2d-4bb1-b117-252b15acf0c2",
+    "c1e0f201-42cb-46a1-901a-65bb4fc18f6c",
+    "cf339735-eb1a-46f0-8c3e-eae06f278eca"
   ]
 }

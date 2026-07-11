@@ -26,11 +26,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "cards.json"
+CARD_IMPORT_METADATA_PATH = REPO_ROOT / "workshop" / "card-data" / "card_import_metadata.json"
 TAXONOMY_PATH = REPO_ROOT / "workshop" / "knowledge" / "role_taxonomy.json"
 ASSIGNMENTS_PATH = REPO_ROOT / "workshop" / "knowledge" / "functional_roles.json"
-
-EXPECTED_CARD_COUNT = 106
-EXPECTED_ASSIGNMENT_COUNT = 106
 
 ALLOWED_CONFIDENCE_VALUES = {"low", "medium", "high"}
 ALLOWED_SOURCE_TYPES = {"human_curated", "taxonomy_inference", "project_override"}
@@ -102,10 +100,11 @@ def main():
     def check(description, errors):
         checks.append((description, errors))
 
-    # Checks 1-3: files parse as JSON.
+    # Checks 1-4: files parse as JSON.
     parsed = {}
     for label, path in (
         ("cards.json", CARDS_PATH),
+        ("card_import_metadata.json", CARD_IMPORT_METADATA_PATH),
         ("role_taxonomy.json", TAXONOMY_PATH),
         ("functional_roles.json", ASSIGNMENTS_PATH),
     ):
@@ -122,6 +121,7 @@ def main():
         return report(checks)
 
     cards_doc = parsed["cards.json"]
+    card_import_metadata = parsed["card_import_metadata.json"]
     taxonomy_doc = parsed["role_taxonomy.json"]
     assignments_doc = parsed["functional_roles.json"]
 
@@ -131,22 +131,20 @@ def main():
         role.get("role_id") for role in taxonomy_doc.get("roles", [])
     }
 
-    # Check 4: exact card count.
+    # Check 5: canonical facts count is metadata-driven.
     errors = []
-    if len(cards) != EXPECTED_CARD_COUNT:
-        errors.append(f"expected {EXPECTED_CARD_COUNT} card records, found {len(cards)}")
-    check(f"cards.json contains exactly {EXPECTED_CARD_COUNT} card records", errors)
+    expected_card_count = card_import_metadata.get("canonical_card_facts_count")
+    if not isinstance(expected_card_count, int) or isinstance(expected_card_count, bool):
+        errors.append("card_import_metadata.json is missing integer canonical_card_facts_count")
+    elif len(cards) != expected_card_count:
+        errors.append(f"expected {expected_card_count} card records, found {len(cards)}")
+    check("cards.json count matches canonical Card Facts metadata", errors)
 
-    # Check 5: exact assignment count.
+    # Check 6: every canonical fact has one assignment record.
     errors = []
-    if len(assignments) != EXPECTED_ASSIGNMENT_COUNT:
-        errors.append(
-            f"expected {EXPECTED_ASSIGNMENT_COUNT} assignment records, found {len(assignments)}"
-        )
-    check(
-        f"functional_roles.json contains exactly {EXPECTED_ASSIGNMENT_COUNT} assignment records",
-        errors,
-    )
+    if len(assignments) != len(cards):
+        errors.append(f"expected {len(cards)} assignment records, found {len(assignments)}")
+    check("functional-role assignment count matches canonical Card Facts", errors)
 
     card_ids = {card.get("scryfall_id") for card in cards}
 

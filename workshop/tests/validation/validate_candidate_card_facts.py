@@ -18,15 +18,6 @@ CANDIDATE_CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "candidate_cards.j
 CANDIDATE_METADATA_PATH = REPO_ROOT / "workshop" / "card-data" / "candidate_card_import_metadata.json"
 DECK_CARDS_PATH = REPO_ROOT / "workshop" / "card-data" / "cards.json"
 
-REQUIRED_NAMES = [
-    "City of Brass",
-    "Mana Confluence",
-    "Urza's Saga",
-    "Krark-Clan Ironworks",
-    "Mana Echoes",
-    "Tezzeret the Seeker",
-]
-
 FORBIDDEN_LANGUAGE_PATTERNS = [
     r"\badd this\b",
     r"\bcut this\b",
@@ -83,20 +74,32 @@ def main():
 
     records = candidate_doc.get("candidate_cards")
 
-    # Check 3: candidate_cards.json contains exactly 6 records.
+    # Check 3: active candidate count matches lifecycle metadata.
     errors = []
+    active_count = metadata.get("active_candidate_card_count")
     if not isinstance(records, list):
         errors.append("candidate_cards is not an array")
         records = []
-    elif len(records) != 6:
-        errors.append(f"candidate_cards contains {len(records)} records, expected 6")
-    check("candidate_cards.json contains exactly 6 records", errors)
+    if not isinstance(active_count, int) or isinstance(active_count, bool):
+        errors.append("active_candidate_card_count must be an integer")
+    elif len(records) != active_count:
+        errors.append(f"candidate_cards contains {len(records)} records, expected {active_count}")
+    check("candidate_cards.json count matches active candidate lifecycle metadata", errors)
 
-    # Check 4: metadata imported_card_count equals 6.
+    # Check 4: initial intake count matches the stable manifest.
     errors = []
-    if metadata.get("imported_card_count") != 6:
-        errors.append(f"imported_card_count is {metadata.get('imported_card_count')!r}, expected 6")
-    check("metadata imported_card_count equals 6", errors)
+    intake_ids = metadata.get("candidate_intake_scryfall_ids")
+    if not isinstance(intake_ids, list) or not all(isinstance(value, str) and value for value in intake_ids):
+        errors.append("candidate_intake_scryfall_ids must be an array of non-empty strings")
+        intake_ids = []
+    elif len(intake_ids) != len(set(intake_ids)):
+        errors.append("candidate_intake_scryfall_ids contains duplicate Scryfall IDs")
+    if metadata.get("imported_card_count") != len(intake_ids):
+        errors.append(
+            f"imported_card_count is {metadata.get('imported_card_count')!r}, "
+            f"expected {len(intake_ids)} from candidate_intake_scryfall_ids"
+        )
+    check("metadata imported_card_count matches the stable intake manifest", errors)
 
     # Check 5: unresolved_card_count equals 0.
     errors = []
@@ -111,14 +114,15 @@ def main():
         errors.append(f"unresolved_cards is {unresolved_cards!r}, expected []")
     check("metadata unresolved_cards is empty", errors)
 
-    # Check 7: required candidate names are present exactly.
+    # Check 7: active candidate names and IDs match lifecycle metadata.
     errors = []
     actual_names = [record.get("name") for record in records if isinstance(record, dict)]
-    if actual_names != REQUIRED_NAMES:
-        errors.append(f"candidate names are {actual_names!r}, expected {REQUIRED_NAMES!r}")
-    if metadata.get("candidate_card_names") != REQUIRED_NAMES:
-        errors.append("metadata candidate_card_names does not match required names")
-    check("required candidate names are present exactly", errors)
+    actual_ids = [record.get("scryfall_id") for record in records if isinstance(record, dict)]
+    if actual_names != metadata.get("active_candidate_card_names"):
+        errors.append("active candidate names do not match lifecycle metadata")
+    if actual_ids != metadata.get("active_candidate_scryfall_ids"):
+        errors.append("active candidate Scryfall IDs do not match lifecycle metadata")
+    check("active candidate records match lifecycle metadata", errors)
 
     # Check 8: every record has a Scryfall ID.
     errors = []
@@ -162,43 +166,50 @@ def main():
         seen_ids.add(scryfall_id)
     check("no duplicate Scryfall IDs", errors)
 
-    # Check 12: the stable intake manifest covers every active candidate identity.
+    # Check 12: active and promoted identities partition the stable intake manifest.
     errors = []
-    intake_ids = metadata.get("candidate_intake_scryfall_ids")
-    if not isinstance(intake_ids, list) or not all(isinstance(value, str) and value for value in intake_ids):
-        errors.append("candidate_intake_scryfall_ids must be an array of non-empty strings")
-        intake_ids = []
-    if len(intake_ids) != len(set(intake_ids)):
-        errors.append("candidate_intake_scryfall_ids contains duplicate Scryfall IDs")
     active_ids = {record.get("scryfall_id") for record in records if record.get("scryfall_id")}
-    missing_active_ids = sorted(active_ids - set(intake_ids))
-    if missing_active_ids:
-        errors.append(
-            "candidate_intake_scryfall_ids is missing active candidate IDs: "
-            f"{missing_active_ids}"
-        )
-    check("candidate intake manifest preserves active candidate identities", errors)
+    promoted_ids = metadata.get("promoted_candidate_scryfall_ids")
+    if not isinstance(promoted_ids, list) or not all(isinstance(value, str) and value for value in promoted_ids):
+        errors.append("promoted_candidate_scryfall_ids must be an array of non-empty strings")
+        promoted_ids = []
+    elif len(promoted_ids) != len(set(promoted_ids)):
+        errors.append("promoted_candidate_scryfall_ids contains duplicate Scryfall IDs")
+    if active_ids & set(promoted_ids):
+        errors.append("active and promoted candidate identities overlap")
+    if active_ids | set(promoted_ids) != set(intake_ids):
+        errors.append("active and promoted candidate identities do not partition the intake manifest")
+    if metadata.get("promoted_candidate_card_count") != len(promoted_ids):
+        errors.append("promoted_candidate_card_count does not match promoted_candidate_scryfall_ids")
+    check("candidate intake manifest preserves active and promoted identities", errors)
 
-    # Check 13: no candidate card already exists in deck Card Facts.
+    # Check 13: promoted identities exist in canonical Card Facts.
     errors = []
     deck_cards = load_json(DECK_CARDS_PATH).get("cards", [])
     deck_ids = {card.get("scryfall_id") for card in deck_cards if card.get("scryfall_id")}
     deck_names = {card.get("name") for card in deck_cards if card.get("name")}
+    missing_promoted_ids = sorted(set(promoted_ids) - deck_ids)
+    if missing_promoted_ids:
+        errors.append(f"promoted candidate IDs are missing from cards.json: {missing_promoted_ids}")
+    check("promoted candidate identities resolve in canonical Card Facts", errors)
+
+    # Check 14: no active candidate card already exists in deck Card Facts.
+    errors = []
     for record in records:
         if record.get("scryfall_id") in deck_ids:
             errors.append(f"{record.get('name')} already exists in cards.json by Scryfall ID")
         if record.get("name") in deck_names:
             errors.append(f"{record.get('name')} already exists in cards.json by exact name")
-    check("candidate cards do not already exist in deck Card Facts", errors)
+    check("active candidate cards do not already exist in canonical Card Facts", errors)
 
-    # Check 14: recommendation_status is facts_only for every record.
+    # Check 15: recommendation_status is facts_only for every active record.
     errors = []
     for record in records:
         if record.get("recommendation_status") != "facts_only":
             errors.append(f"{record.get('name', '<unknown>')} recommendation_status is not 'facts_only'")
     check("recommendation_status is facts_only for every record", errors)
 
-    # Check 15: no recommendation/actionable language appears in facts or metadata.
+    # Check 16: no recommendation/actionable language appears in facts or metadata.
     errors = []
     combined_text = json.dumps(candidate_doc, ensure_ascii=False) + "\n" + json.dumps(metadata, ensure_ascii=False)
     for pattern in FORBIDDEN_LANGUAGE_PATTERNS:
@@ -207,7 +218,7 @@ def main():
             errors.append(f"forbidden language found: {match.group(0)!r}")
     check("no recommendation/actionable language appears in candidate facts or metadata", errors)
 
-    # Check 16: validator is read-only by design.
+    # Check 17: validator is read-only by design.
     errors = []
     for path in (CANDIDATE_CARDS_PATH, CANDIDATE_METADATA_PATH, DECK_CARDS_PATH):
         if not path.is_file():
