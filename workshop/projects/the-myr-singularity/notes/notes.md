@@ -248,3 +248,15 @@ DeckVersion v1.1 created and implemented from the approved design.
 - Card Facts were not manually authored; incoming cards remain referenced
   through candidate Card Facts.
 - Next natural step: post-implementation validation/report for v1.1.
+
+## 2026-07-10 - Sprint 1 v1.1 Implementation Complete
+
+Sprint 1 v1.1 implementation complete.
+
+- The full pipeline ran end to end: rec-002 candidates -> Product Owner
+  review -> decision scaffolds -> deck-change design -> Product Owner
+  approval -> DeckVersion v1.1 implementation (PRs #20-#27).
+- v1.1 is live: `deck/current.txt` and `versions/v1.1.json` agree
+  (1 commander + 99 main + 7 sideboard, 34 lands).
+- Open threads: cand-009/cand-010 testing gate; dedicated
+  post-implementation report/validation for v1.1 is the next task.
