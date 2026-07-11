@@ -4,16 +4,16 @@
   "source_recommendation_id": "rec-002",
   "source_candidate_id": "cand-007",
   "source_review_file": "workshop/projects/the-myr-singularity/recommendations/review-rec-002.json",
-  "decision_status": "pending_deck_change_design",
+  "decision_status": "implemented_as_v1.1",
   "decision_type": "candidate_accepted_for_decision_path",
   "created_at": "2026-07-10T19:28:09Z",
   "decided_by": "Product Owner",
   "candidate_summary": "City of Brass / Mana Confluence mana-fixing candidate: increase any-color land sources for a five-color identity whose colored-cast consistency the baseline flags as unverified.",
   "candidate_status_at_review": "accepted_for_decision",
-  "deck_change_authorized": false,
-  "deck_change_implemented": false,
-  "creates_new_deck_version": false,
-  "target_deck_version": null,
+  "deck_change_authorized": true,
+  "deck_change_implemented": true,
+  "creates_new_deck_version": true,
+  "target_deck_version": "v1.1",
   "proposed_incoming_cards": [
     "City of Brass",
     "Mana Confluence"
@@ -25,13 +25,26 @@
     "How much life-loss/pain-land pressure is acceptable for the deck?"
   ],
   "rationale": "Product Owner accepted the mana-fixing candidate for the decision path because the baseline analysis identified colored-cast consistency as a structural pressure point, and City of Brass / Mana Confluence directly address colored access.",
-  "required_next_step": "deck_change_design_before_v1.1",
+  "required_next_step": "post_implementation_validation_or_report",
   "explicit_boundary": {
-    "statement": "This decision scaffold does not change the deck. No deck change is authorized. It does not create v1.1. It does not select outgoing cuts. It does not mark the recommendation candidate as implemented. A future task must design the actual deck change and create a new deck version before implementation.",
-    "deck_change_authorized": false,
-    "deck_change_implemented": false,
-    "outgoing_cuts_selected": false,
+    "statement": "This decision has been implemented as part of DeckVersion v1.1 through the Product-Owner-approved deck-change-design-v1.1. deck/current.txt reflects v1.1 and versions/v1.1.json records the implemented version. The originating rec-002 candidate record remains proposed in its historical artifact and was not modified; Card Facts were not manually authored. Trace: candidate -> review -> decision scaffold -> design -> Product Owner approval -> v1.1 implementation.",
+    "deck_change_authorized": true,
+    "deck_change_implemented": true,
+    "outgoing_cuts_selected": true,
     "candidate_marked_implemented": false,
-    "new_deck_version_created": false
-  }
+    "new_deck_version_created": true,
+    "implemented_in_version": "v1.1"
+  },
+  "implemented_at": "2026-07-10T21:32:00Z",
+  "implementation_source": "deck-change-design-v1.1",
+  "implemented_in_version": "v1.1",
+  "incoming_cards": [
+    "City of Brass",
+    "Mana Confluence"
+  ],
+  "outgoing_cards": [
+    "Urza's Mine",
+    "Urza's Power Plant"
+  ],
+  "implementation_rationale": "approved mana fixing update from v1.1 design"
 }

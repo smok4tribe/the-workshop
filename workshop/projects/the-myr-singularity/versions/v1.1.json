@@ -1,1 +1,632 @@
-{}
+{
+  "version_id": "v1.1",
+  "project_id": "the-myr-singularity",
+  "parent_version_id": "v1.0",
+  "created_at": "2026-07-10T21:32:00Z",
+  "created_by": "Claude",
+  "version_status": "implemented",
+  "implementation_source": "deck-change-design-v1.1",
+  "source_decision_ids": [
+    "decision-002",
+    "decision-003",
+    "decision-004"
+  ],
+  "source_recommendation_id": "rec-002",
+  "source_review_file": "workshop/projects/the-myr-singularity/recommendations/review-rec-002.json",
+  "approved_design_id": "deck-change-design-v1.1",
+  "commander": {
+    "quantity": 1,
+    "name": "Urtet, Remnant of Memnarch",
+    "section": "commander"
+  },
+  "main_deck": [
+    {
+      "quantity": 1,
+      "name": "Academy Ruins",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Adarkar Wastes",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Aetherflux Reservoir",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Agatha's Soul Cauldron",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Alibou, Ancient Witness",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "All Is Dust",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Ancient Den",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Arcane Denial",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Arcane Signet",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Basalt Monolith",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Bridge of Khazad-dûm",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Buried Ruin",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Cascading Cataracts",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "City of Brass",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Clock of Omens",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Cloud Key",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Command Tower",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Copper Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Counterspell",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Darksteel Citadel",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Demonic Tutor",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Dispatch",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Egg Hammer",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Emry, Lurker of the Loch",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Etherium Sculptor",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Exotic Orchard",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Fabricate",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Fomori Vault",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Forest",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Forsaken Monument",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Foundry Inspector",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Glimmervoid",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Gold Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Great Furnace",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Hope's Aero Magic",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Inventors' Fair",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Iron Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Island",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Island",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Jhoira, Weatherlight Captain",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Kuldotha Forgemaster",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Lightning Greaves",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Mana Confluence",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Moonsnare Prototype",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Mountain",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Muddle the Mixture",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Myr Convert",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Myr Galvanizer",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Myr Kinsmith",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Myr Retriever",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Myr Welder",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Mystic Forge",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Organic Extinction",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Palladium Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Plague Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Plains",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Prismatic Lens",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Propaganda",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Relic of Legends",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Reliquary Tower",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Repurposing Bay",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Reshape",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Rhystic Study",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Sculpting Steel",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Seat of the Synod",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Sensei's Divining Top",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Shadowbringers",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Shimmer Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Shivan Reef",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Silver Myr",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Skullclamp",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Slobad, Goblin Tinkerer",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Snow-Covered Island",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Sol Ring",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Spire of Industry",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Springleaf Drum",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Staff of Domination",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Steel Overseer",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Swamp",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Swiftfoot Boots",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Tarnished Citadel",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Tezzeret, Cruel Captain",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Tezzeret, Master of the Bridge",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Tezzeret the Seeker",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "The Mycosynth Gardens",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Thoughtcast",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Three Tree City",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Tree of Tales",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Ugin, the Ineffable",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Underground River",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Unwinding Clock",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Urza, Lord High Artificer",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Urza's Cave",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Urza's Incubator",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Urza's Saga",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Vault of Whispers",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Walking Ballista",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Whir of Invention",
+      "section": "main_deck"
+    },
+    {
+      "quantity": 1,
+      "name": "Yavimaya Coast",
+      "section": "main_deck"
+    }
+  ],
+  "sideboard": [
+    {
+      "quantity": 1,
+      "name": "Aetherize",
+      "section": "sideboard"
+    },
+    {
+      "quantity": 1,
+      "name": "Darksteel Forge",
+      "section": "sideboard"
+    },
+    {
+      "quantity": 1,
+      "name": "Ghostly Prison",
+      "section": "sideboard"
+    },
+    {
+      "quantity": 1,
+      "name": "Meekstone",
+      "section": "sideboard"
+    },
+    {
+      "quantity": 1,
+      "name": "Mistrise Village",
+      "section": "sideboard"
+    },
+    {
+      "quantity": 1,
+      "name": "Neurok Stealthsuit",
+      "section": "sideboard"
+    },
+    {
+      "quantity": 1,
+      "name": "Torpor Orb",
+      "section": "sideboard"
+    }
+  ],
+  "changes_from_v1.0": {
+    "added": [
+      {
+        "name": "City of Brass",
+        "reference": "candidate:scryfall:c21565d0-fc40-4d89-9b27-87c03385e0af",
+        "source_decision_id": "decision-002"
+      },
+      {
+        "name": "Mana Confluence",
+        "reference": "candidate:scryfall:504a69eb-3c2d-4bb1-b117-252b15acf0c2",
+        "source_decision_id": "decision-002"
+      },
+      {
+        "name": "Urza's Saga",
+        "reference": "candidate:scryfall:c1e0f201-42cb-46a1-901a-65bb4fc18f6c",
+        "source_decision_id": "decision-003"
+      },
+      {
+        "name": "Tezzeret the Seeker",
+        "reference": "candidate:scryfall:cf339735-eb1a-46f0-8c3e-eae06f278eca",
+        "source_decision_id": "decision-004"
+      }
+    ],
+    "removed": [
+      {
+        "name": "Urza's Mine",
+        "reference": "deck:scryfall:396bbb7d-ae61-4d8d-b931-9ed2f712832e",
+        "source_decision_id": "decision-002"
+      },
+      {
+        "name": "Urza's Power Plant",
+        "reference": "deck:scryfall:b0449a19-37f7-4169-9e32-928db5ec76fe",
+        "source_decision_id": "decision-002"
+      },
+      {
+        "name": "Urza's Tower",
+        "reference": "deck:scryfall:1e9f09b3-dd2d-4ba9-a57e-4f3c1793f752",
+        "source_decision_id": "decision-003"
+      },
+      {
+        "name": "Nevinyrral's Disk",
+        "reference": "deck:scryfall:36fb6ee3-bd54-4e5b-b055-c2c42515c162",
+        "source_decision_id": "decision-004"
+      }
+    ]
+  },
+  "change_summary": "Implements the Product-Owner-approved deck-change-design-v1.1: the three Urza's Tron lands are replaced by City of Brass, Mana Confluence, and Urza's Saga to improve colored access and artifact utility from the mana base, and Nevinyrral's Disk is replaced by Tezzeret the Seeker to trade the deck's only self-destructive board wipe for a proactive artifact tutor/untap engine. Land count stays at 34 and the Myr artifact-combo identity is preserved.",
+  "expected_impacts": {
+    "mana_fixing": "Colored sources rise from 21 to 23 and fixing lands from 12 to 14; the colorless-only Tron package and its incomplete-assembly failure mode are removed. New incremental painland life pressure is accepted and flagged for testing.",
+    "artifact_engine": "Artifact tutoring rises from 7 toward 9 effective sources with direct-to-battlefield placement from Tezzeret the Seeker; his +1 reinforces the 6 untap engines and reuses the 14 mana rocks; Urza's Saga adds scaling Construct board presence from the land slot.",
+    "risk_tradeoffs": "Board-wipe density drops from 3 to 2; the rare assembled-Tron burst ceiling is given up; Tezzeret the Seeker is a five-mana play on a 3.0-average curve; Urza's Saga self-sacrifices after chapter III, effectively lowering the land count by one over time."
+  },
+  "implementation_boundary": {
+    "statement": "This file records the v1.1 implementation. deck/current.txt now reflects v1.1. Card Facts were not manually authored: incoming cards remain referenced through candidate Card Facts (candidate:scryfall:<id>) in workshop/card-data/candidate_cards.json. cand-009 (Krark-Clan Ironworks) and cand-010 (Mana Echoes) remain needs_testing and out of scope for this version.",
+    "deck_current_reflects": "v1.1",
+    "card_facts_manually_authored": false,
+    "needs_testing_candidates_untouched": [
+      "cand-009",
+      "cand-010"
+    ]
+  },
+  "validation_summary": {
+    "commander_count": 1,
+    "main_deck_count": 99,
+    "sideboard_count": 7,
+    "total_commander_deck": 100,
+    "land_count": 34,
+    "checks_run": [
+      "validate_knowledge_layer.py",
+      "validate_candidate_card_facts.py",
+      "validate_recommendation_schema.py (rec-001 defaults and rec-002 via env vars)",
+      "validate_recommendation_review.py",
+      "python -m json.tool on v1.1.json and updated decision artifacts",
+      "scripted deck count and IN/OUT verification against deck/current.txt and versions/v1.1.json"
+    ]
+  }
+}

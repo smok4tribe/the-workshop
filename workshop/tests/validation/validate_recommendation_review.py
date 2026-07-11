@@ -414,34 +414,60 @@ def main():
         for entry in entries
         if entry.get("review_status") == "needs_testing"
     }
-    scaffold_required_values = [
-        ("decision_status", "pending_deck_change_design"),
-        ("decision_type", "candidate_accepted_for_decision_path"),
-        ("deck_change_authorized", False),
-        ("deck_change_implemented", False),
-        ("creates_new_deck_version", False),
-        ("target_deck_version", None),
-        ("proposed_outgoing_cards", []),
-        ("required_next_step", "deck_change_design_before_v1.1"),
-    ]
+    # Per decision_status, the fields a decision record must carry. Scaffolds
+    # are non-authorizing; implemented decisions record a completed
+    # decision -> design -> approval -> version chain for v1.1.
+    decision_state_required_values = {
+        "pending_deck_change_design": [
+            ("decision_type", "candidate_accepted_for_decision_path"),
+            ("deck_change_authorized", False),
+            ("deck_change_implemented", False),
+            ("creates_new_deck_version", False),
+            ("target_deck_version", None),
+            ("proposed_outgoing_cards", []),
+            ("required_next_step", "deck_change_design_before_v1.1"),
+        ],
+        "implemented_as_v1.1": [
+            ("decision_type", "candidate_accepted_for_decision_path"),
+            ("deck_change_authorized", True),
+            ("deck_change_implemented", True),
+            ("creates_new_deck_version", True),
+            ("target_deck_version", "v1.1"),
+            ("implemented_in_version", "v1.1"),
+            ("implementation_source", "deck-change-design-v1.1"),
+            ("required_next_step", "post_implementation_validation_or_report"),
+        ],
+    }
     design_common_required_values = [
         ("design_type", "pre_version_deck_change_design"),
-        ("deck_change_authorized", False),
-        ("deck_change_implemented", False),
-        ("creates_new_deck_version", False),
     ]
-    # Per design_status, the extra fields a non-implementing design must carry.
-    # Proposed designs await Product Owner review; approved designs record the
-    # approval but still implement nothing — only a future task creates v1.1.
+    # Per design_status, the fields the design must carry. Proposed designs
+    # await Product Owner review; approved designs record the approval but
+    # still implement nothing; implemented designs record that the approved
+    # change became DeckVersion v1.1.
     design_state_required_values = {
         "proposed_for_product_owner_review": [
+            ("deck_change_authorized", False),
+            ("deck_change_implemented", False),
+            ("creates_new_deck_version", False),
             ("product_owner_review_required", True),
             ("required_next_step", "product_owner_approval_before_v1.1"),
         ],
         "product_owner_approved": [
+            ("deck_change_authorized", False),
+            ("deck_change_implemented", False),
+            ("creates_new_deck_version", False),
             ("product_owner_approved", True),
             ("product_owner_approval_required", False),
             ("required_next_step", "create_deck_version_v1.1"),
+        ],
+        "implemented_as_v1.1": [
+            ("deck_change_authorized", True),
+            ("deck_change_implemented", True),
+            ("creates_new_deck_version", True),
+            ("product_owner_approved", True),
+            ("implemented_version_id", "v1.1"),
+            ("required_next_step", "post_implementation_validation_or_report"),
         ],
     }
     for decision_path in sorted(DECISIONS_DIR.glob("*.json")):
@@ -488,6 +514,12 @@ def main():
                         f"{rel_path} explicit_boundary must state the design is approved "
                         "but not implemented"
                     )
+            elif design_status == "implemented_as_v1.1":
+                if "implemented" not in boundary_text or "v1.1" not in boundary_text:
+                    errors.append(
+                        f"{rel_path} explicit_boundary must state the design was "
+                        "implemented as v1.1"
+                    )
             elif "no deck change is authorized" not in boundary_text:
                 errors.append(
                     f"{rel_path} explicit_boundary does not say 'no deck change is authorized'"
@@ -503,18 +535,38 @@ def main():
                             f"{source_decision_id!r}"
                         )
             continue
-        for field, expected in scaffold_required_values:
+        decision_status = decision_doc.get("decision_status")
+        if decision_status not in decision_state_required_values:
+            errors.append(
+                f"{rel_path} decision_status {decision_status!r} is not one of "
+                f"{sorted(decision_state_required_values)}"
+            )
+            decision_required_values = []
+        else:
+            decision_required_values = decision_state_required_values[decision_status]
+        for field, expected in decision_required_values:
             if field not in decision_doc:
-                errors.append(f"{rel_path} scaffold is missing required field {field!r}")
+                errors.append(f"{rel_path} decision is missing required field {field!r}")
             elif decision_doc.get(field) != expected:
                 errors.append(
-                    f"{rel_path} scaffold field {field!r} must be {expected!r}, "
+                    f"{rel_path} decision field {field!r} must be {expected!r}, "
                     f"found {decision_doc.get(field)!r}"
                 )
         decision_boundary = decision_doc.get("explicit_boundary")
+        decision_boundary_text = (
+            json.dumps(decision_boundary, ensure_ascii=False).lower()
+            if isinstance(decision_boundary, dict)
+            else ""
+        )
         if not isinstance(decision_boundary, dict):
-            errors.append(f"{rel_path} scaffold is missing an explicit_boundary object")
-        elif "no deck change is authorized" not in json.dumps(decision_boundary, ensure_ascii=False).lower():
+            errors.append(f"{rel_path} decision is missing an explicit_boundary object")
+        elif decision_status == "implemented_as_v1.1":
+            if "implemented" not in decision_boundary_text or "v1.1" not in decision_boundary_text:
+                errors.append(
+                    f"{rel_path} explicit_boundary must state the decision was "
+                    "implemented as v1.1"
+                )
+        elif "no deck change is authorized" not in decision_boundary_text:
             errors.append(
                 f"{rel_path} explicit_boundary does not say 'no deck change is authorized'"
             )
@@ -529,10 +581,28 @@ def main():
                 f"{rel_path} references {source_candidate_id!r}, which is not an "
                 "accepted_for_decision candidate in review-rec-002"
             )
-    check("decision files are placeholders, non-authorizing scaffolds, or non-authorizing designs only", errors)
+    check("decision files are placeholders, valid scaffolds/designs, or implemented v1.1 records", errors)
 
-    # Check 20: no new deck version (v1.1) has been created by review.
+    # Check 20: deck versions beyond v1.0 exist only as implemented-design outcomes.
+    # An empty placeholder is always allowed. A populated version file is allowed
+    # only when an implemented design artifact records it as its
+    # implemented_version_id, and the version document is structurally sound
+    # (correct version_id, parent v1.0, implemented status, 1 commander,
+    # 99 main-deck entries, 7 sideboard entries).
     errors = []
+    implemented_design_version_ids = set()
+    for decision_path in sorted(DECISIONS_DIR.glob("*.json")):
+        try:
+            doc = load_json(decision_path)
+        except json.JSONDecodeError:
+            continue
+        if (
+            isinstance(doc, dict)
+            and doc.get("design_type") == "pre_version_deck_change_design"
+            and doc.get("design_status") == "implemented_as_v1.1"
+            and doc.get("implemented_version_id")
+        ):
+            implemented_design_version_ids.add(doc.get("implemented_version_id"))
     for version_path in sorted(VERSIONS_DIR.glob("*.json")):
         if version_path.name == "v1.0.json":
             continue
@@ -541,12 +611,37 @@ def main():
         except json.JSONDecodeError as exc:
             errors.append(f"{version_path} is not valid JSON: {exc}")
             continue
-        if version_doc != {}:
+        if version_doc == {}:
+            continue
+        rel_path = version_path.relative_to(REPO_ROOT)
+        version_id = version_path.stem
+        if version_id not in implemented_design_version_ids:
             errors.append(
-                f"{version_path.relative_to(REPO_ROOT)} is populated; Sprint 1 review "
-                "must not create a new deck version"
+                f"{rel_path} is populated but no implemented design artifact records "
+                f"{version_id!r} as its implemented_version_id"
             )
-    check("no new deck version has been created by review", errors)
+            continue
+        if version_doc.get("version_id") != version_id:
+            errors.append(f"{rel_path} version_id must be {version_id!r}")
+        if version_doc.get("parent_version_id") != "v1.0":
+            errors.append(f"{rel_path} parent_version_id must be 'v1.0'")
+        if version_doc.get("version_status") != "implemented":
+            errors.append(f"{rel_path} version_status must be 'implemented'")
+        if not isinstance(version_doc.get("commander"), dict) or not version_doc["commander"].get("name"):
+            errors.append(f"{rel_path} must record exactly one commander entry")
+        main_deck = version_doc.get("main_deck")
+        if not isinstance(main_deck, list) or len(main_deck) != 99:
+            errors.append(
+                f"{rel_path} main_deck must contain exactly 99 entries, found "
+                f"{len(main_deck) if isinstance(main_deck, list) else 'non-list'}"
+            )
+        sideboard = version_doc.get("sideboard")
+        if not isinstance(sideboard, list) or len(sideboard) != 7:
+            errors.append(
+                f"{rel_path} sideboard must contain exactly 7 entries, found "
+                f"{len(sideboard) if isinstance(sideboard, list) else 'non-list'}"
+            )
+    check("deck versions beyond v1.0 exist only as implemented-design outcomes", errors)
 
     # Check 21: rec-002 candidate records remain unmodified by review.
     errors = []

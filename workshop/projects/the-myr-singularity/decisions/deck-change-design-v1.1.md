@@ -2,16 +2,18 @@
 
 ## Status
 
-`product_owner_approved` — the Product Owner **approved this design as
-proposed** on 2026-07-10. The approval covers the exact IN/OUT sets below.
+`implemented_as_v1.1` — the Product Owner approved this design on
+2026-07-10 and it has now been **implemented as DeckVersion v1.1**
+(implemented at 2026-07-10T21:32:00Z).
 
-Even with approval, this artifact remains **non-implementing**: no deck
-change is implemented in this task, `deck/current.txt` remains unchanged,
-and `versions/v1.1.json` is not created or populated yet. Approval
-authorizes the next task to create DeckVersion v1.1; it does not itself
-change the deck.
+- `deck/current.txt` now reflects v1.1.
+- `versions/v1.1.json` is populated and records the implemented version.
+- Card Facts were not manually authored; incoming cards remain referenced
+  through candidate Card Facts.
+- Krark-Clan Ironworks (cand-009) and Mana Echoes (cand-010) remain
+  `needs_testing` and out of scope for v1.1.
 
-## Approved IN / OUT
+## Implemented IN / OUT
 
 | IN | slot | OUT | slot |
 |---|---|---|---|
@@ -131,15 +133,14 @@ Seeker. Four cards in, four cards out.
 
 ## Boundary statement
 
-This design has Product Owner approval, but the deck change is approved
-and **not implemented**. This artifact still does not modify the deck: no
-deck change is implemented in this task. `deck/current.txt` remains
-unchanged. `versions/v1.1.json` remains an empty, unpopulated placeholder.
-A future task must create DeckVersion v1.1 before any implementation
-exists. This design does not mark any decision as implemented, does not
-mark any recommendation candidate as accepted or implemented, and does
-not promote candidate card facts into deck card facts.
+This design has now been implemented as DeckVersion v1.1.
+`deck/current.txt` reflects v1.1 and `versions/v1.1.json` records the
+implemented version. Card Facts were not manually authored: incoming
+cards remain referenced through candidate Card Facts. cand-009 and
+cand-010 remain `needs_testing` and untouched. rec-002 and
+review-rec-002 remain unchanged as historical artifacts.
 
 ## Required next step
 
-`create_deck_version_v1.1` — create DeckVersion v1.1 in a future task.
+`post_implementation_validation_or_report` — post-implementation
+validation and/or a v1.1 report.

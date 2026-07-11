@@ -231,3 +231,20 @@ Product Owner approved deck-change-design-v1.1 as proposed.
 - No v1.1 was created; `versions/v1.1.json` remains an empty placeholder.
 - cand-009 and cand-010 remain `needs_testing` and untouched.
 - Next step is create DeckVersion v1.1 (`create_deck_version_v1.1`).
+
+## 2026-07-10 - Sprint 1 DeckVersion v1.1 Implementation Checkpoint
+
+DeckVersion v1.1 created and implemented from the approved design.
+
+- `deck/current.txt` updated to v1.1; `versions/v1.1.json` populated as
+  the first implemented deck version (parent v1.0).
+- IN: City of Brass, Mana Confluence, Urza's Saga, Tezzeret the Seeker.
+- OUT: Urza's Mine, Urza's Power Plant, Urza's Tower, Nevinyrral's Disk.
+- Counts preserved: 1 commander + 99 main deck + 7 sideboard; 34 lands.
+- decision-002/003/004 and deck-change-design-v1.1 are now
+  `implemented_as_v1.1`; the full trace candidate -> review -> decision ->
+  design -> approval -> implementation is recorded.
+- cand-009 and cand-010 remain `needs_testing` and untouched.
+- Card Facts were not manually authored; incoming cards remain referenced
+  through candidate Card Facts.
+- Next natural step: post-implementation validation/report for v1.1.
