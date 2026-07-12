@@ -6,20 +6,22 @@
   "sprint_id": "Sprint 1",
   "certification_scope": "sprint_1_local_prototype",
   "generated_at": "2026-07-12T00:00:00Z",
-  "certification_status": "pending_independent_review",
+  "certification_status": "certified",
   "candidate_base_commit": "7387afcb9a6345a97083506245fa6414504ad654",
   "certification_claim_boundary": "Certification concerns local product-loop execution, structure, traceability, reproducibility, and evidence honesty. It does not claim measured deck performance.",
   "independent_review": {
-    "status": "pending",
-    "reviewer_role": null,
-    "reviewer": null,
-    "verdict": null,
-    "reviewed_commit": null,
-    "reviewed_at": null,
-    "review_source": null,
+    "status": "completed",
+    "reviewer_role": "independent_reviewer",
+    "reviewer": "Sol",
+    "verdict": "APPROVE",
+    "reviewed_commit": "c0de66c59fbebbf87dd1fea53bd87fe305f9ae1c",
+    "reviewed_at": "2026-07-12T23:32:14Z",
+    "review_source": {
+      "path": "workshop/projects/the-myr-singularity/reports/sprint_1_certification_review.json"
+    },
     "blocking_findings": [],
     "non_blocking_followups": [],
-    "rationale": null
+    "rationale": "Independent adversarial review approved the exact reviewed commit after verifying the certification trust boundaries, complete reviewed-candidate equivalence, lifecycle-neutral fixture construction, evidence honesty, and regression coverage. No blocking or non-blocking findings remain. Certification is limited to local product-loop execution, structure, traceability, reproducibility, and evidence honesty, and does not claim measured deck performance."
   },
   "source_references": {
     "project": {
@@ -687,7 +689,7 @@
         "resulting_deck_version"
       ],
       "outcome": "All declared dependencies are derived as satisfied.",
-      "limitations": "Independent review remains pending."
+      "limitations": null
     },
     {
       "gate_id": "gate-analysis",
@@ -707,7 +709,7 @@
         "functional_knowledge"
       ],
       "outcome": "All declared dependencies are derived as satisfied.",
-      "limitations": "Independent review remains pending."
+      "limitations": null
     },
     {
       "gate_id": "gate-recommendation",
@@ -726,7 +728,7 @@
         "rec_002"
       ],
       "outcome": "All declared dependencies are derived as satisfied.",
-      "limitations": "Independent review remains pending."
+      "limitations": null
     },
     {
       "gate_id": "gate-decision-versioning",
@@ -748,7 +750,7 @@
         "resulting_deck_version"
       ],
       "outcome": "All declared dependencies are derived as satisfied.",
-      "limitations": "Independent review remains pending."
+      "limitations": null
     },
     {
       "gate_id": "gate-report",
@@ -762,7 +764,7 @@
         "project_report"
       ],
       "outcome": "All declared dependencies are derived as satisfied.",
-      "limitations": "Independent review remains pending."
+      "limitations": null
     },
     {
       "gate_id": "gate-product-loop",
@@ -787,7 +789,7 @@
       ],
       "evidence_source_keys": [],
       "outcome": "All declared dependencies are derived as satisfied.",
-      "limitations": "Independent review remains pending."
+      "limitations": null
     },
     {
       "gate_id": "gate-data-knowledge",
@@ -803,7 +805,7 @@
         "functional_knowledge"
       ],
       "outcome": "All declared dependencies are derived as satisfied.",
-      "limitations": "Independent review remains pending."
+      "limitations": null
     },
     {
       "gate_id": "gate-evidence-honesty",
@@ -821,7 +823,7 @@
         "project_report"
       ],
       "outcome": "All declared dependencies are derived as satisfied.",
-      "limitations": "Independent review remains pending."
+      "limitations": null
     },
     {
       "gate_id": "gate-reproducibility",
@@ -835,7 +837,7 @@
         "validation_documentation"
       ],
       "outcome": "All declared dependencies are derived as satisfied.",
-      "limitations": "Independent review remains pending."
+      "limitations": null
     },
     {
       "gate_id": "gate-scope-control",
@@ -855,7 +857,7 @@
         "resulting_deck_version"
       ],
       "outcome": "All declared dependencies are derived as satisfied.",
-      "limitations": "Independent review remains pending."
+      "limitations": null
     }
   ],
   "definition_of_done": [
@@ -1045,8 +1047,8 @@
     "complete external platform integration"
   ],
   "next_action": {
-    "action_id": "request_independent_review",
-    "description": "Obtain independent Sprint 1 certification review."
+    "action_id": "merge_and_record_certification",
+    "description": "Merge, record certification closure, and synchronize external RFC documentation."
   },
   "project_name": "The Myr Singularity",
   "version_state": {
