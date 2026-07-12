@@ -1,6 +1,7 @@
 # Data Model Regression Checklist
 
-- [x] Pass - Project root owns project membership; global Card Facts stay separate.
-- [x] Pass - DeckVersions preserve exact quantity-aware commander, main-deck, and sideboard state.
-- [x] Pass - Immutable v1.0 parent, v1.1 parent link, current pointer, and current-deck alignment are validated.
-- [x] Pass - Candidate lifecycle, canonical Knowledge, source references, and historical provenance are validated.
+## Required Checks
+
+- [x] DM-01 | Project ownership and global Card Facts separation | evidence: workshop/projects/the-myr-singularity/project.json, workshop/card-data/cards.json
+- [x] DM-02 | Quantity-aware DeckVersion state | evidence: workshop/projects/the-myr-singularity/versions/v1.0.json, workshop/projects/the-myr-singularity/versions/v1.1.json
+- [x] DM-03 | Candidate lifecycle partition | evidence: workshop/card-data/candidate_card_import_metadata.json, workshop/card-data/candidate_cards.json

@@ -195,15 +195,60 @@ groups, evidence status, and next actions are all data-driven and deterministic.
 
 ## Sprint certification
 
-`validate_sprint_1_certification.py` is a closure validator, not a substitute
-for layer or report validation. It invokes the relevant layer validators and
-also checks Sprint exit criteria, deferred-work capture, regression checklists,
-deterministic closure rendering, evidence honesty, and the independent-review
-state. Passing validators alone does not certify Sprint 1.
+Certification JSON records the result, but validator code and authoritative
+sources derive whether that result is true. `validate_sprint_1_certification.py`
+resolves every declared source inside the repository, validates its artifact
+shape and internal identity, and cross-checks project, version, recommendation,
+review, decision, design, report, Card Facts, Knowledge, lifecycle, backlog, and
+closure-document relationships.
 
-The committed production candidate is `pending_independent_review`. A certified
-state requires an independent reviewer, approval verdict, reviewed commit and
-timestamp, review source, and no blocking findings.
+The validator derives the ordered 15-stage product loop, all 27 exit criteria,
+the ten gate dependency sets, and Functional/Structural/Product Done. Recorded
+source keys, artifact IDs, statuses, gate dependencies, and validation-contract
+commands must match those derived contracts; certification JSON cannot override
+the repository evidence.
+
+`candidate_base_commit` is verified through local git. It must be the configured
+Sprint integration base, be a real ancestor of `HEAD`, and have no protected
+product-artifact changes in the base-to-candidate diff. Production validation
+orchestrates both recommendation validators, every other layer validator, the
+non-recursive lower-level regression suite, recursive parsing of every Workshop
+JSON file, all three renderer parity checks, and the scope-control diff.
+
+Independent review uses a structured `sprint_certification_review` JSON source.
+Pending state forbids reviewer and finding data. Certified, certified-with-
+follow-ups, and not-certified states require a completed independent review,
+valid reviewed commit, resolvable review artifact, matching review fields, and
+state-appropriate findings or follow-ups. Changes after the reviewed candidate
+commit are limited to certification review-recording artifacts.
+
+Backlog validation requires one structured record for each required work type,
+unique IDs, project ownership, controlled status/priority values, version and
+candidate links, non-authorization for KCI and Mana Echoes, simulation
+assumptions, and RFC-007/008/009/013 coverage.
+
+Regression checklists use this parseable syntax:
+
+```text
+- [x] PP-01 | Project-first workflow | evidence: workshop/path.json
+- [~] SIM-01 | Simulation not required for Sprint 1 | evidence: workshop/path.json
+```
+
+`[x]` means pass, `[~]` means not required, and `[ ]` is a certification
+failure. Required sections and IDs are fixed, IDs must be unique, and every
+evidence path must resolve. Simulation entries must remain `[~]` while no saved
+simulation or measured-performance evidence exists.
+
+Closure validation checks the project README sections and facts, project scope,
+the unique Sprint notes checkpoint, and the RFC handoff. The closure renderer is
+data-driven for project/version identity, pending and completed review states,
+external documentation, backlog content, and next action.
+
+Certification-specific tests live in `test_sprint_1_certification.py`; the
+established lower-level suite remains in `test_validation_architecture.py` so
+the certification validator can run it without recursion. The production
+candidate remains `pending_independent_review`; passing validation does not by
+itself certify Sprint 1.
 
 ## Regression tests
 

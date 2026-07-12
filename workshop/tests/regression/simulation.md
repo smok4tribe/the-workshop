@@ -1,6 +1,7 @@
 # Simulation Regression Checklist
 
-- [~] Not required for Sprint 1 - No SimulationRun or SimulationResult exists.
-- [x] Pass - No win-rate or gameplay-performance claim exists; report evidence is `not_run` / `not_measured`.
-- [x] Pass - Future simulation questions are captured in `notes/backlog.json`.
-- [x] Pass - Simulation absence is not a Sprint 1 certification failure.
+## Required Checks
+
+- [~] SIM-01 | Simulation is not required for Sprint 1 | evidence: workshop/projects/the-myr-singularity/reports/project_report_v1.1.json
+- [~] SIM-02 | Performance remains unmeasured | evidence: workshop/projects/the-myr-singularity/reports/project_report_v1.1.json
+- [~] SIM-03 | Future simulation assumptions are deferred | evidence: workshop/projects/the-myr-singularity/notes/backlog.json

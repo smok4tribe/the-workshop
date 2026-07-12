@@ -1,7 +1,7 @@
 # Product Principles Regression Checklist
 
-- [x] Pass - Project-first workflow: `project.json` and `brief/brief.json`.
-- [x] Pass - Context before judgment and analysis before recommendation: `analysis/baseline_v1.0.json`.
-- [x] Pass - Recommendation before decision and decision before versioning: `recommendations/`, `decisions/`.
-- [x] Pass - User agency, identity preservation, explainability, reversibility, and uncertainty honesty: review, design, and report artifacts.
-- [x] Pass - Readable reports have structured sources: `reports/*.json`.
+## Required Checks
+
+- [x] PP-01 | Project-first workflow | evidence: workshop/projects/the-myr-singularity/project.json, workshop/projects/the-myr-singularity/brief/brief.json
+- [x] PP-02 | Analysis before recommendation | evidence: workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json, workshop/projects/the-myr-singularity/recommendations/rec-002.json
+- [x] PP-03 | User agency and evidence honesty | evidence: workshop/projects/the-myr-singularity/recommendations/review-rec-002.json, workshop/projects/the-myr-singularity/reports/project_report_v1.1.json
