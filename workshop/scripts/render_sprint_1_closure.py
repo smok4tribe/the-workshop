@@ -126,7 +126,9 @@ def render_certification(doc):
         f"{item['implementation_status']}; source {item['source_candidate_reference']}"
         for item in boundary["needs_testing_candidates"]
     ]
-    lines += ["", "## Deferred Non-Blocking Work", "", *bullets(doc["deferred_backlog_ids"])]
+    lines += ["", "## Deferred Non-Blocking Work", ""] + [
+        f"- {item['work_type']}: {item['backlog_id']}" for item in doc["deferred_work"]
+    ]
     lines += ["", "## Sprint 1 Non-Goals", "", *bullets(doc["sprint_1_non_goals"])]
     lines += [
         "", "## External Documentation Review", "",
@@ -140,7 +142,7 @@ def render_certification(doc):
     for key, value in sorted(doc["source_references"].items()):
         refs = value if isinstance(value, list) else [value]
         lines.append(f"- {key}: {', '.join(item['path'] for item in refs)}")
-    lines += ["", "## Next Action", "", doc["next_action"]]
+    lines += ["", "## Next Action", "", doc["next_action"]["description"]]
     return "\n".join(lines).rstrip() + "\n"
 
 

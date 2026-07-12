@@ -129,13 +129,13 @@ Certification concerns local product-loop execution, structure, traceability, re
 
 ## Deferred Non-Blocking Work
 
-- backlog-001
-- backlog-002
-- backlog-003
-- backlog-004
-- backlog-005
-- backlog-006
-- backlog-007
+- post_implementation_analysis: backlog-001
+- mana_color_simulation: backlog-002
+- candidate_testing_kci: backlog-003
+- candidate_testing_mana_echoes: backlog-004
+- version_state_cleanup: backlog-005
+- append_only_transition_history: backlog-006
+- external_rfc_sync: backlog-007
 
 ## Sprint 1 Non-Goals
 
@@ -152,7 +152,7 @@ Certification concerns local product-loop execution, structure, traceability, re
 
 ## External Documentation Review
 
-- Status: pending_external_review
+- Status: pending_external_sync
 - Backlog work type: external_rfc_sync
 - External files modified: False
 - RFC-007
@@ -194,4 +194,4 @@ Certification candidate prepared; independent review pending.
 
 ## Next Action
 
-Independent Sprint 1 certification review.
+Obtain independent Sprint 1 certification review.

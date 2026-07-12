@@ -1044,7 +1044,10 @@
     "production scalability",
     "complete external platform integration"
   ],
-  "next_action": "Independent Sprint 1 certification review.",
+  "next_action": {
+    "action_id": "request_independent_review",
+    "description": "Obtain independent Sprint 1 certification review."
+  },
   "project_name": "The Myr Singularity",
   "version_state": {
     "baseline_version_id": "v1.0",
@@ -1054,7 +1057,7 @@
     "sideboard_unchanged": true
   },
   "external_documentation": {
-    "status": "pending_external_review",
+    "status": "pending_external_sync",
     "backlog_work_type": "external_rfc_sync",
     "rfc_ids": [
       "RFC-007",
@@ -1063,5 +1066,35 @@
       "RFC-013"
     ],
     "external_files_modified": false
-  }
+  },
+  "deferred_work": [
+    {
+      "work_type": "post_implementation_analysis",
+      "backlog_id": "backlog-001"
+    },
+    {
+      "work_type": "mana_color_simulation",
+      "backlog_id": "backlog-002"
+    },
+    {
+      "work_type": "candidate_testing_kci",
+      "backlog_id": "backlog-003"
+    },
+    {
+      "work_type": "candidate_testing_mana_echoes",
+      "backlog_id": "backlog-004"
+    },
+    {
+      "work_type": "version_state_cleanup",
+      "backlog_id": "backlog-005"
+    },
+    {
+      "work_type": "append_only_transition_history",
+      "backlog_id": "backlog-006"
+    },
+    {
+      "work_type": "external_rfc_sync",
+      "backlog_id": "backlog-007"
+    }
+  ]
 }

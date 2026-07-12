@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -69,16 +71,17 @@ class CertificationFixture:
             raise AssertionError(result.stdout + result.stderr)
 
     def run_validator(self, *, skip_lower=True):
-        env = os.environ.copy()
-        env["WORKSHOP_CERTIFICATION_EXPECTED_BASE"] = self.base
-        if skip_lower:
-            env["WORKSHOP_CERTIFICATION_SKIP_LOWER_REGRESSIONS"] = "1"
-        else:
-            env.pop("WORKSHOP_CERTIFICATION_SKIP_LOWER_REGRESSIONS", None)
-        return subprocess.run(
-            [sys.executable, str(self.validator)], cwd=self.root, env=env,
-            text=True, encoding="utf-8", capture_output=True, check=False,
-        )
+        spec = importlib.util.spec_from_file_location("fixture_certification", self.validator)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = module.validate_certification(
+                self.root,
+                expected_base_commit=self.base,
+                run_lower_regressions=not skip_lower,
+            )
+        return subprocess.CompletedProcess([], code, output.getvalue(), "")
 
     def mutate_cert(self, mutate, *, render=True):
         cert = self.load(self.cert_path)
@@ -114,6 +117,12 @@ class CertificationFixture:
             self.write(review_path, review_doc)
         def mutate(cert):
             cert["certification_status"] = status
+            actions = {
+                "certified": {"action_id": "merge_and_record_certification", "description": "Merge, record certification closure, and synchronize external RFC documentation."},
+                "certified_with_non_blocking_followups": {"action_id": "merge_record_and_track_followups", "description": "Merge, record certification, and track non-blocking follow-ups."},
+                "not_certified": {"action_id": "remediate_and_request_new_review", "description": "Remediate blocking findings and request a new independent review."},
+            }
+            cert["next_action"] = actions[status]
             for gate in cert["quality_gates"]:
                 gate["limitations"] = None
             cert["independent_review"] = {
@@ -128,6 +137,16 @@ class CertificationFixture:
 
 
 class SprintCertificationTests(unittest.TestCase):
+    def test_00_production_environment_bypasses_are_ignored(self):
+        env = os.environ.copy()
+        env["WORKSHOP_CERTIFICATION_EXPECTED_BASE"] = "0000000000000000000000000000000000000000"
+        env["WORKSHOP_CERTIFICATION_SKIP_LOWER_REGRESSIONS"] = "1"
+        result = subprocess.run(
+            [sys.executable, str(REPO_ROOT / "workshop" / "tests" / "validation" / "validate_sprint_1_certification.py")],
+            cwd=REPO_ROOT, env=env, text=True, encoding="utf-8", capture_output=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def assert_fails(self, fixture, expected, *, skip_lower=True):
         result = fixture.run_validator(skip_lower=skip_lower)
         output = result.stdout + result.stderr

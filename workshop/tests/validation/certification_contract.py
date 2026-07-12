@@ -125,6 +125,18 @@ BACKLOG_WORK_TYPES = {
     "append_only_transition_history", "external_rfc_sync",
 }
 
+NON_GOALS = [
+    "polished UI", "SaaS architecture", "production database",
+    "automatic recommendation generation", "full Commander rules engine",
+    "full gameplay simulation", "multiplayer modeling", "power or win-rate accuracy",
+    "production scalability", "complete external platform integration",
+]
+
+CLAIM_BOUNDARY = (
+    "Certification concerns local product-loop execution, structure, traceability, "
+    "reproducibility, and evidence honesty. It does not claim measured deck performance."
+)
+
 
 def load_json(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))

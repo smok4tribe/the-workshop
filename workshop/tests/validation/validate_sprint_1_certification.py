@@ -14,6 +14,7 @@ if str(_IMPORT_ROOT) not in sys.path:
 
 from workshop.tests.validation.certification_contract import (
     BACKLOG_WORK_TYPES,
+    CLAIM_BOUNDARY,
     CERTIFICATION_SCOPE,
     CHECKLIST_CONTRACT,
     CRITERION_SOURCES,
@@ -21,6 +22,7 @@ from workshop.tests.validation.certification_contract import (
     EXPECTED_BASE_COMMIT,
     GATE_CONTRACT,
     LOOP_CONTRACT,
+    NON_GOALS,
     PROJECT_ID,
     PROTECTED_PREFIXES,
     REQUIRED_SOURCE_KEYS,
@@ -174,10 +176,10 @@ def validate_source_identities(cert, docs, texts):
     return errors
 
 
-def validate_git_boundary(cert):
+def validate_git_boundary(cert, expected_base_commit):
     errors = []
     base = cert.get("candidate_base_commit")
-    expected = os.environ.get("WORKSHOP_CERTIFICATION_EXPECTED_BASE", EXPECTED_BASE_COMMIT)
+    expected = expected_base_commit
     if base != expected:
         errors.append("candidate_base_commit does not match the intended Sprint integration base")
         return errors, False
@@ -397,7 +399,12 @@ def validate_review_lifecycle(cert):
     return errors
 
 
-def main():
+def validate_certification(root: Path, *, expected_base_commit: str, run_lower_regressions: bool):
+    global ROOT, PROJECT, VALIDATION_DIR, CERT_PATH
+    ROOT = Path(root)
+    PROJECT = ROOT / "workshop" / "projects" / PROJECT_ID
+    VALIDATION_DIR = ROOT / "workshop" / "tests" / "validation"
+    CERT_PATH = PROJECT / "reports" / "sprint_1_certification.json"
     checks = []
     try:
         cert = load_json(CERT_PATH)
@@ -414,7 +421,7 @@ def main():
     source_errors.extend(validate_source_identities(cert, docs, texts))
     checks.append(("structured source identity and relationships", source_errors))
 
-    git_errors, scope_ok = validate_git_boundary(cert)
+    git_errors, scope_ok = validate_git_boundary(cert, expected_base_commit)
     checks.append(("candidate base commit and protected-path scope", git_errors))
 
     backlog_errors, backlog_ok = validate_backlog(docs.get("backlog") or {}, docs.get("product_owner_review") or {}, docs.get("resulting_deck_version") or {})
@@ -435,6 +442,36 @@ def main():
 
     evidence_errors = validate_evidence(cert, docs)
     checks.append(("evidence honesty and candidate state", evidence_errors))
+
+    state_errors = []
+    version_state = cert.get("version_state", {})
+    baseline = docs.get("baseline_deck_version") or {}
+    report_doc = docs.get("project_report") or {}
+    expected_version_state = {
+        "baseline_version_id": baseline.get("version_id"),
+        "resulting_version_id": (docs.get("resulting_deck_version") or {}).get("version_id"),
+        "current_version_id": (docs.get("project") or {}).get("current_version_id"),
+        "commander_unchanged": (docs.get("resulting_deck_version") or {}).get("commander") == baseline.get("commander"),
+        "sideboard_unchanged": (docs.get("resulting_deck_version") or {}).get("sideboard") == baseline.get("sideboard"),
+    }
+    if version_state != expected_version_state or report_doc.get("baseline_deck_version_id") != expected_version_state["baseline_version_id"] or report_doc.get("resulting_deck_version_id") != expected_version_state["resulting_version_id"]:
+        state_errors.append("certification version_state does not match authoritative version sources")
+    external = cert.get("external_documentation", {})
+    external_backlog = next((item for item in (docs.get("backlog") or {}).get("items", []) if item.get("work_type") == "external_rfc_sync"), {})
+    if external != {"status": "pending_external_sync", "backlog_work_type": "external_rfc_sync", "rfc_ids": ["RFC-007", "RFC-008", "RFC-009", "RFC-013"], "external_files_modified": False} or external_backlog.get("work_type") != "external_rfc_sync":
+        state_errors.append("external documentation state does not match backlog and certification scope")
+    deferred = cert.get("deferred_work")
+    expected_deferred = [{"work_type": item.get("work_type"), "backlog_id": item.get("backlog_id")} for item in (docs.get("backlog") or {}).get("items", [])]
+    if deferred != expected_deferred:
+        state_errors.append("deferred work references do not exactly match structured backlog")
+    if cert.get("certification_claim_boundary") != CLAIM_BOUNDARY:
+        state_errors.append("certification claim boundary does not match the authoritative contract")
+    if cert.get("sprint_1_non_goals") != NON_GOALS:
+        state_errors.append("Sprint 1 non-goal set does not match the authoritative contract")
+    actions = {"pending_independent_review": {"action_id": "request_independent_review", "description": "Obtain independent Sprint 1 certification review."}, "certified": {"action_id": "merge_and_record_certification", "description": "Merge, record certification closure, and synchronize external RFC documentation."}, "certified_with_non_blocking_followups": {"action_id": "merge_record_and_track_followups", "description": "Merge, record certification, and track non-blocking follow-ups."}, "not_certified": {"action_id": "remediate_and_request_new_review", "description": "Remediate blocking findings and request a new independent review."}}
+    if cert.get("next_action") != actions.get(cert.get("certification_status")):
+        state_errors.append("next_action does not match certification lifecycle state")
+    checks.append(("derived version, external documentation, deferred work, and lifecycle action", state_errors))
 
     review_errors = validate_review_lifecycle(cert)
     checks.append(("independent review lifecycle and source", review_errors))
@@ -464,14 +501,13 @@ def main():
         if result.returncode:
             runtime_errors.append(f"{rec_name} validator failed")
 
-    skip_lower = os.environ.get("WORKSHOP_CERTIFICATION_SKIP_LOWER_REGRESSIONS") == "1"
-    if skip_lower:
-        runtime["validation-lower-regressions"] = True
-    else:
+    if run_lower_regressions:
         result = run(ROOT, [sys.executable, "-m", "unittest", "workshop.tests.validation.test_validation_architecture", "-v"])
         runtime["validation-lower-regressions"] = result.returncode == 0
         if result.returncode:
             runtime_errors.append("lower-level regression suite failed")
+    else:
+        runtime["validation-lower-regressions"] = True
 
     json_errors = []
     for path in sorted((ROOT / "workshop").rglob("*.json")):
@@ -613,6 +649,14 @@ def main():
     checks.append(("validation contract matches actual execution", contract_errors))
 
     return emit(checks)
+
+
+def main():
+    return validate_certification(
+        ROOT,
+        expected_base_commit=EXPECTED_BASE_COMMIT,
+        run_lower_regressions=True,
+    )
 
 
 if __name__ == "__main__":
