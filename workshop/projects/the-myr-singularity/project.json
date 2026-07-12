@@ -20,14 +20,22 @@
     "Improve resilience."
   ],
   "scope": {
-    "phase": "Project and Brief initialization only.",
+    "phase": "Sprint 1 local product loop complete; final certification pending independent review.",
+    "included": [
+      "Project and Design Brief.",
+      "Baseline and resulting DeckVersions.",
+      "Canonical Card Facts and Functional Knowledge.",
+      "Baseline structural analysis.",
+      "Recommendations, Product Owner review, decisions, design, approval, and implementation.",
+      "Structured and readable post-implementation reporting.",
+      "Validation and regression coverage."
+    ],
     "not_included": [
-      "Decklist content.",
-      "Card facts.",
-      "Analysis.",
-      "Recommendations.",
-      "Decisions.",
-      "Code implementation."
+      "Measured post-implementation performance.",
+      "Gameplay validation.",
+      "Saved simulation evidence.",
+      "Full UI or production application.",
+      "Automatic recommendation generation."
     ]
   }
 }

@@ -775,6 +775,5 @@ class ValidationArchitectureRegressionTests(unittest.TestCase):
                 )
                 self.tearDown(); self.setUp()
 
-
 if __name__ == "__main__":
     unittest.main()

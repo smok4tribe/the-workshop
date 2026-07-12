@@ -14,6 +14,7 @@ checks. Every validator is read-only and uses only the Python standard library.
 | `validate_decision_pipeline.py` | Recommendation, review, decisions, deck-change design, and Product Owner approval |
 | `validate_deck_versions.py` | Current deck, parent/child DeckVersions, quantity-aware diffs, and implementation integrity |
 | `validate_project_reports.py` | Structured project reports, source traceability, exact DeckVersion deltas, evidence status, and deterministic Markdown |
+| `validate_sprint_1_certification.py` | Sprint closure, exit criteria, backlog/checklist closure, evidence honesty, and independent-review state |
 
 `validate_recommendation_review.py` intentionally does not validate decisions,
 designs, approval, implementation, DeckVersions, or `deck/current.txt`.
@@ -30,6 +31,7 @@ python workshop/tests/validation/validate_recommendation_review.py
 python workshop/tests/validation/validate_decision_pipeline.py
 python workshop/tests/validation/validate_deck_versions.py
 python workshop/tests/validation/validate_project_reports.py
+python workshop/tests/validation/validate_sprint_1_certification.py
 ```
 
 The recommendation validator defaults to `rec-001`. Validate `rec-002` in
@@ -190,6 +192,63 @@ groups, evidence status, and next actions are all data-driven and deterministic.
 | active candidate facts | active external candidates still under review |
 | functional knowledge | canonical role assignments |
 | lifecycle metadata | intake and promoted provenance partition |
+
+## Sprint certification
+
+Certification JSON records the result, but validator code and authoritative
+sources derive whether that result is true. `validate_sprint_1_certification.py`
+resolves every declared source inside the repository, validates its artifact
+shape and internal identity, and cross-checks project, version, recommendation,
+review, decision, design, report, Card Facts, Knowledge, lifecycle, backlog, and
+closure-document relationships.
+
+The validator derives the ordered 15-stage product loop, all 27 exit criteria,
+the ten gate dependency sets, and Functional/Structural/Product Done. Recorded
+source keys, artifact IDs, statuses, gate dependencies, and validation-contract
+commands must match those derived contracts; certification JSON cannot override
+the repository evidence.
+
+`candidate_base_commit` is verified through local git. It must be the configured
+Sprint integration base, be a real ancestor of `HEAD`, and have no protected
+product-artifact changes in the base-to-candidate diff. Production validation
+orchestrates both recommendation validators, every other layer validator, the
+non-recursive lower-level regression suite, recursive parsing of every Workshop
+JSON file, all three renderer parity checks, and the scope-control diff.
+
+Independent review uses a structured `sprint_certification_review` JSON source.
+Pending state forbids reviewer and finding data. Certified, certified-with-
+follow-ups, and not-certified states require a completed independent review,
+valid reviewed commit, resolvable review artifact, matching review fields, and
+state-appropriate findings or follow-ups. Changes after the reviewed candidate
+commit are limited to certification review-recording artifacts.
+
+Backlog validation requires one structured record for each required work type,
+unique IDs, project ownership, controlled status/priority values, version and
+candidate links, non-authorization for KCI and Mana Echoes, simulation
+assumptions, and RFC-007/008/009/013 coverage.
+
+Regression checklists use this parseable syntax:
+
+```text
+- [x] PP-01 | Project-first workflow | evidence: workshop/path.json
+- [~] SIM-01 | Simulation not required for Sprint 1 | evidence: workshop/path.json
+```
+
+`[x]` means pass, `[~]` means not required, and `[ ]` is a certification
+failure. Required sections and IDs are fixed, IDs must be unique, and every
+evidence path must resolve. Simulation entries must remain `[~]` while no saved
+simulation or measured-performance evidence exists.
+
+Closure validation checks the project README sections and facts, project scope,
+the unique Sprint notes checkpoint, and the RFC handoff. The closure renderer is
+data-driven for project/version identity, pending and completed review states,
+external documentation, backlog content, and next action.
+
+Certification-specific tests live in `test_sprint_1_certification.py`; the
+established lower-level suite remains in `test_validation_architecture.py` so
+the certification validator can run it without recursion. The production
+candidate remains `pending_independent_review`; passing validation does not by
+itself certify Sprint 1.
 
 ## Regression tests
 

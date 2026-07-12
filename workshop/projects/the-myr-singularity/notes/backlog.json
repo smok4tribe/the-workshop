@@ -1,1 +1,120 @@
-[]
+{
+  "schema_version": "1.0",
+  "project_id": "the-myr-singularity",
+  "backlog_id": "the-myr-singularity-backlog",
+  "items": [
+    {
+      "backlog_id": "backlog-001",
+      "title": "Post-v1.1 structural analysis",
+      "status": "deferred",
+      "priority": "high",
+      "purpose": "Analyze DeckVersion v1.1 after Sprint 1 certification.",
+      "dependency": "Sprint 1 certification",
+      "acceptance_criteria": [
+        "Structured v1.1 analysis exists",
+        "No performance claim without evidence"
+      ],
+      "work_type": "post_implementation_analysis",
+      "project_id": "the-myr-singularity",
+      "related_version_id": "v1.1"
+    },
+    {
+      "backlog_id": "backlog-002",
+      "title": "Focused mana/color simulation",
+      "status": "deferred",
+      "priority": "high",
+      "purpose": "Evaluate five-color mana assumptions after policy and mulligan rules are defined.",
+      "dependency": "Sprint 1 certification",
+      "acceptance_criteria": [
+        "Assumptions recorded",
+        "Mulligan policy decided",
+        "No simulation claim before results exist"
+      ],
+      "work_type": "mana_color_simulation",
+      "project_id": "the-myr-singularity",
+      "related_version_id": "v1.1",
+      "required_assumptions": [
+        "mulligan_policy_pending",
+        "simulation_assumptions_pending",
+        "no_existing_result_claim"
+      ]
+    },
+    {
+      "backlog_id": "backlog-003",
+      "title": "Krark-Clan Ironworks testing",
+      "status": "needs_testing",
+      "priority": "medium",
+      "purpose": "Test KCI without implementation authorization.",
+      "dependency": "Post-certification testing plan",
+      "acceptance_criteria": [
+        "Testing evidence recorded",
+        "Product Owner decision remains required"
+      ],
+      "work_type": "candidate_testing_kci",
+      "project_id": "the-myr-singularity",
+      "related_candidate_id": "cand-009",
+      "implementation_authorized": false
+    },
+    {
+      "backlog_id": "backlog-004",
+      "title": "Mana Echoes testing",
+      "status": "needs_testing",
+      "priority": "medium",
+      "purpose": "Test Mana Echoes without implementation authorization.",
+      "dependency": "Post-certification testing plan",
+      "acceptance_criteria": [
+        "Testing evidence recorded",
+        "Product Owner decision remains required"
+      ],
+      "work_type": "candidate_testing_mana_echoes",
+      "project_id": "the-myr-singularity",
+      "related_candidate_id": "cand-010",
+      "implementation_authorized": false
+    },
+    {
+      "backlog_id": "backlog-005",
+      "title": "Generic version-state cleanup",
+      "status": "deferred",
+      "priority": "low",
+      "purpose": "Remove remaining version-specific state naming.",
+      "dependency": "Sprint 1 certification",
+      "acceptance_criteria": [
+        "Generic state contract proposed"
+      ],
+      "work_type": "version_state_cleanup",
+      "project_id": "the-myr-singularity"
+    },
+    {
+      "backlog_id": "backlog-006",
+      "title": "Append-only transition history",
+      "status": "deferred",
+      "priority": "low",
+      "purpose": "Model decision, approval, and implementation events.",
+      "dependency": "Sprint 1 certification",
+      "acceptance_criteria": [
+        "Event/history model proposed"
+      ],
+      "work_type": "append_only_transition_history",
+      "project_id": "the-myr-singularity"
+    },
+    {
+      "backlog_id": "backlog-007",
+      "title": "External RFC documentation synchronization",
+      "status": "deferred",
+      "priority": "medium",
+      "purpose": "Synchronize RFC-007, RFC-008, RFC-009, and RFC-013 after certification.",
+      "dependency": "Independent certification outcome",
+      "acceptance_criteria": [
+        "RFC update decisions recorded"
+      ],
+      "work_type": "external_rfc_sync",
+      "project_id": "the-myr-singularity",
+      "external_rfc_ids": [
+        "RFC-007",
+        "RFC-008",
+        "RFC-009",
+        "RFC-013"
+      ]
+    }
+  ]
+}
