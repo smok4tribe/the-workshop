@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 class CertificationFixture:
-    def __init__(self):
+    def __init__(self, source_certification=None):
         self.temp = tempfile.TemporaryDirectory(prefix="sprint-certification-")
         self.root = Path(self.temp.name)
         shutil.copytree(REPO_ROOT / "workshop", self.root / "workshop")
@@ -28,6 +28,16 @@ class CertificationFixture:
         self.backlog_path = self.project / "notes" / "backlog.json"
         self.validator = self.root / "workshop" / "tests" / "validation" / "validate_sprint_1_certification.py"
         self.renderer = self.root / "workshop" / "scripts" / "render_sprint_1_closure.py"
+        spec = importlib.util.spec_from_file_location("fixture_projection", self.validator)
+        projection_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(projection_module)
+        source = source_certification or self.load(self.cert_path)
+        self.projected_source_certification = projection_module.canonical_pending_projection(source)
+        self.write(self.cert_path, self.projected_source_certification)
+        review_path = self.project / "reports" / "sprint_1_certification_review.json"
+        if review_path.exists():
+            review_path.unlink()
+        self.render()
         self.git("init")
         self.git("config", "user.email", "certification@example.invalid")
         self.git("config", "user.name", "Certification Fixture")
@@ -146,6 +156,47 @@ class CertificationFixture:
 
 
 class SprintCertificationTests(unittest.TestCase):
+    def test_00f_fixture_is_lifecycle_neutral(self):
+        source = CertificationFixture.load(REPO_ROOT / "workshop" / "projects" / "the-myr-singularity" / "reports" / "sprint_1_certification.json")
+        states = [
+            ("certified", "APPROVE", [], [], None),
+            ("certified_with_non_blocking_followups", "APPROVE", ["Track documentation"], [], "Non-blocking follow-ups remain to be tracked."),
+            ("not_certified", "REQUEST CHANGES", [], ["Blocking evidence gap"], "Blocking independent-review findings require remediation."),
+        ]
+        for status, verdict, followups, blockers, limitation in states:
+            with self.subTest(status=status):
+                copied = json.loads(json.dumps(source))
+                copied["certification_status"] = status
+                copied["independent_review"] = {
+                    "status": "completed", "reviewer_role": "independent_reviewer", "reviewer": "Sol",
+                    "verdict": verdict, "reviewed_commit": "a" * 40, "reviewed_at": "2026-07-12T12:00:00Z",
+                    "review_source": {"path": "workshop/projects/the-myr-singularity/reports/sprint_1_certification_review.json"},
+                    "blocking_findings": blockers, "non_blocking_followups": followups, "rationale": "Recorded review",
+                }
+                copied["next_action"] = {"action_id": "recorded", "description": "Recorded lifecycle state."}
+                for gate in copied["quality_gates"]:
+                    gate["limitations"] = limitation
+                with CertificationFixture(copied) as fixture:
+                    cert = fixture.load(fixture.cert_path)
+                    expected = json.loads(json.dumps(fixture.projected_source_certification))
+                    expected["candidate_base_commit"] = fixture.base
+                    self.assertEqual(cert, expected)
+                    self.assertEqual(cert["certification_status"], "pending_independent_review")
+                    self.assertEqual(cert["independent_review"]["status"], "pending")
+                    self.assertTrue(all(value is None for key, value in cert["independent_review"].items() if key not in {"status", "blocking_findings", "non_blocking_followups"}))
+                    self.assertEqual(cert["independent_review"]["blocking_findings"], [])
+                    self.assertEqual(cert["independent_review"]["non_blocking_followups"], [])
+                    self.assertEqual(cert["next_action"]["action_id"], "request_independent_review")
+                    self.assertTrue(all(gate["limitations"] == "Independent review remains pending." for gate in cert["quality_gates"]))
+                    self.assertFalse((fixture.project / "reports" / "sprint_1_certification_review.json").exists())
+                    self.git_fixture_commit_exists(fixture, fixture.pending_commit)
+                    result = fixture.run_validator()
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    @staticmethod
+    def git_fixture_commit_exists(fixture, commit):
+        fixture.git("cat-file", "-e", f"{commit}^{{commit}}")
+
     def test_00e_source_domains_are_localized(self):
         def break_card_facts(fixture):
             path = fixture.root / "workshop" / "card-data" / "cards.json"
