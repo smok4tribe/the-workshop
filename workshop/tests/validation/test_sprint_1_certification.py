@@ -428,6 +428,37 @@ class SprintCertificationTests(unittest.TestCase):
                 mutate(fixture)
                 self.assert_fails(fixture, expected)
 
+    def test_09b_reviewed_candidate_full_content_equivalence(self):
+        cases = [
+            ("version state", lambda c: c["version_state"].update(current_version_id="v9.9")),
+            ("claim boundary", lambda c: c.update(certification_claim_boundary="False boundary")),
+            ("non-goal", lambda c: c["sprint_1_non_goals"].__setitem__(0, "changed non-goal")),
+            ("external documentation", lambda c: c["external_documentation"].update(status="synced")),
+            ("deferred work", lambda c: c["deferred_work"].pop()),
+            ("evidence boundary", lambda c: c["evidence_boundary"].update(performance_measurement="measured")),
+            ("product loop", lambda c: c["product_loop"][0].update(status="incomplete")),
+            ("exit criterion", lambda c: c["sprint_exit_criteria"][0].update(status="fail")),
+            ("quality gate", lambda c: c["quality_gates"][0].update(status="fail")),
+            ("Definition of Done", lambda c: c["definition_of_done"][0].update(functional_done="fail")),
+            ("validation contract", lambda c: c["validation_contract"][0].update(status="fail")),
+            ("source reference", lambda c: c["source_references"]["project"].update(id="wrong-project")),
+        ]
+        for name, mutate in cases:
+            with self.subTest(name=name), CertificationFixture() as fixture:
+                self._review_with_mutated_candidate(fixture, mutate)
+                self.assert_fails(fixture, "reviewed_commit certification candidate differs from the canonical pending projection of the recorded certification")
+
+        completed_states = [
+            ("certified", "APPROVE", [], []),
+            ("certified_with_non_blocking_followups", "APPROVE", ["Track documentation"], []),
+            ("not_certified", "REQUEST CHANGES", [], ["Blocking evidence gap"]),
+        ]
+        for status, verdict, followups, blockers in completed_states:
+            with self.subTest(status=status), CertificationFixture() as fixture:
+                fixture.complete_review(status=status, verdict=verdict, followups=followups, blockers=blockers, rationale="Review rationale")
+                result = fixture.run_validator()
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     @staticmethod
     def _review_with_mutated_candidate(fixture, mutate):
         original = fixture.load(fixture.cert_path)

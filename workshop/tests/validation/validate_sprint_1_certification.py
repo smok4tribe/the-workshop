@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 _IMPORT_ROOT = Path(__file__).resolve().parents[3]
@@ -341,6 +342,31 @@ def validate_evidence(cert, docs):
     return errors
 
 
+def canonical_pending_projection(recorded_certification: dict) -> dict:
+    """Restore only the lifecycle fields that may change while recording review."""
+    projected = deepcopy(recorded_certification)
+    projected["certification_status"] = "pending_independent_review"
+    projected["independent_review"] = {
+        "status": "pending",
+        "reviewer_role": None,
+        "reviewer": None,
+        "verdict": None,
+        "reviewed_commit": None,
+        "reviewed_at": None,
+        "review_source": None,
+        "blocking_findings": [],
+        "non_blocking_followups": [],
+        "rationale": None,
+    }
+    projected["next_action"] = {
+        "action_id": "request_independent_review",
+        "description": "Obtain independent Sprint 1 certification review.",
+    }
+    for gate in projected.get("quality_gates", []):
+        gate["limitations"] = "Independent review remains pending."
+    return projected
+
+
 def validate_review_lifecycle(cert):
     errors = []
     status = cert.get("certification_status")
@@ -378,6 +404,8 @@ def validate_review_lifecycle(cert):
             )) or reviewed_review.get("blocking_findings") != []
                 or reviewed_review.get("non_blocking_followups") != []):
             errors.append("reviewed_commit pending certification candidate contains completed review data")
+        elif reviewed_candidate != canonical_pending_projection(cert):
+            errors.append("reviewed_commit certification candidate differs from the canonical pending projection of the recorded certification")
         changed = git(ROOT, "diff", "--name-only", f"{review['reviewed_commit']}..HEAD")
         allowed = (
             "workshop/projects/the-myr-singularity/reports/sprint_1_certification.json",
