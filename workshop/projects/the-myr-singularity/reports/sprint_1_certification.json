@@ -623,7 +623,7 @@
       "requirement_level": "required",
       "status": "pending_external_review",
       "rationale": "Repository evidence and certification validation support this criterion.",
-      "limitations": "Independent review is pending.",
+      "limitations": "External RFC and ADR synchronization remains pending.",
       "evidence_source_keys": [
         "documentation_handoff",
         "backlog"

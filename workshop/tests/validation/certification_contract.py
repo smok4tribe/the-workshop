@@ -119,6 +119,28 @@ CHECKLIST_CONTRACT = {
     "simulation.md": ("# Simulation Regression Checklist", {"SIM-01", "SIM-02", "SIM-03"}),
 }
 
+CHECKLIST_EVIDENCE = {
+    "PP-01": {"workshop/projects/the-myr-singularity/project.json", "workshop/projects/the-myr-singularity/brief/brief.json"},
+    "PP-02": {"workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json", "workshop/projects/the-myr-singularity/recommendations/rec-002.json"},
+    "PP-03": {"workshop/projects/the-myr-singularity/recommendations/review-rec-002.json", "workshop/projects/the-myr-singularity/reports/project_report_v1.1.json"},
+    "DM-01": {"workshop/projects/the-myr-singularity/project.json", "workshop/card-data/cards.json"},
+    "DM-02": {"workshop/projects/the-myr-singularity/versions/v1.0.json", "workshop/projects/the-myr-singularity/versions/v1.1.json"},
+    "DM-03": {"workshop/card-data/candidate_card_import_metadata.json", "workshop/card-data/candidate_cards.json"},
+    "RS-01": {"workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json", "workshop/projects/the-myr-singularity/recommendations/rec-002.json"},
+    "RS-02": {"workshop/projects/the-myr-singularity/decisions/decision-002.json", "workshop/projects/the-myr-singularity/decisions/decision-003.json", "workshop/projects/the-myr-singularity/decisions/decision-004.json"},
+    "RS-03": {"workshop/projects/the-myr-singularity/reports/project_report_v1.1.json"},
+    "SIM-01": {"workshop/projects/the-myr-singularity/reports/project_report_v1.1.json"},
+    "SIM-02": {"workshop/projects/the-myr-singularity/reports/project_report_v1.1.json"},
+    "SIM-03": {"workshop/projects/the-myr-singularity/notes/backlog.json"},
+}
+
+CHECKLIST_STATES = {
+    "PP-01": "x", "PP-02": "x", "PP-03": "x",
+    "DM-01": "x", "DM-02": "x", "DM-03": "x",
+    "RS-01": "x", "RS-02": "x", "RS-03": "x",
+    "SIM-01": "~", "SIM-02": "~", "SIM-03": "~",
+}
+
 BACKLOG_WORK_TYPES = {
     "post_implementation_analysis", "mana_color_simulation", "candidate_testing_kci",
     "candidate_testing_mana_echoes", "version_state_cleanup",
@@ -197,13 +219,14 @@ def parse_checklist(root, path, expected_heading, expected_ids):
     if set(ids) != expected_ids:
         errors.append(f"{path.name} checklist IDs do not match the required set")
     for state, item_id, evidence_paths in items:
-        if state == " ":
-            errors.append(f"{path.name} checklist item {item_id} is failing")
-        if path.name == "simulation.md" and state != "~":
-            errors.append(f"simulation checklist item {item_id} must be not required")
+        expected_state = CHECKLIST_STATES.get(item_id)
+        if state != expected_state:
+            errors.append(f"{path.name} checklist item {item_id} state does not match the authoritative contract")
         for relative in evidence_paths:
             if not (root / relative).is_file():
                 errors.append(f"{path.name} checklist item {item_id} evidence does not resolve: {relative}")
+        if set(evidence_paths) != CHECKLIST_EVIDENCE.get(item_id, set()):
+            errors.append(f"{path.name} checklist item {item_id} evidence is not authoritative")
     return errors
 
 

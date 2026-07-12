@@ -38,6 +38,9 @@ class CertificationFixture:
         cert["candidate_base_commit"] = self.base
         self.write(self.cert_path, cert)
         self.render()
+        self.git("add", "workshop")
+        self.git("commit", "-m", "pending certification candidate")
+        self.pending_commit = self.git("rev-parse", "HEAD").stdout.strip()
 
     def __enter__(self):
         return self
@@ -99,7 +102,7 @@ class CertificationFixture:
     def complete_review(self, *, status="certified", verdict="APPROVE", followups=None, blockers=None, rationale=None, reviewed_commit=None, source=True):
         followups = [] if followups is None else followups
         blockers = [] if blockers is None else blockers
-        reviewed_commit = reviewed_commit or self.base
+        reviewed_commit = reviewed_commit or self.pending_commit
         review_path = self.project / "reports" / "sprint_1_certification_review.json"
         review_doc = {
             "artifact_type": "sprint_certification_review",
@@ -112,6 +115,7 @@ class CertificationFixture:
             "reviewed_at": "2026-07-12T12:00:00Z",
             "blocking_findings": blockers,
             "non_blocking_followups": followups,
+            "rationale": rationale,
         }
         if source:
             self.write(review_path, review_doc)
@@ -123,8 +127,13 @@ class CertificationFixture:
                 "not_certified": {"action_id": "remediate_and_request_new_review", "description": "Remediate blocking findings and request a new independent review."},
             }
             cert["next_action"] = actions[status]
+            limitations = {
+                "certified": None,
+                "certified_with_non_blocking_followups": "Non-blocking follow-ups remain to be tracked.",
+                "not_certified": "Blocking independent-review findings require remediation.",
+            }
             for gate in cert["quality_gates"]:
-                gate["limitations"] = None
+                gate["limitations"] = limitations[status]
             cert["independent_review"] = {
                 "status": "completed", "reviewer": "Sol",
                 "reviewer_role": "independent_reviewer", "verdict": verdict,
@@ -137,6 +146,78 @@ class CertificationFixture:
 
 
 class SprintCertificationTests(unittest.TestCase):
+    def test_00c_recommendation_failures_are_localized(self):
+        for rec_name, validation_id in (("rec-001", "validation-rec-001"), ("rec-002", "validation-rec-002")):
+            with self.subTest(rec_name=rec_name), CertificationFixture() as fixture:
+                path = fixture.project / "recommendations" / f"{rec_name}.json"
+                document = fixture.load(path)
+                document["project_id"] = "wrong-project"
+                fixture.write(path, document)
+                fixture.render()
+                result = fixture.run_validator()
+                output = result.stdout
+                self.assertNotEqual(result.returncode, 0, output)
+                for expected in (
+                    "product loop stage loop-09 does not match derived completion evidence",
+                    "Sprint exit criterion exit-11 status does not match derived evidence",
+                    "quality gate gate-recommendation does not match derived dependencies",
+                    "Definition of Done 'recommendation' functional_done does not match derived evidence",
+                    f"validation contract record {validation_id} does not match actual execution",
+                ):
+                    self.assertIn(expected, output)
+                self.assertNotIn("Definition of Done 'reporting' functional_done does not match derived evidence", output)
+                self.assertNotIn("Definition of Done 'Card Facts and Knowledge' functional_done does not match derived evidence", output)
+
+    def test_00d_localized_capability_dependencies(self):
+        cases = [
+            ("reporting", lambda f: (f.project / "reports" / "project_report_v1.1.md").write_text("drift", encoding="utf-8"), "reporting", "recommendation"),
+            ("workspace", lambda f: (f.project / "README.md").write_text("# Placeholder\n", encoding="utf-8"), "project workspace", "versioning"),
+            ("versioning", lambda f: (f.project / "deck" / "current.txt").write_text((f.project / "deck" / "current.txt").read_text(encoding="utf-8").replace("1 City of Brass", "1 Academy Ruins"), encoding="utf-8"), "versioning", "reporting"),
+        ]
+        for name, mutate, affected, unaffected in cases:
+            with self.subTest(name=name), CertificationFixture() as fixture:
+                mutate(fixture)
+                output = fixture.run_validator().stdout
+                self.assertIn(f"Definition of Done '{affected}'", output)
+                self.assertNotIn(f"Definition of Done '{unaffected}' functional_done does not match derived evidence", output)
+        with CertificationFixture() as fixture:
+            path = fixture.root / "workshop" / "tests" / "validation" / "test_validation_architecture.py"
+            path.write_text(path.read_text(encoding="utf-8").replace("\nif __name__ == \"__main__\":", "\n    def test_forced_lower_failure(self):\n        self.fail('forced')\n\nif __name__ == \"__main__\":"), encoding="utf-8")
+            output = fixture.run_validator(skip_lower=False).stdout
+            self.assertIn("Definition of Done 'validation' structural_done does not match derived evidence", output)
+            self.assertNotIn("Definition of Done 'reporting' functional_done does not match derived evidence", output)
+
+    def test_00b_recommendation_and_versioning_propagation(self):
+        for rec_name in ("rec-001", "rec-002"):
+            with self.subTest(rec_name=rec_name), CertificationFixture() as fixture:
+                path = fixture.project / "recommendations" / f"{rec_name}.json"
+                data = fixture.load(path)
+                data["project_id"] = "wrong-project"
+                fixture.write(path, data)
+                fixture.render()
+                self.assert_fails(fixture, "product loop stage loop-09 does not match derived completion evidence")
+                result = fixture.run_validator()
+                self.assertIn("quality gate gate-recommendation does not match derived dependencies", result.stdout)
+                self.assertIn("Definition of Done 'recommendation' functional_done does not match derived evidence", result.stdout)
+        with CertificationFixture() as fixture:
+            deck = fixture.project / "deck" / "current.txt"
+            deck.write_text(deck.read_text(encoding="utf-8").replace("1 City of Brass", "1 Academy Ruins"), encoding="utf-8")
+            result = fixture.run_validator()
+            self.assert_fails(fixture, "product loop stage loop-14 does not match derived completion evidence")
+            self.assertIn("Sprint exit criterion exit-19 status does not match derived evidence", result.stdout)
+            self.assertIn("quality gate gate-decision-versioning does not match derived dependencies", result.stdout)
+            self.assertIn("Definition of Done 'versioning' functional_done does not match derived evidence", result.stdout)
+
+    def test_00a_lifecycle_and_localized_capability_contracts(self):
+        with CertificationFixture() as fixture:
+            report = fixture.project / "reports" / "project_report_v1.1.md"
+            report.write_text(report.read_text(encoding="utf-8") + "\nDrift.\n", encoding="utf-8")
+            self.assert_fails(fixture, "Definition of Done 'reporting' functional_done does not match derived evidence")
+        with CertificationFixture() as fixture:
+            readme = fixture.project / "README.md"
+            readme.write_text("# Placeholder\n", encoding="utf-8")
+            self.assert_fails(fixture, "Definition of Done 'project workspace' product_done does not match derived evidence")
+
     def test_00_production_environment_bypasses_are_ignored(self):
         env = os.environ.copy()
         env["WORKSHOP_CERTIFICATION_EXPECTED_BASE"] = "0000000000000000000000000000000000000000"
@@ -302,6 +383,46 @@ class SprintCertificationTests(unittest.TestCase):
             result = fixture.run_validator()
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_09a_reviewed_candidate_boundary_mutations(self):
+        cases = [
+            ("rationale mismatch", lambda f: (f.complete_review(rationale="Approved"), f.write(f.project / "reports" / "sprint_1_certification_review.json", {**f.load(f.project / "reports" / "sprint_1_certification_review.json"), "rationale": "Different"})), "independent review source does not agree"),
+            ("unrelated valid ancestor", lambda f: f.complete_review(reviewed_commit=f.base), "reviewed_commit does not contain the pending certification candidate"),
+            ("missing candidate artifact", self._review_without_candidate_artifact, "reviewed_commit does not contain the pending certification candidate"),
+            ("wrong certification ID", lambda f: self._review_with_mutated_candidate(f, lambda c: c.update(certification_id="wrong")), "reviewed_commit does not contain the pending certification candidate"),
+            ("wrong project ID", lambda f: self._review_with_mutated_candidate(f, lambda c: c.update(project_id="wrong")), "reviewed_commit does not contain the pending certification candidate"),
+            ("wrong candidate base", lambda f: self._review_with_mutated_candidate(f, lambda c: c.update(candidate_base_commit="a" * 40)), "reviewed_commit does not contain the pending certification candidate"),
+            ("completed candidate", lambda f: self._review_with_mutated_candidate(f, lambda c: c.update(certification_status="certified")), "reviewed_commit does not contain the pending certification candidate"),
+        ]
+        for name, mutate, expected in cases:
+            with self.subTest(name=name), CertificationFixture() as fixture:
+                mutate(fixture)
+                self.assert_fails(fixture, expected)
+
+    @staticmethod
+    def _review_with_mutated_candidate(fixture, mutate):
+        original = fixture.load(fixture.cert_path)
+        candidate = json.loads(json.dumps(original))
+        mutate(candidate)
+        fixture.write(fixture.cert_path, candidate)
+        fixture.render()
+        fixture.git("add", "workshop")
+        fixture.git("commit", "-m", "invalid reviewed candidate")
+        reviewed_commit = fixture.git("rev-parse", "HEAD").stdout.strip()
+        fixture.write(fixture.cert_path, original)
+        fixture.render()
+        fixture.complete_review(reviewed_commit=reviewed_commit)
+
+    @staticmethod
+    def _review_without_candidate_artifact(fixture):
+        original = fixture.load(fixture.cert_path)
+        fixture.cert_path.unlink()
+        fixture.git("add", "-A")
+        fixture.git("commit", "-m", "candidate artifact absent")
+        reviewed_commit = fixture.git("rev-parse", "HEAD").stdout.strip()
+        fixture.write(fixture.cert_path, original)
+        fixture.render()
+        fixture.complete_review(reviewed_commit=reviewed_commit)
+
     def test_10_backlog_mutations(self):
         def item(work_type):
             return lambda backlog: next(value for value in backlog["items"] if value["work_type"] == work_type)
@@ -324,8 +445,8 @@ class SprintCertificationTests(unittest.TestCase):
         cases = [
             ("section", "product_principles.md", lambda text: text.replace("## Required Checks", "## Missing"), "missing required checklist sections"),
             ("evidence", "data_model.md", lambda text: text.replace("workshop/card-data/cards.json", "missing.json"), "evidence does not resolve"),
-            ("simulation complete", "simulation.md", lambda text: text.replace("[~] SIM-01", "[x] SIM-01"), "must be not required"),
-            ("fail item", "reasoning.md", lambda text: text.replace("[x] RS-01", "[ ] RS-01"), "is failing"),
+            ("simulation complete", "simulation.md", lambda text: text.replace("[~] SIM-01", "[x] SIM-01"), "SIM-01 state does not match the authoritative contract"),
+            ("fail item", "reasoning.md", lambda text: text.replace("[x] RS-01", "[ ] RS-01"), "RS-01 state does not match the authoritative contract"),
             ("no items", "reasoning.md", lambda _: "# Reasoning Regression Checklist\n\n## Required Checks\n", "contains no checklist items"),
         ]
         for name, filename, mutate, expected in cases:
@@ -333,6 +454,54 @@ class SprintCertificationTests(unittest.TestCase):
                 path = fixture.root / "workshop" / "tests" / "regression" / filename
                 path.write_text(mutate(path.read_text(encoding="utf-8")), encoding="utf-8")
                 self.assert_fails(fixture, expected)
+
+    def test_11a_checklist_authority_mutations(self):
+        cases = [
+            ("product principles", "product_principles.md", "workshop/projects/the-myr-singularity/project.json", "workshop/projects/the-myr-singularity/README.md"),
+            ("data model", "data_model.md", "workshop/card-data/cards.json", "workshop/projects/the-myr-singularity/README.md"),
+            ("reasoning", "reasoning.md", "workshop/projects/the-myr-singularity/decisions/decision-002.json", "workshop/projects/the-myr-singularity/project.json"),
+            ("simulation", "simulation.md", "workshop/projects/the-myr-singularity/reports/project_report_v1.1.json", "workshop/projects/the-myr-singularity/project.json"),
+        ]
+        for name, filename, authoritative, unrelated in cases:
+            with self.subTest(name=name), CertificationFixture() as fixture:
+                path = fixture.root / "workshop" / "tests" / "regression" / filename
+                path.write_text(path.read_text(encoding="utf-8").replace(authoritative, unrelated, 1), encoding="utf-8")
+                self.assert_fails(fixture, "evidence is not authoritative")
+        with CertificationFixture() as fixture:
+            path = fixture.root / "workshop" / "tests" / "regression" / "product_principles.md"
+            path.write_text(path.read_text(encoding="utf-8").replace("[x] PP-01", "[~] PP-01"), encoding="utf-8")
+            self.assert_fails(fixture, "PP-01 state does not match the authoritative contract")
+        with CertificationFixture() as fixture:
+            path = fixture.root / "workshop" / "tests" / "regression" / "data_model.md"
+            text = path.read_text(encoding="utf-8")
+            path.write_text(text.replace(", workshop/card-data/cards.json", "", 1), encoding="utf-8")
+            self.assert_fails(fixture, "evidence is not authoritative")
+
+    def test_11b_lifecycle_limitations_and_rendering(self):
+        cases = [
+            ("pending_independent_review", None, None, None, "Independent review remains pending."),
+            ("certified", "APPROVE", [], [], None),
+            ("certified_with_non_blocking_followups", "APPROVE", ["Track documentation"], [], "Non-blocking follow-ups remain to be tracked."),
+            ("not_certified", "REQUEST CHANGES", [], ["Blocking evidence gap"], "Blocking independent-review findings require remediation."),
+        ]
+        for status, verdict, followups, blockers, limitation in cases:
+            with self.subTest(status=status), CertificationFixture() as fixture:
+                if status != "pending_independent_review":
+                    fixture.complete_review(status=status, verdict=verdict, followups=followups, blockers=blockers, rationale="Rationale")
+                result = fixture.run_validator()
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                cert = fixture.load(fixture.cert_path)
+                self.assertEqual(cert["sprint_exit_criteria"][23]["limitations"], "External RFC and ADR synchronization remains pending.")
+                self.assertTrue(all(gate["limitations"] == limitation for gate in cert["quality_gates"]))
+                self.assertIn(cert["next_action"]["action_id"], {
+                    "request_independent_review", "merge_and_record_certification",
+                    "merge_record_and_track_followups", "remediate_and_request_new_review",
+                })
+                rendered = fixture.cert_path.with_suffix(".md").read_text(encoding="utf-8")
+                if status == "pending_independent_review":
+                    self.assertIn("independent review pending", rendered)
+                else:
+                    self.assertNotIn("Independent review is pending.", rendered)
 
     def test_12_closure_document_mutations(self):
         cases = [

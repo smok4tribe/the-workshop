@@ -359,6 +359,18 @@ def validate_review_lifecycle(cert):
     if git(ROOT, "cat-file", "-e", f"{review['reviewed_commit']}^{{commit}}").returncode or git(ROOT, "merge-base", "--is-ancestor", review["reviewed_commit"], "HEAD").returncode:
         errors.append("independent review reviewed_commit is not a valid reviewed ancestor")
     else:
+        candidate_path = "workshop/projects/the-myr-singularity/reports/sprint_1_certification.json"
+        candidate = git(ROOT, "show", f"{review['reviewed_commit']}:{candidate_path}")
+        try:
+            reviewed_candidate = json.loads(candidate.stdout) if not candidate.returncode else {}
+        except json.JSONDecodeError:
+            reviewed_candidate = {}
+        if (reviewed_candidate.get("certification_id") != cert.get("certification_id")
+                or reviewed_candidate.get("project_id") != PROJECT_ID
+                or reviewed_candidate.get("candidate_base_commit") != cert.get("candidate_base_commit")
+                or reviewed_candidate.get("certification_status") != "pending_independent_review"
+                or (reviewed_candidate.get("independent_review") or {}).get("status") != "pending"):
+            errors.append("reviewed_commit does not contain the pending certification candidate")
         changed = git(ROOT, "diff", "--name-only", f"{review['reviewed_commit']}..HEAD")
         allowed = (
             "workshop/projects/the-myr-singularity/reports/sprint_1_certification.json",
@@ -387,6 +399,7 @@ def validate_review_lifecycle(cert):
         "reviewed_commit": review.get("reviewed_commit"), "reviewed_at": review.get("reviewed_at"),
         "blocking_findings": review.get("blocking_findings"),
         "non_blocking_followups": review.get("non_blocking_followups"),
+        "rationale": review.get("rationale"),
     }
     if any(artifact.get(key) != value for key, value in expected.items()):
         errors.append("independent review source does not agree with certification review fields")
@@ -491,14 +504,18 @@ def validate_certification(root: Path, *, expected_base_commit: str, run_lower_r
         runtime[validation_id] = result.returncode == 0
         if result.returncode:
             runtime_errors.append(f"layer validator {script} failed")
+    recommendation_source_ok = {
+        rec_name: not any(error.startswith(f"{rec_name} source identity") for error in source_errors)
+        for rec_name in ("rec-001", "rec-002")
+    }
     for validation_id, rec_name in (("validation-rec-001", "rec-001"), ("validation-rec-002", "rec-002")):
         env = {
             "WORKSHOP_RECOMMENDATION_JSON": f"workshop/projects/{PROJECT_ID}/recommendations/{rec_name}.json",
             "WORKSHOP_RECOMMENDATION_MD": f"workshop/projects/{PROJECT_ID}/recommendations/{rec_name}.md",
         }
         result = run(ROOT, [sys.executable, VALIDATION_DIR / "validate_recommendation_schema.py"], env)
-        runtime[validation_id] = result.returncode == 0
-        if result.returncode:
+        runtime[validation_id] = result.returncode == 0 and recommendation_source_ok[rec_name]
+        if not runtime[validation_id]:
             runtime_errors.append(f"{rec_name} validator failed")
 
     if run_lower_regressions:
@@ -544,11 +561,12 @@ def validate_certification(root: Path, *, expected_base_commit: str, run_lower_r
     resulting = docs.get("resulting_deck_version") or {}
     resulting_counters = {zone: deck.section_counter(resulting, zone)[0] for zone in ("commander", "main_deck", "sideboard")}
     current_aligned = not current_errors and current == resulting_counters
-    source_ok = not source_errors
+    source_ok = not [error for error in source_errors if not error.startswith(("rec-001", "rec-002"))]
     report_parity = runtime.get("validation-report-renderer", False)
     stage_truth = {step_id: source_ok for step_id, _, _, _ in LOOP_CONTRACT}
     stage_truth["loop-07"] = source_ok and bool((docs.get("baseline_analysis") or {}).get("analysis_id"))
     stage_truth["loop-08"] = source_ok and bool((docs.get("baseline_analysis") or {}).get("structural_pressure_points"))
+    stage_truth["loop-09"] = source_ok and runtime.get("validation-rec-001", False) and runtime.get("validation-rec-002", False)
     stage_truth["loop-11"] = source_ok and len(docs.get("decisions") or []) == 3
     stage_truth["loop-13"] = source_ok and (docs.get("deck_change_design") or {}).get("product_owner_approved") is True
     stage_truth["loop-14"] = source_ok and current_aligned
@@ -573,6 +591,10 @@ def validate_certification(root: Path, *, expected_base_commit: str, run_lower_r
     criterion_truth.update({
         "exit-06": source_ok and (docs.get("resulting_deck_version") or {}).get("parent_version_id") == "v1.0",
         "exit-10": bool((docs.get("baseline_analysis") or {}).get("structural_pressure_points")),
+        "exit-11": runtime.get("validation-rec-001", False) and runtime.get("validation-rec-002", False),
+        "exit-12": runtime.get("validation-rec-002", False),
+        "exit-13": runtime.get("validation-rec-002", False),
+        "exit-14": runtime.get("validation-rec-002", False) and runtime.get("validation-review", False),
         "exit-15": len(docs.get("decisions") or []) == 3,
         "exit-16": all(item.get("implementation_rationale") for item in (docs.get("decisions") or [])),
         "exit-17": (docs.get("deck_change_design") or {}).get("product_owner_approved") is True,
@@ -601,7 +623,7 @@ def validate_certification(root: Path, *, expected_base_commit: str, run_lower_r
             criterion_errors.append(f"Sprint exit criterion {criterion_id} status does not match derived evidence")
         if item.get("evidence_source_keys") != CRITERION_SOURCES[criterion_id]:
             criterion_errors.append(f"Sprint exit criterion {criterion_id} evidence source keys are incorrect")
-        expected_limitation = "Independent review is pending." if criterion_id == "exit-24" and status == "pending_external_review" else None
+        expected_limitation = "External RFC and ADR synchronization remains pending." if criterion_id == "exit-24" and status == "pending_external_review" else None
         if item.get("requirement_level") != "required" or item.get("limitations") != expected_limitation or not item.get("title") or not item.get("rationale"):
             criterion_errors.append(f"Sprint exit criterion {criterion_id} requirement metadata is incorrect")
     checks.append(("derived Sprint exit criteria", criterion_errors))
@@ -611,7 +633,13 @@ def validate_certification(root: Path, *, expected_base_commit: str, run_lower_r
     if [item.get("gate_id") for item in gates] != [item[0] for item in GATE_CONTRACT]:
         gate_errors.append("quality gate set/order does not match the canonical contract")
     by_gate = {item.get("gate_id"): item for item in gates}
-    expected_gate_limitation = "Independent review remains pending." if cert.get("certification_status") == "pending_independent_review" else None
+    lifecycle_limitations = {
+        "pending_independent_review": "Independent review remains pending.",
+        "certified": None,
+        "certified_with_non_blocking_followups": "Non-blocking follow-ups remain to be tracked.",
+        "not_certified": "Blocking independent-review findings require remediation.",
+    }
+    expected_gate_limitation = lifecycle_limitations.get(cert.get("certification_status"))
     for gate_id, label, dependencies in GATE_CONTRACT:
         item = by_gate.get(gate_id, {})
         dependency_pass = all(stage_truth.get(dep, False) if dep.startswith("loop-") else derived_status.get(dep) in {"pass", "pending_external_review"} for dep in dependencies)
@@ -628,9 +656,21 @@ def validate_certification(root: Path, *, expected_base_commit: str, run_lower_r
     dod = cert.get("definition_of_done") if isinstance(cert.get("definition_of_done"), list) else []
     if [item.get("capability") for item in dod] != DOD_CAPABILITIES:
         dod_errors.append("Definition of Done capability set/order is incorrect")
-    all_runtime = not runtime_errors
+    rec_ok = runtime.get("validation-rec-001", False) and runtime.get("validation-rec-002", False)
+    capability_truth = {
+        "project workspace": (source_ok and not closure_errors, source_ok, source_ok and not closure_errors),
+        "deck import and DeckVersion": (current_aligned, source_ok and current_aligned, current_aligned),
+        "Card Facts and Knowledge": (runtime.get("validation-knowledge", False), source_ok, runtime.get("validation-knowledge", False)),
+        "analysis": (stage_truth["loop-07"], source_ok, stage_truth["loop-08"]),
+        "recommendation": (rec_ok, rec_ok and source_ok, rec_ok and runtime.get("validation-review", False)),
+        "review and decision": (runtime.get("validation-review", False), runtime.get("validation-decision", False), stage_truth["loop-11"]),
+        "versioning": (runtime.get("validation-deck-version", False), source_ok and current_aligned, current_aligned),
+        "reporting": (report_parity, runtime.get("validation-project-report", False) and report_parity, report_evidence_ok),
+        "validation": (not runtime_errors, runtime.get("validation-lower-regressions", False) and runtime.get("validation-all-json", False), not runtime_errors),
+    }
     for item in dod:
-        expected = {"functional_done": "pass", "structural_done": "pass", "product_done": "pass"} if source_ok and all_runtime and not evidence_errors else {"functional_done": "fail", "structural_done": "fail", "product_done": "fail"}
+        truth = capability_truth.get(item.get("capability"), (False, False, False))
+        expected = {"functional_done": "pass" if truth[0] else "fail", "structural_done": "pass" if truth[1] else "fail", "product_done": "pass" if truth[2] else "fail"}
         for field, value in expected.items():
             if item.get(field) != value:
                 dod_errors.append(f"Definition of Done {item.get('capability')!r} {field} does not match derived evidence")
