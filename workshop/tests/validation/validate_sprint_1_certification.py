@@ -365,12 +365,19 @@ def validate_review_lifecycle(cert):
             reviewed_candidate = json.loads(candidate.stdout) if not candidate.returncode else {}
         except json.JSONDecodeError:
             reviewed_candidate = {}
+        reviewed_review = reviewed_candidate.get("independent_review") or {}
         if (reviewed_candidate.get("certification_id") != cert.get("certification_id")
                 or reviewed_candidate.get("project_id") != PROJECT_ID
                 or reviewed_candidate.get("candidate_base_commit") != cert.get("candidate_base_commit")
                 or reviewed_candidate.get("certification_status") != "pending_independent_review"
-                or (reviewed_candidate.get("independent_review") or {}).get("status") != "pending"):
+                or reviewed_review.get("status") != "pending"):
             errors.append("reviewed_commit does not contain the pending certification candidate")
+        elif (any(reviewed_review.get(key) is not None for key in (
+                "reviewer", "reviewer_role", "verdict", "reviewed_commit", "reviewed_at",
+                "review_source", "rationale",
+            )) or reviewed_review.get("blocking_findings") != []
+                or reviewed_review.get("non_blocking_followups") != []):
+            errors.append("reviewed_commit pending certification candidate contains completed review data")
         changed = git(ROOT, "diff", "--name-only", f"{review['reviewed_commit']}..HEAD")
         allowed = (
             "workshop/projects/the-myr-singularity/reports/sprint_1_certification.json",
@@ -561,16 +568,55 @@ def validate_certification(root: Path, *, expected_base_commit: str, run_lower_r
     resulting = docs.get("resulting_deck_version") or {}
     resulting_counters = {zone: deck.section_counter(resulting, zone)[0] for zone in ("commander", "main_deck", "sideboard")}
     current_aligned = not current_errors and current == resulting_counters
-    source_ok = not [error for error in source_errors if not error.startswith(("rec-001", "rec-002"))]
+    def source_key_ok(key, *markers):
+        unresolved = f"source {key!r}"
+        return not any(
+            error.startswith(unresolved) or any(marker in error for marker in markers)
+            for error in source_errors
+        )
+
+    source_key_truth = {key: source_key_ok(key) for key in REQUIRED_SOURCE_KEYS}
+    source_key_truth.update({
+        "project": source_key_ok("project", "project source", "project current", "project scope"),
+        "brief": source_key_ok("brief", "brief source"),
+        "baseline_deck_version": source_key_ok("baseline_deck_version", "baseline DeckVersion"),
+        "resulting_deck_version": source_key_ok("resulting_deck_version", "resulting DeckVersion"),
+        "baseline_analysis": source_key_ok("baseline_analysis", "baseline analysis"),
+        "rec_001": recommendation_source_ok["rec-001"],
+        "rec_002": recommendation_source_ok["rec-002"],
+        "product_owner_review": source_key_ok("product_owner_review", "Product Owner review"),
+        "decisions": source_key_ok("decisions", "decision source", "decision source set"),
+        "deck_change_design": source_key_ok("deck_change_design", "deck-change design"),
+        "project_report": source_key_ok("project_report", "project report source", "project report version"),
+        "card_facts": source_key_ok("card_facts", "canonical Card Facts"),
+        "active_candidate_facts": source_key_ok("active_candidate_facts", "active candidate facts"),
+        "functional_knowledge": source_key_ok("functional_knowledge", "Functional Knowledge"),
+        "candidate_lifecycle_metadata": source_key_ok("candidate_lifecycle_metadata", "candidate lifecycle"),
+        "backlog": source_key_ok("backlog", "backlog source"),
+    })
+    source_domain_truth = {
+        "project": all(source_key_truth[key] for key in ("project", "brief", "project_readme", "notes")),
+        "deck_version": all(source_key_truth[key] for key in ("current_decklist", "baseline_deck_version", "resulting_deck_version")),
+        "card_facts_knowledge": all(source_key_truth[key] for key in ("card_facts", "active_candidate_facts", "functional_knowledge", "candidate_lifecycle_metadata")),
+        "analysis": source_key_truth["baseline_analysis"],
+        "recommendation": all(source_key_truth[key] for key in ("rec_001", "rec_002")),
+        "review_decision": all(source_key_truth[key] for key in ("product_owner_review", "decisions", "deck_change_design")),
+        "versioning": all(source_key_truth[key] for key in ("current_decklist", "baseline_deck_version", "resulting_deck_version", "decisions", "deck_change_design")),
+        "reporting": source_key_truth["project_report"],
+        "validation": all(source_key_truth[key] for key in ("validation_documentation", "regression_checklists", "backlog")),
+    }
     report_parity = runtime.get("validation-report-renderer", False)
-    stage_truth = {step_id: source_ok for step_id, _, _, _ in LOOP_CONTRACT}
-    stage_truth["loop-07"] = source_ok and bool((docs.get("baseline_analysis") or {}).get("analysis_id"))
-    stage_truth["loop-08"] = source_ok and bool((docs.get("baseline_analysis") or {}).get("structural_pressure_points"))
-    stage_truth["loop-09"] = source_ok and runtime.get("validation-rec-001", False) and runtime.get("validation-rec-002", False)
-    stage_truth["loop-11"] = source_ok and len(docs.get("decisions") or []) == 3
-    stage_truth["loop-13"] = source_ok and (docs.get("deck_change_design") or {}).get("product_owner_approved") is True
-    stage_truth["loop-14"] = source_ok and current_aligned
-    stage_truth["loop-15"] = source_ok and report_parity
+    stage_truth = {
+        step_id: all(source_key_truth.get(key, False) for key in source_keys)
+        for step_id, _, source_keys, _ in LOOP_CONTRACT
+    }
+    stage_truth["loop-07"] = stage_truth["loop-07"] and bool((docs.get("baseline_analysis") or {}).get("analysis_id"))
+    stage_truth["loop-08"] = stage_truth["loop-08"] and bool((docs.get("baseline_analysis") or {}).get("structural_pressure_points"))
+    stage_truth["loop-09"] = source_domain_truth["recommendation"] and runtime.get("validation-rec-001", False) and runtime.get("validation-rec-002", False)
+    stage_truth["loop-11"] = stage_truth["loop-11"] and len(docs.get("decisions") or []) == 3
+    stage_truth["loop-13"] = stage_truth["loop-13"] and (docs.get("deck_change_design") or {}).get("product_owner_approved") is True
+    stage_truth["loop-14"] = stage_truth["loop-14"] and current_aligned
+    stage_truth["loop-15"] = stage_truth["loop-15"] and report_parity
     loop_errors = []
     records = cert.get("product_loop") if isinstance(cert.get("product_loop"), list) else []
     if [item.get("step_id") for item in records] != [item[0] for item in LOOP_CONTRACT]:
@@ -587,26 +633,29 @@ def validate_certification(root: Path, *, expected_base_commit: str, run_lower_r
     checks.append(("derived ordered product loop", loop_errors))
 
     report_evidence_ok = not evidence_errors
-    criterion_truth = {criterion_id: source_ok for criterion_id in CRITERION_SOURCES}
+    criterion_truth = {
+        criterion_id: all(source_key_truth.get(key, False) for key in source_keys)
+        for criterion_id, source_keys in CRITERION_SOURCES.items()
+    }
     criterion_truth.update({
-        "exit-06": source_ok and (docs.get("resulting_deck_version") or {}).get("parent_version_id") == "v1.0",
-        "exit-10": bool((docs.get("baseline_analysis") or {}).get("structural_pressure_points")),
-        "exit-11": runtime.get("validation-rec-001", False) and runtime.get("validation-rec-002", False),
-        "exit-12": runtime.get("validation-rec-002", False),
-        "exit-13": runtime.get("validation-rec-002", False),
-        "exit-14": runtime.get("validation-rec-002", False) and runtime.get("validation-review", False),
-        "exit-15": len(docs.get("decisions") or []) == 3,
-        "exit-16": all(item.get("implementation_rationale") for item in (docs.get("decisions") or [])),
-        "exit-17": (docs.get("deck_change_design") or {}).get("product_owner_approved") is True,
-        "exit-18": (docs.get("resulting_deck_version") or {}).get("parent_version_id") == "v1.0",
-        "exit-19": current_aligned,
-        "exit-20": report_parity,
-        "exit-22": not runtime_errors,
-        "exit-23": not closure_errors,
-        "exit-24": not closure_errors and backlog_ok,
-        "exit-25": backlog_ok,
-        "exit-26": report_evidence_ok,
-        "exit-27": scope_ok and not closure_errors,
+        "exit-06": criterion_truth["exit-06"] and (docs.get("resulting_deck_version") or {}).get("parent_version_id") == "v1.0",
+        "exit-10": criterion_truth["exit-10"] and bool((docs.get("baseline_analysis") or {}).get("structural_pressure_points")),
+        "exit-11": source_domain_truth["recommendation"] and runtime.get("validation-rec-001", False) and runtime.get("validation-rec-002", False),
+        "exit-12": source_key_truth["rec_002"] and runtime.get("validation-rec-002", False),
+        "exit-13": criterion_truth["exit-13"] and runtime.get("validation-rec-002", False),
+        "exit-14": criterion_truth["exit-14"] and runtime.get("validation-rec-002", False) and runtime.get("validation-review", False),
+        "exit-15": criterion_truth["exit-15"] and len(docs.get("decisions") or []) == 3,
+        "exit-16": criterion_truth["exit-16"] and all(item.get("implementation_rationale") for item in (docs.get("decisions") or [])),
+        "exit-17": criterion_truth["exit-17"] and (docs.get("deck_change_design") or {}).get("product_owner_approved") is True,
+        "exit-18": criterion_truth["exit-18"] and (docs.get("resulting_deck_version") or {}).get("parent_version_id") == "v1.0",
+        "exit-19": criterion_truth["exit-19"] and current_aligned,
+        "exit-20": criterion_truth["exit-20"] and report_parity,
+        "exit-22": criterion_truth["exit-22"] and not runtime_errors,
+        "exit-23": criterion_truth["exit-23"] and not closure_errors,
+        "exit-24": criterion_truth["exit-24"] and not closure_errors and backlog_ok,
+        "exit-25": criterion_truth["exit-25"] and backlog_ok,
+        "exit-26": criterion_truth["exit-26"] and report_evidence_ok,
+        "exit-27": criterion_truth["exit-27"] and scope_ok and not closure_errors,
     })
     criterion_errors = []
     criteria = cert.get("sprint_exit_criteria") if isinstance(cert.get("sprint_exit_criteria"), list) else []
@@ -658,15 +707,15 @@ def validate_certification(root: Path, *, expected_base_commit: str, run_lower_r
         dod_errors.append("Definition of Done capability set/order is incorrect")
     rec_ok = runtime.get("validation-rec-001", False) and runtime.get("validation-rec-002", False)
     capability_truth = {
-        "project workspace": (source_ok and not closure_errors, source_ok, source_ok and not closure_errors),
-        "deck import and DeckVersion": (current_aligned, source_ok and current_aligned, current_aligned),
-        "Card Facts and Knowledge": (runtime.get("validation-knowledge", False), source_ok, runtime.get("validation-knowledge", False)),
-        "analysis": (stage_truth["loop-07"], source_ok, stage_truth["loop-08"]),
-        "recommendation": (rec_ok, rec_ok and source_ok, rec_ok and runtime.get("validation-review", False)),
-        "review and decision": (runtime.get("validation-review", False), runtime.get("validation-decision", False), stage_truth["loop-11"]),
-        "versioning": (runtime.get("validation-deck-version", False), source_ok and current_aligned, current_aligned),
-        "reporting": (report_parity, runtime.get("validation-project-report", False) and report_parity, report_evidence_ok),
-        "validation": (not runtime_errors, runtime.get("validation-lower-regressions", False) and runtime.get("validation-all-json", False), not runtime_errors),
+        "project workspace": (source_domain_truth["project"] and not closure_errors, source_domain_truth["project"], source_domain_truth["project"] and not closure_errors),
+        "deck import and DeckVersion": (source_domain_truth["deck_version"] and current_aligned, source_domain_truth["deck_version"] and current_aligned, source_domain_truth["deck_version"] and current_aligned),
+        "Card Facts and Knowledge": (source_domain_truth["card_facts_knowledge"] and runtime.get("validation-knowledge", False), source_domain_truth["card_facts_knowledge"], source_domain_truth["card_facts_knowledge"] and runtime.get("validation-knowledge", False)),
+        "analysis": (source_domain_truth["analysis"] and stage_truth["loop-07"], source_domain_truth["analysis"], source_domain_truth["analysis"] and stage_truth["loop-08"]),
+        "recommendation": (source_domain_truth["recommendation"] and rec_ok, source_domain_truth["recommendation"] and rec_ok, source_domain_truth["recommendation"] and rec_ok and runtime.get("validation-review", False)),
+        "review and decision": (source_domain_truth["review_decision"] and runtime.get("validation-review", False), source_domain_truth["review_decision"] and runtime.get("validation-decision", False), source_domain_truth["review_decision"] and stage_truth["loop-11"]),
+        "versioning": (source_domain_truth["versioning"] and runtime.get("validation-deck-version", False), source_domain_truth["versioning"] and current_aligned, source_domain_truth["versioning"] and current_aligned),
+        "reporting": (source_domain_truth["reporting"] and report_parity, source_domain_truth["reporting"] and runtime.get("validation-project-report", False) and report_parity, source_domain_truth["reporting"] and report_evidence_ok),
+        "validation": (source_domain_truth["validation"] and not runtime_errors, source_domain_truth["validation"] and runtime.get("validation-lower-regressions", False) and runtime.get("validation-all-json", False), source_domain_truth["validation"] and not runtime_errors),
     }
     for item in dod:
         truth = capability_truth.get(item.get("capability"), (False, False, False))

@@ -146,6 +146,30 @@ class CertificationFixture:
 
 
 class SprintCertificationTests(unittest.TestCase):
+    def test_00e_source_domains_are_localized(self):
+        def break_card_facts(fixture):
+            path = fixture.root / "workshop" / "card-data" / "cards.json"
+            document = fixture.load(path)
+            document["cards"] = "wrong-shape"
+            fixture.write(path, document)
+
+        cases = [
+            ("project report", lambda f: f.mutate_cert(lambda c: c["source_references"]["project_report"].update(id="wrong")), ["reporting"], ["project workspace", "Card Facts and Knowledge"]),
+            ("backlog", lambda f: f.mutate_backlog(lambda b: b.update(project_id="wrong")), ["validation"], ["deck import and DeckVersion", "recommendation"]),
+            ("Card Facts", break_card_facts, ["Card Facts and Knowledge"], ["project workspace", "analysis"]),
+            ("analysis", lambda f: f.mutate_cert(lambda c: c["source_references"]["baseline_analysis"].update(id="wrong")), ["analysis"], ["project workspace", "reporting"]),
+            ("decision", lambda f: f.mutate_cert(lambda c: c["source_references"]["decisions"][0].update(id="wrong")), ["review and decision", "versioning"], ["project workspace", "Card Facts and Knowledge"]),
+        ]
+        for name, mutate, affected, unaffected in cases:
+            with self.subTest(name=name), CertificationFixture() as fixture:
+                mutate(fixture)
+                output = fixture.run_validator().stdout
+                for capability in affected:
+                    for dimension in ("functional_done", "structural_done", "product_done"):
+                        self.assertIn(f"Definition of Done '{capability}' {dimension} does not match derived evidence", output)
+                for capability in unaffected:
+                    self.assertNotIn(f"Definition of Done '{capability}'", output)
+
     def test_00c_recommendation_failures_are_localized(self):
         for rec_name, validation_id in (("rec-001", "validation-rec-001"), ("rec-002", "validation-rec-002")):
             with self.subTest(rec_name=rec_name), CertificationFixture() as fixture:
@@ -392,6 +416,12 @@ class SprintCertificationTests(unittest.TestCase):
             ("wrong project ID", lambda f: self._review_with_mutated_candidate(f, lambda c: c.update(project_id="wrong")), "reviewed_commit does not contain the pending certification candidate"),
             ("wrong candidate base", lambda f: self._review_with_mutated_candidate(f, lambda c: c.update(candidate_base_commit="a" * 40)), "reviewed_commit does not contain the pending certification candidate"),
             ("completed candidate", lambda f: self._review_with_mutated_candidate(f, lambda c: c.update(certification_status="certified")), "reviewed_commit does not contain the pending certification candidate"),
+            ("pending reviewer", lambda f: self._review_with_mutated_candidate(f, lambda c: c["independent_review"].update(reviewer="Sol")), "reviewed_commit pending certification candidate contains completed review data"),
+            ("pending verdict", lambda f: self._review_with_mutated_candidate(f, lambda c: c["independent_review"].update(verdict="APPROVE")), "reviewed_commit pending certification candidate contains completed review data"),
+            ("pending reviewed commit", lambda f: self._review_with_mutated_candidate(f, lambda c: c["independent_review"].update(reviewed_commit="a" * 40)), "reviewed_commit pending certification candidate contains completed review data"),
+            ("pending rationale", lambda f: self._review_with_mutated_candidate(f, lambda c: c["independent_review"].update(rationale="Premature")), "reviewed_commit pending certification candidate contains completed review data"),
+            ("pending blocking findings", lambda f: self._review_with_mutated_candidate(f, lambda c: c["independent_review"].update(blocking_findings=["Blocking"])), "reviewed_commit pending certification candidate contains completed review data"),
+            ("pending non-blocking follow-ups", lambda f: self._review_with_mutated_candidate(f, lambda c: c["independent_review"].update(non_blocking_followups=["Follow up"])), "reviewed_commit pending certification candidate contains completed review data"),
         ]
         for name, mutate, expected in cases:
             with self.subTest(name=name), CertificationFixture() as fixture:
