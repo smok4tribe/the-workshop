@@ -775,6 +775,47 @@ class ValidationArchitectureRegressionTests(unittest.TestCase):
                 )
                 self.tearDown(); self.setUp()
 
+    def test_sprint_certification_candidate_and_mutations(self):
+        certification = self.project / "reports" / "sprint_1_certification.json"
+        backlog = self.project / "notes" / "backlog.json"
+        renderer = self.repo / "workshop" / "scripts" / "render_sprint_1_closure.py"
+
+        def render():
+            result = subprocess.run([sys.executable, str(renderer)], cwd=self.repo, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stdout.decode() + result.stderr.decode())
+
+        def validate(expected=None):
+            result = self.run_validator("validate_sprint_1_certification.py")
+            if expected:
+                self.assert_validation_fails(result, expected)
+            else:
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+        validate()
+        cases = [
+            ("missing source", lambda c,b: c["source_references"]["project"].update({"path":"missing.json"}), "source 'project' does not resolve"),
+            ("wrong current", lambda c,b: c.update({"project_id":"wrong"}), "certification identity or scope is invalid"),
+            ("empty backlog", lambda c,b: b.update({"items":[]}), "required deferred backlog items are not captured"),
+            ("missing KCI", lambda c,b: b.update({"items":[x for x in b["items"] if x["backlog_id"]!="backlog-003"]}), "required deferred backlog items are not captured"),
+            ("missing Mana", lambda c,b: b.update({"items":[x for x in b["items"] if x["backlog_id"]!="backlog-004"]}), "required deferred backlog items are not captured"),
+            ("premature certified", lambda c,b: c.update({"certification_status":"certified"}), "completed certification requires approving independent review"),
+        ]
+        for _, mutate, expected in cases:
+            with self.subTest(expected=expected):
+                c,b=self.load_json(certification),self.load_json(backlog); mutate(c,b); self.write_json(certification,c); self.write_json(backlog,b); render(); validate(expected); self.tearDown(); self.setUp(); certification=self.project/'reports'/'sprint_1_certification.json'; backlog=self.project/'notes'/'backlog.json'; renderer=self.repo/'workshop'/'scripts'/'render_sprint_1_closure.py'
+
+    def test_sprint_certification_completed_review_can_pass_and_markdown_drift_fails(self):
+        certification=self.project/'reports'/'sprint_1_certification.json'; data=self.load_json(certification)
+        data['certification_status']='certified'; data['independent_review'].update({'status':'completed','reviewer':'Independent Reviewer','verdict':'APPROVE','reviewed_commit':'7387afcb9a6345a97083506245fa6414504ad654','reviewed_at':'2026-07-12T00:00:00Z','review_source':'fixture','blocking_findings':[]})
+        self.write_json(certification,data); self.regenerate_closure()
+        self.assertEqual(self.run_validator('validate_sprint_1_certification.py').returncode,0)
+        markdown=certification.with_suffix('.md'); markdown.write_text(markdown.read_text(encoding='utf-8')+'\nDrift.\n',encoding='utf-8')
+        self.assert_validation_fails(self.run_validator('validate_sprint_1_certification.py'),'certification Markdown differs from deterministic renderer output')
+
+    def regenerate_closure(self):
+        result=subprocess.run([sys.executable,str(self.repo/'workshop'/'scripts'/'render_sprint_1_closure.py')],cwd=self.repo,capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

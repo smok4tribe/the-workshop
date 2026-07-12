@@ -14,6 +14,7 @@ checks. Every validator is read-only and uses only the Python standard library.
 | `validate_decision_pipeline.py` | Recommendation, review, decisions, deck-change design, and Product Owner approval |
 | `validate_deck_versions.py` | Current deck, parent/child DeckVersions, quantity-aware diffs, and implementation integrity |
 | `validate_project_reports.py` | Structured project reports, source traceability, exact DeckVersion deltas, evidence status, and deterministic Markdown |
+| `validate_sprint_1_certification.py` | Sprint closure, exit criteria, backlog/checklist closure, evidence honesty, and independent-review state |
 
 `validate_recommendation_review.py` intentionally does not validate decisions,
 designs, approval, implementation, DeckVersions, or `deck/current.txt`.
@@ -30,6 +31,7 @@ python workshop/tests/validation/validate_recommendation_review.py
 python workshop/tests/validation/validate_decision_pipeline.py
 python workshop/tests/validation/validate_deck_versions.py
 python workshop/tests/validation/validate_project_reports.py
+python workshop/tests/validation/validate_sprint_1_certification.py
 ```
 
 The recommendation validator defaults to `rec-001`. Validate `rec-002` in
@@ -190,6 +192,18 @@ groups, evidence status, and next actions are all data-driven and deterministic.
 | active candidate facts | active external candidates still under review |
 | functional knowledge | canonical role assignments |
 | lifecycle metadata | intake and promoted provenance partition |
+
+## Sprint certification
+
+`validate_sprint_1_certification.py` is a closure validator, not a substitute
+for layer or report validation. It invokes the relevant layer validators and
+also checks Sprint exit criteria, deferred-work capture, regression checklists,
+deterministic closure rendering, evidence honesty, and the independent-review
+state. Passing validators alone does not certify Sprint 1.
+
+The committed production candidate is `pending_independent_review`. A certified
+state requires an independent reviewer, approval verdict, reviewed commit and
+timestamp, review source, and no blocking findings.
 
 ## Regression tests
 

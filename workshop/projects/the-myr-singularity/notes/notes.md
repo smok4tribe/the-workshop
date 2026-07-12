@@ -265,3 +265,9 @@ Product Owner review, decisions, deck-change design, approval, and implementatio
   (1 commander + 99 main + 7 sideboard, 34 lands).
 - Open threads: cand-009/cand-010 testing gate; Task 28 final certification is the
   next task.
+# 2026-07-12 - Sprint 1 Certification Candidate
+
+- Task 27 report layer is merged and the certification evidence package is created.
+- Machine-verifiable Sprint exit criteria pass; independent review remains pending.
+- No deck-performance claim is made. KCI and Mana Echoes remain `needs_testing`.
+- The implementation owner has not declared the final Sprint status.

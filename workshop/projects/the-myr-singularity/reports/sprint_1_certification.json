@@ -1,0 +1,816 @@
+{
+  "schema_version": "1.0",
+  "certification_id": "sprint-1-certification-candidate",
+  "certification_type": "sprint_final_certification_candidate",
+  "project_id": "the-myr-singularity",
+  "sprint_id": "Sprint 1",
+  "certification_scope": "sprint_1_local_prototype",
+  "generated_at": "2026-07-12T00:00:00Z",
+  "certification_status": "pending_independent_review",
+  "candidate_base_commit": "7387afcb9a6345a97083506245fa6414504ad654",
+  "certification_claim_boundary": "Certification concerns local product-loop execution, structure, traceability, reproducibility, and evidence honesty. It does not claim measured deck performance.",
+  "independent_review": {
+    "status": "pending",
+    "reviewer_role": "independent_reviewer",
+    "reviewer": null,
+    "verdict": null,
+    "reviewed_commit": null,
+    "reviewed_at": null,
+    "review_source": null,
+    "blocking_findings": []
+  },
+  "source_references": {
+    "project": {
+      "path": "workshop/projects/the-myr-singularity/project.json",
+      "id": "the-myr-singularity"
+    },
+    "brief": {
+      "path": "workshop/projects/the-myr-singularity/brief/brief.json",
+      "project_id": "the-myr-singularity"
+    },
+    "current_decklist": {
+      "path": "workshop/projects/the-myr-singularity/deck/current.txt"
+    },
+    "baseline_deck_version": {
+      "path": "workshop/projects/the-myr-singularity/versions/v1.0.json",
+      "id": "v1.0"
+    },
+    "resulting_deck_version": {
+      "path": "workshop/projects/the-myr-singularity/versions/v1.1.json",
+      "id": "v1.1"
+    },
+    "card_facts": {
+      "path": "workshop/card-data/cards.json"
+    },
+    "active_candidate_facts": {
+      "path": "workshop/card-data/candidate_cards.json"
+    },
+    "functional_knowledge": {
+      "path": "workshop/knowledge/functional_roles.json"
+    },
+    "candidate_lifecycle_metadata": {
+      "path": "workshop/card-data/candidate_card_import_metadata.json"
+    },
+    "baseline_analysis": {
+      "path": "workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json",
+      "id": "baseline_v1.0"
+    },
+    "rec_001": {
+      "path": "workshop/projects/the-myr-singularity/recommendations/rec-001.json",
+      "id": "rec-001"
+    },
+    "rec_002": {
+      "path": "workshop/projects/the-myr-singularity/recommendations/rec-002.json",
+      "id": "rec-002"
+    },
+    "product_owner_review": {
+      "path": "workshop/projects/the-myr-singularity/recommendations/review-rec-002.json",
+      "recommendation_id": "rec-002"
+    },
+    "decisions": [
+      {
+        "path": "workshop/projects/the-myr-singularity/decisions/decision-002.json",
+        "id": "decision-002"
+      },
+      {
+        "path": "workshop/projects/the-myr-singularity/decisions/decision-003.json",
+        "id": "decision-003"
+      },
+      {
+        "path": "workshop/projects/the-myr-singularity/decisions/decision-004.json",
+        "id": "decision-004"
+      }
+    ],
+    "deck_change_design": {
+      "path": "workshop/projects/the-myr-singularity/decisions/deck-change-design-v1.1.json",
+      "id": "deck-change-design-v1.1"
+    },
+    "project_report": {
+      "path": "workshop/projects/the-myr-singularity/reports/project_report_v1.1.json",
+      "id": "project-report-v1.1"
+    },
+    "changelog": {
+      "path": "workshop/projects/the-myr-singularity/reports/changelog.md"
+    },
+    "notes": {
+      "path": "workshop/projects/the-myr-singularity/notes/notes.md"
+    },
+    "backlog": {
+      "path": "workshop/projects/the-myr-singularity/notes/backlog.json"
+    },
+    "regression_checklists": [
+      {
+        "path": "workshop/tests/regression/product_principles.md"
+      },
+      {
+        "path": "workshop/tests/regression/data_model.md"
+      },
+      {
+        "path": "workshop/tests/regression/reasoning.md"
+      },
+      {
+        "path": "workshop/tests/regression/simulation.md"
+      }
+    ],
+    "validation_documentation": {
+      "path": "workshop/tests/validation/README.md"
+    }
+  },
+  "product_loop": [
+    {
+      "step_id": "loop-01",
+      "title": "Project",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-02",
+      "title": "Brief",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-03",
+      "title": "Deck Import",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-04",
+      "title": "Baseline DeckVersion",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-05",
+      "title": "Card Facts",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-06",
+      "title": "Functional Knowledge",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-07",
+      "title": "Baseline Analysis",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-08",
+      "title": "Structural Weakness",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-09",
+      "title": "Recommendation",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-10",
+      "title": "Product Owner Review",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-11",
+      "title": "Decision",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-12",
+      "title": "Deck-change Design",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-13",
+      "title": "Product Owner Approval",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-14",
+      "title": "Resulting DeckVersion",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    },
+    {
+      "step_id": "loop-15",
+      "title": "Report",
+      "status": "complete",
+      "source_paths": [],
+      "artifact_ids": [],
+      "input_boundary": "Structured local evidence only.",
+      "output_boundary": "Recorded Sprint 1 artifact.",
+      "evidence_note": "Verified by referenced Sprint 1 artifacts and validators."
+    }
+  ],
+  "sprint_exit_criteria": [
+    {
+      "criterion_id": "exit-01",
+      "title": "Local project folder exists",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-02",
+      "title": "Project metadata exists",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-03",
+      "title": "Lightweight Design Brief exists",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-04",
+      "title": "Decklist is stored in supported plain-text form",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-05",
+      "title": "Baseline DeckVersion exists",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-06",
+      "title": "Baseline DeckVersion remains unchanged",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-07",
+      "title": "Canonical Card Facts come from an external source",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-08",
+      "title": "Basic Functional Knowledge exists for the fixture",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-09",
+      "title": "Baseline analysis exists",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-10",
+      "title": "Analysis identifies at least one structural weakness",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-11",
+      "title": "Structured recommendation exists",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-12",
+      "title": "Recommendation records problem, benefit, trade-off, risk, confidence, identity/constraint checks, and rationale",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-13",
+      "title": "Recommendation did not directly modify the deck",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-14",
+      "title": "Product Owner review preserves user agency",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-15",
+      "title": "Decisions exist for implemented changes",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-16",
+      "title": "Decisions explain why the changes occurred",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-17",
+      "title": "New DeckVersion exists only after decisions and approval",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-18",
+      "title": "Resulting DeckVersion links to the baseline parent",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-19",
+      "title": "Current deck exactly matches the resulting DeckVersion",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-20",
+      "title": "Readable project report exists",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-21",
+      "title": "Structured sources exist behind readable reports",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-22",
+      "title": "Process is reproducible on the fixture through deterministic validators",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-23",
+      "title": "Sprint findings are recorded in repository Sprint notes",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-24",
+      "title": "Major architecture decisions are represented in existing ADR documentation and implementation evidence",
+      "requirement_level": "required",
+      "status": "pending_external_review",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": "Independent review is pending."
+    },
+    {
+      "criterion_id": "exit-25",
+      "title": "Deferred ideas are captured in Backlog",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-26",
+      "title": "Unmeasured outcomes remain explicitly unmeasured",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    },
+    {
+      "criterion_id": "exit-27",
+      "title": "Sprint 1 non-goals were not accidentally implemented",
+      "requirement_level": "required",
+      "status": "pass",
+      "evidence_paths": [
+        "workshop/projects/the-myr-singularity/project.json"
+      ],
+      "rationale": "Repository evidence and certification validation support this criterion.",
+      "limitations": null
+    }
+  ],
+  "quality_gates": [
+    {
+      "gate_id": "Project Gate",
+      "status": "pass",
+      "required_evidence": [
+        "structured source references",
+        "layer validators"
+      ],
+      "actual_evidence_references": [
+        "workshop/tests/validation"
+      ],
+      "outcome": "Repository evidence resolves and required contracts pass.",
+      "limitations": "Independent review remains pending."
+    },
+    {
+      "gate_id": "Analysis Gate",
+      "status": "pass",
+      "required_evidence": [
+        "structured source references",
+        "layer validators"
+      ],
+      "actual_evidence_references": [
+        "workshop/tests/validation"
+      ],
+      "outcome": "Repository evidence resolves and required contracts pass.",
+      "limitations": "Independent review remains pending."
+    },
+    {
+      "gate_id": "Recommendation Gate",
+      "status": "pass",
+      "required_evidence": [
+        "structured source references",
+        "layer validators"
+      ],
+      "actual_evidence_references": [
+        "workshop/tests/validation"
+      ],
+      "outcome": "Repository evidence resolves and required contracts pass.",
+      "limitations": "Independent review remains pending."
+    },
+    {
+      "gate_id": "Decision and Versioning Gate",
+      "status": "pass",
+      "required_evidence": [
+        "structured source references",
+        "layer validators"
+      ],
+      "actual_evidence_references": [
+        "workshop/tests/validation"
+      ],
+      "outcome": "Repository evidence resolves and required contracts pass.",
+      "limitations": "Independent review remains pending."
+    },
+    {
+      "gate_id": "Report Gate",
+      "status": "pass",
+      "required_evidence": [
+        "structured source references",
+        "layer validators"
+      ],
+      "actual_evidence_references": [
+        "workshop/tests/validation"
+      ],
+      "outcome": "Repository evidence resolves and required contracts pass.",
+      "limitations": "Independent review remains pending."
+    },
+    {
+      "gate_id": "Product Loop Gate",
+      "status": "pass",
+      "required_evidence": [
+        "structured source references",
+        "layer validators"
+      ],
+      "actual_evidence_references": [
+        "workshop/tests/validation"
+      ],
+      "outcome": "Repository evidence resolves and required contracts pass.",
+      "limitations": "Independent review remains pending."
+    },
+    {
+      "gate_id": "Data and Knowledge Boundary Gate",
+      "status": "pass",
+      "required_evidence": [
+        "structured source references",
+        "layer validators"
+      ],
+      "actual_evidence_references": [
+        "workshop/tests/validation"
+      ],
+      "outcome": "Repository evidence resolves and required contracts pass.",
+      "limitations": "Independent review remains pending."
+    },
+    {
+      "gate_id": "Evidence Honesty Gate",
+      "status": "pass",
+      "required_evidence": [
+        "structured source references",
+        "layer validators"
+      ],
+      "actual_evidence_references": [
+        "workshop/tests/validation"
+      ],
+      "outcome": "Repository evidence resolves and required contracts pass.",
+      "limitations": "Independent review remains pending."
+    },
+    {
+      "gate_id": "Reproducibility Gate",
+      "status": "pass",
+      "required_evidence": [
+        "structured source references",
+        "layer validators"
+      ],
+      "actual_evidence_references": [
+        "workshop/tests/validation"
+      ],
+      "outcome": "Repository evidence resolves and required contracts pass.",
+      "limitations": "Independent review remains pending."
+    },
+    {
+      "gate_id": "Scope-Control Gate",
+      "status": "pass",
+      "required_evidence": [
+        "structured source references",
+        "layer validators"
+      ],
+      "actual_evidence_references": [
+        "workshop/tests/validation"
+      ],
+      "outcome": "Repository evidence resolves and required contracts pass.",
+      "limitations": "Independent review remains pending."
+    }
+  ],
+  "definition_of_done": [
+    {
+      "capability": "project workspace",
+      "functional_done": "pass",
+      "structural_done": "pass",
+      "product_done": "pass"
+    },
+    {
+      "capability": "deck import and DeckVersion",
+      "functional_done": "pass",
+      "structural_done": "pass",
+      "product_done": "pass"
+    },
+    {
+      "capability": "Card Facts and Knowledge",
+      "functional_done": "pass",
+      "structural_done": "pass",
+      "product_done": "pass"
+    },
+    {
+      "capability": "analysis",
+      "functional_done": "pass",
+      "structural_done": "pass",
+      "product_done": "pass"
+    },
+    {
+      "capability": "recommendation",
+      "functional_done": "pass",
+      "structural_done": "pass",
+      "product_done": "pass"
+    },
+    {
+      "capability": "review and decision",
+      "functional_done": "pass",
+      "structural_done": "pass",
+      "product_done": "pass"
+    },
+    {
+      "capability": "versioning",
+      "functional_done": "pass",
+      "structural_done": "pass",
+      "product_done": "pass"
+    },
+    {
+      "capability": "reporting",
+      "functional_done": "pass",
+      "structural_done": "pass",
+      "product_done": "pass"
+    },
+    {
+      "capability": "validation",
+      "functional_done": "pass",
+      "structural_done": "pass",
+      "product_done": "pass"
+    }
+  ],
+  "validation_contract": [
+    "validate_knowledge_layer.py",
+    "validate_candidate_card_facts.py",
+    "validate_recommendation_schema.py rec-001",
+    "validate_recommendation_schema.py rec-002",
+    "validate_recommendation_review.py",
+    "validate_decision_pipeline.py",
+    "validate_deck_versions.py",
+    "validate_project_reports.py",
+    "validate_sprint_1_certification.py",
+    "full mutation/regression suite",
+    "all Workshop JSON parse",
+    "deterministic project report rendering",
+    "deterministic certification rendering",
+    "deterministic backlog rendering",
+    "git diff --check"
+  ],
+  "evidence_boundary": {
+    "implementation": "verified",
+    "post_implementation_analysis": "not_run",
+    "simulation": "not_run",
+    "gameplay_validation": "not_recorded",
+    "performance": "not_measured",
+    "needs_testing_candidates": [
+      {
+        "candidate_id": "cand-009",
+        "name": "Krark-Clan Ironworks",
+        "implementation_status": "not_implemented"
+      },
+      {
+        "candidate_id": "cand-010",
+        "name": "Mana Echoes",
+        "implementation_status": "not_implemented"
+      }
+    ]
+  },
+  "deferred_backlog_ids": [
+    "backlog-001",
+    "backlog-002",
+    "backlog-003",
+    "backlog-004",
+    "backlog-005",
+    "backlog-006",
+    "backlog-007"
+  ],
+  "sprint_1_non_goals": [
+    "polished UI",
+    "SaaS architecture",
+    "production database",
+    "automatic recommendation generation",
+    "full Commander rules engine",
+    "full gameplay simulation",
+    "multiplayer modeling",
+    "power or win-rate accuracy",
+    "production scalability",
+    "complete external platform integration"
+  ],
+  "next_action": "Independent Sprint 1 certification review."
+}
