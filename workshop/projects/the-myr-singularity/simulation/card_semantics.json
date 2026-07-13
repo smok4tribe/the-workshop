@@ -1,0 +1,153 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "project_scoped_simulation_card_semantics",
+  "artifact_id": "the-myr-singularity-simulation-card-semantics",
+  "project_id": "the-myr-singularity",
+  "policy_version": "sim-policy-v1",
+  "generated_at": "2026-07-13T00:00:00Z",
+  "generated_by": "Terra",
+  "purpose": "Records project-scoped, source-aware modeled card behavior for the Simulation Policy. This artifact exists so that fixture-specific card behavior lives outside the universal Simulation Policy. The policy defines when overrides may be used, how they are validated, and how unsupported behavior is surfaced; this artifact supplies the concrete per-card modeled behavior for The Myr Singularity. It never edits canonical Card Facts and never records simulation results.",
+  "scope": {
+    "includes": [
+      "Per-card modeled simulation behavior for cards whose required mana/land semantics are not fully resolvable from canonical Card Facts.",
+      "The explicit statement of whether each entry compensates for missing canonical produced_mana data.",
+      "Source, confidence, validation status, and limitations for each modeled behavior."
+    ],
+    "excludes": [
+      "Editing canonical Card Facts (workshop/card-data/cards.json) or candidate Card Facts.",
+      "Universal simulation semantics or resolution rules (owned by simulation_policy.json).",
+      "Any SimulationRun, SimulationResult, or comparison result.",
+      "Card behavior beyond land-drop and mana/color production required by the committed Sprint 2 metrics.",
+      "Reasoning interpretation or Product Owner decisions."
+    ]
+  },
+  "override_boundary": {
+    "statement": "Each entry is a project-scoped simulation override. An override may be used only for the modeled_behavior fields it declares, only within this project, and only because the referenced canonical Card Facts do not resolve the required simulation semantics. An override never mutates canonical Card Facts and never grants behavior beyond what it explicitly declares. Any card behavior not resolvable from canonical Card Facts and not declared here is unsupported and, per the Simulation Policy, must surface as a visible limitation and must never silently contribute to a success metric.",
+    "authoritative_universal_rules": "workshop/projects/the-myr-singularity/simulation/simulation_policy.json",
+    "never_edits_canonical_card_facts": true,
+    "never_records_results": true
+  },
+  "modeled_behavior_field_contract": {
+    "card_identity": "Canonical card identity: name plus stable Scryfall ID matching canonical Card Facts.",
+    "modeled_behavior": "The explicit simulation behavior this entry authorizes: land-drop status, produced colors, and five-color-source status.",
+    "time_dependent_availability": "Optional. Present when a card is not a permanent source. Declares a bounded availability window in controller-turn offsets from the play turn, a removal event, and persists_as_permanent_land false. When absent, the card is treated as a permanent source per its produced_mana or override. The policy time_dependent_card_semantics section defines how the engine consumes this block.",
+    "unsupported_behaviors": "Optional list of named behaviors of the card that are explicitly not modeled and must never contribute to a metric.",
+    "scope": "Always 'project:the-myr-singularity' for this artifact; overrides are never global.",
+    "source": "Where the modeled behavior comes from (oracle text of the canonical card fact, and the reason a modeled entry is required).",
+    "confidence": "high, medium, or low confidence in the modeled behavior.",
+    "validation_status": "modeled_pending_engine_review until Task 32 exercises it against the engine; never 'measured'.",
+    "limitations": "What this modeled behavior does not capture.",
+    "compensates_for_missing_canonical_produced_mana": "Boolean. True when the entry exists specifically because the canonical Card Fact has produced_mana null or absent for a card that does produce mana."
+  },
+  "entries": [
+    {
+      "card_identity": {
+        "name": "City of Brass",
+        "scryfall_id": "c21565d0-fc40-4d89-9b27-87c03385e0af"
+      },
+      "modeled_behavior": {
+        "counts_as_land_drop": true,
+        "produces_colors": ["W", "U", "B", "R", "G"],
+        "produces_colorless": false,
+        "counts_as_five_color_source": true
+      },
+      "scope": "project:the-myr-singularity",
+      "source": {
+        "type": "modeled_from_canonical_oracle_text",
+        "canonical_card_fact": "workshop/card-data/cards.json",
+        "oracle_basis": "\"{T}: Add one mana of any color.\"",
+        "reason": "Canonical produced_mana is null for this card, so any-color land production must be modeled explicitly for the simulation to represent the v1.1 five-color mana-fixing change."
+      },
+      "confidence": "high",
+      "validation_status": "modeled_pending_engine_review",
+      "limitations": [
+        "Does not model the incidental 1 damage on tap; the Sprint 2 model has no life total.",
+        "Any-color production is modeled as availability of each of the five colors, not as simultaneous multi-color output from a single tap."
+      ],
+      "compensates_for_missing_canonical_produced_mana": true
+    },
+    {
+      "card_identity": {
+        "name": "Mana Confluence",
+        "scryfall_id": "504a69eb-3c2d-4bb1-b117-252b15acf0c2"
+      },
+      "modeled_behavior": {
+        "counts_as_land_drop": true,
+        "produces_colors": ["W", "U", "B", "R", "G"],
+        "produces_colorless": false,
+        "counts_as_five_color_source": true
+      },
+      "scope": "project:the-myr-singularity",
+      "source": {
+        "type": "modeled_from_canonical_oracle_text",
+        "canonical_card_fact": "workshop/card-data/cards.json",
+        "oracle_basis": "\"{T}, Pay 1 life: Add one mana of any color.\"",
+        "reason": "Canonical produced_mana is null for this card, so any-color land production must be modeled explicitly for the simulation to represent the v1.1 five-color mana-fixing change."
+      },
+      "confidence": "high",
+      "validation_status": "modeled_pending_engine_review",
+      "limitations": [
+        "Does not model the 1 life payment; the Sprint 2 model has no life total.",
+        "Any-color production is modeled as availability of each of the five colors, not as simultaneous multi-color output from a single tap."
+      ],
+      "compensates_for_missing_canonical_produced_mana": true
+    },
+    {
+      "card_identity": {
+        "name": "Urza's Saga",
+        "scryfall_id": "c1e0f201-42cb-46a1-901a-65bb4fc18f6c"
+      },
+      "modeled_behavior": {
+        "counts_as_land_drop": true,
+        "produces_colors": [],
+        "produces_colorless": true,
+        "counts_as_five_color_source": false
+      },
+      "time_dependent_availability": {
+        "model": "controller_turn_window",
+        "window_units": "controller_turns_from_play",
+        "available_as_source_from_play": true,
+        "availability_window": {
+          "start_offset": 0,
+          "end_offset": 2,
+          "inclusive": true,
+          "description": "Usable as a colorless source on the play turn (entry) and on the controller's next two turns, spanning entry through the Chapter III trigger window."
+        },
+        "removal_event": {
+          "trigger": "chapter_iii_resolves",
+          "controller_turn_offset": 2,
+          "effect": "removed_from_battlefield",
+          "description": "After Chapter III resolves on the controller's second turn after entry, Urza's Saga is sacrificed and leaves the battlefield."
+        },
+        "persists_as_permanent_land": false,
+        "max_controller_turns_available": 3
+      },
+      "unsupported_behaviors": [
+        "chapter_iii_artifact_tutor",
+        "construct_token_creation",
+        "any_saga_behavior_not_listed_here"
+      ],
+      "scope": "project:the-myr-singularity",
+      "source": {
+        "type": "modeled_from_canonical_oracle_text",
+        "canonical_card_fact": "workshop/card-data/cards.json",
+        "oracle_basis": "Saga land that adds {C} while in play, gains a lore counter each of the controller's upkeeps, and is sacrificed after Chapter III.",
+        "reason": "Canonical produced_mana is null for this card. It is modeled as a colorless-only land drop that produces {C} from entry and remains a colorless source only through the Chapter III window, after which it is removed. It is explicitly not a five-color source and never a permanent land through the horizon."
+      },
+      "confidence": "medium",
+      "validation_status": "modeled_pending_engine_review",
+      "limitations": [
+        "Produces {C} from entry as a bounded simplification; the exact Saga chapter that grants the mana ability is not separately modeled.",
+        "Construct token generation, the Chapter III artifact tutor, and any other Saga behavior are unsupported and must not contribute to any metric.",
+        "The removal after Chapter III is modeled deterministically as a controller-turn window; exact stack timing within a turn is not modeled."
+      ],
+      "compensates_for_missing_canonical_produced_mana": true
+    }
+  ],
+  "explicit_boundary": {
+    "statement": "This artifact records modeled card behavior only. It authorizes no deck change, edits no canonical or candidate Card Facts, creates no SimulationRun or SimulationResult, and makes no performance claim. Every entry remains modeled_pending_engine_review until the deterministic engine task exercises it.",
+    "edits_card_facts": false,
+    "creates_results": false,
+    "authorizes_deck_change": false
+  }
+}

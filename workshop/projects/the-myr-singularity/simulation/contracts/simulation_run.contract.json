@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "simulation_run_contract",
+  "contract_id": "simulation-run-contract-v1",
+  "project_id": "the-myr-singularity",
+  "policy_version": "sim-policy-v1",
+  "generated_at": "2026-07-13T00:00:00Z",
+  "purpose": "Defines the data contract for a SimulationRun. A SimulationRun stores exact configuration and identity for one execution against one DeckVersion: the project, the DeckVersion, the deck-content fingerprint, the question, the policy, the seed, the iteration count, the RNG identity, and the run status. It stores no metrics and no interpretation. Task 30 defines this contract but creates no SimulationRun instance.",
+  "scope": {
+    "includes": [
+      "Required SimulationRun fields that prevent a run from floating without Project, DeckVersion, question, policy, seed, and limitations.",
+      "The deterministic seed and fingerprint binding.",
+      "The boundary that a run carries no metrics or interpretation."
+    ],
+    "excludes": [
+      "Metric values, raw counts, probabilities, intervals, or failure-pattern frequencies (those belong to a SimulationResult).",
+      "Reasoning interpretation or Product Owner decisions.",
+      "Any deck change or DeckVersion creation."
+    ]
+  },
+  "required_fields": {
+    "run_id": {"type": "string", "description": "Stable run identity."},
+    "artifact_type": {"type": "string", "const": "simulation_run", "description": "Must be 'simulation_run' for instances."},
+    "project_id": {"type": "string", "description": "Owning project id; a run may never float without a project."},
+    "question_id": {"type": "string", "description": "The SimulationQuestion this run answers."},
+    "policy_id": {"type": "string", "description": "The SimulationPolicy policy_id."},
+    "policy_version": {"type": "string", "description": "The SimulationPolicy policy_version."},
+    "deck_version_id": {"type": "string", "description": "The exact immutable DeckVersion tested."},
+    "deck_version_path": {"type": "string", "description": "Repo-relative path to the DeckVersion file."},
+    "deck_content_fingerprint": {"type": "string", "description": "The deck-content-sha256-v1 fingerprint of the tested DeckVersion; must match the DeckVersion recomputation and the fingerprint bound to deck_version_id."},
+    "run_role": {"type": "string", "description": "The role string used in seed derivation, for example 'baseline_v1.0' or 'candidate_v1.1'."},
+    "rng_id": {"type": "string", "const": "pcg32-v1", "description": "RNG identity from the policy."},
+    "seed_type": {"type": "string", "const": "unsigned_64_bit", "description": "Seed type from the policy."},
+    "seed": {"type": "integer", "description": "The unsigned 64-bit seed derived per the policy canonical_seed_derivation. Required and non-null for saved runs."},
+    "seed_derivation_algorithm_id": {"type": "string", "const": "sim-seed-sha256-v1", "description": "Seed derivation algorithm id from the policy."},
+    "iteration_count": {"type": "integer", "description": "Number of iterations; must be at least the policy minimum_saved_iterations for a saved run."},
+    "config": {
+      "type": "object",
+      "description": "Run configuration that references, not restates, policy semantics.",
+      "required_fields": ["mulligan_policy_ref", "keep_rule_ref", "bottoming_rule_ref", "observation_horizon_turn", "sequencing_levels", "card_semantics_ref"]
+    },
+    "status": {
+      "type": "string",
+      "allowed_values": ["planned", "executed", "invalid"],
+      "description": "Run execution status. Task 30 creates no instance; production instances appear in later tasks."
+    },
+    "limitations": {"type": "array", "description": "Limitations applicable to this run, including any unsupported-card-behavior limitations surfaced from the modeled deck."},
+    "source_references": {
+      "type": "object",
+      "description": "Repo-relative references to the policy, question, DeckVersion, and card_semantics used.",
+      "required_fields": ["policy", "question", "deck_version", "card_semantics"]
+    },
+    "explicit_boundary": {
+      "type": "object",
+      "description": "Boolean boundary flags.",
+      "required_fields": ["carries_metrics", "carries_interpretation", "creates_deck_version"]
+    }
+  },
+  "boundary_rules": [
+    "A SimulationRun must reference exactly one Project and exactly one DeckVersion.",
+    "deck_content_fingerprint must equal the recomputed fingerprint of the referenced DeckVersion; a mismatch invalidates the run.",
+    "seed must be derivable from question_id, policy_version, deck_content_fingerprint, and run_role via the policy seed derivation.",
+    "iteration_count below the policy minimum is not a valid saved run.",
+    "config references policy rules by reference and never restates their semantics.",
+    "A SimulationRun carries no metrics, no probabilities, and no interpretation.",
+    "A SimulationRun never creates or edits a DeckVersion."
+  ],
+  "validation_expectations": [
+    "The run JSON parses and has every required field.",
+    "policy_id, policy_version, rng_id, seed_type, and seed_derivation_algorithm_id match the SimulationPolicy.",
+    "deck_version_path resolves and deck_content_fingerprint equals the recomputed fingerprint.",
+    "seed equals the policy-derived seed for the recorded inputs.",
+    "iteration_count is at least the policy minimum_saved_iterations for a saved run.",
+    "No metric, raw count, probability, interval, or failure-pattern frequency field is present.",
+    "No reasoning_interpretation or product_owner_decision field is present.",
+    "explicit_boundary.carries_metrics, carries_interpretation, and creates_deck_version are all false."
+  ],
+  "task_30_state": {
+    "instances_created": 0,
+    "note": "Task 30 defines this contract only. No SimulationRun instance is created, so no production run exists."
+  }
+}

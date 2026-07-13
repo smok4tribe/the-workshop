@@ -1,0 +1,386 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "simulation_policy",
+  "policy_id": "the-myr-singularity-simulation-policy",
+  "policy_version": "sim-policy-v1",
+  "project_id": "the-myr-singularity",
+  "generated_at": "2026-07-13T00:00:00Z",
+  "generated_by": "Terra",
+  "depends_on_rfcs": ["RFC-005", "RFC-010", "RFC-014", "RFC-015"],
+  "purpose": "Defines the universal, versioned semantic contract for The Workshop simulation of The Myr Singularity. It owns every result-changing assumption that is not deck content: mulligan, keep and bottoming rules, draw/play and turn semantics, observation horizon, Level 1 and Level 2 sequencing semantics, mana/color/ramp resolution rules, the supported-versus-unsupported card-behavior boundary, deterministic seed and RNG identity, iteration and uncertainty policy, the deck-content fingerprint definition, and the evidence-language boundary. Deck identity is owned by immutable DeckVersion files; fixture-specific modeled card behavior is owned by the project-scoped card_semantics.json artifact this policy references.",
+  "scope": {
+    "includes": [
+      "Universal simulation semantics and resolution rules for the committed Sprint 2 metrics.",
+      "The mulligan, keepability, and bottoming contract with project-specific extension points.",
+      "Draw/play, first-turn-draw, opening-hand, and turn-index semantics.",
+      "Level 1 card-access and Level 2 simplified mana-development semantics.",
+      "Deterministic seed derivation, RNG identity, iteration policy, reproducibility, and uncertainty presentation.",
+      "The deck-content fingerprint definition.",
+      "The rule that unsupported card behavior can never silently contribute to a success metric.",
+      "The evidence-language boundary that forbids gameplay, win-rate, and generic-quality claims."
+    ],
+    "excludes": [
+      "Deck content and DeckVersion identity (owned by workshop/projects/the-myr-singularity/versions/*.json).",
+      "Fixture-specific modeled card behavior (owned by card_semantics.json).",
+      "Failure-pattern category identities (owned by contracts/failure_pattern_taxonomy.json).",
+      "Any SimulationRun, SimulationResult, or comparison result instance.",
+      "The simulation engine implementation.",
+      "Reasoning interpretation and Product Owner decisions."
+    ]
+  },
+  "references": {
+    "card_semantics": "workshop/projects/the-myr-singularity/simulation/card_semantics.json",
+    "question_contract": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json",
+    "run_contract": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_run.contract.json",
+    "result_contract": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_result.contract.json",
+    "comparison_contract": "workshop/projects/the-myr-singularity/simulation/contracts/comparison_result.contract.json",
+    "failure_pattern_taxonomy": "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json",
+    "canonical_card_facts": "workshop/card-data/cards.json"
+  },
+  "commander_scenario": {
+    "format": "Commander",
+    "table": "multiplayer",
+    "seat": "first_player",
+    "first_turn_draw": true,
+    "first_turn_draw_note": "By explicit Sprint 2 decision the modeled first player draws on turn 1. This is a deliberate modeling choice for reproducibility and is not the paper on-the-play rule; it is recorded here rather than hidden in engine code.",
+    "opening_hand_size": 7,
+    "commander_zone": "command_zone",
+    "commander_starts_in_command_zone": true
+  },
+  "turn_semantics": {
+    "turn_indexing": "one_based",
+    "opening_hand_is_turn": 0,
+    "first_drawn_turn": 1,
+    "observation_horizon_turn": 6,
+    "horizon_note": "Primary evidence is observed through turn 6 inclusive. Metric-specific target turns are recorded on each metric and never exceed the horizon.",
+    "cards_seen_by_turn_t": "opening_hand_size + (first_turn_draw ? t : t - 1) cards seen by the end of turn t under Level 1 draw semantics, before any mulligan adjustment."
+  },
+  "mulligan_policy": {
+    "policy_name": "one_free_mulligan_then_london",
+    "free_mulligans": 1,
+    "subsequent_mulligan_rule": "london",
+    "description": "Draw a fresh seven each mulligan. The first mulligan is free (keep seven cards). Each mulligan after the first is a London mulligan: draw seven, then bottom one card per mulligan taken beyond the free one when the hand is kept.",
+    "max_mulligans": 6,
+    "resolution_order": [
+      "Draw opening_hand_size cards.",
+      "Evaluate the hand against keep_rule.",
+      "If keepable, keep; apply bottoming_rule to bottom (mulligans_taken - free_mulligans) cards when positive.",
+      "If not keepable and mulligans_taken < max_mulligans, mulligan again.",
+      "If the maximum is reached, keep the final hand and apply bottoming for the required count."
+    ]
+  },
+  "keep_rule": {
+    "rule_id": "myr-singularity-keep-v1",
+    "base_rule": {
+      "keep_land_count_range": {
+        "min_keep": 2,
+        "max_keep": 5,
+        "description": "Keep hands containing 2 through 5 lands."
+      },
+      "one_land_exception": {
+        "keep": "conditional",
+        "condition": "Keep a one-land hand only when modeled unconditional early acceleration can produce at least two mana by turn 2.",
+        "modeled_unconditional_early_acceleration": "A nonland mana source in hand that is castable and online by turn 2 under Level 2 semantics using only the single land plus that source (for example a one-mana rock cast off the single land on turn 1, or a zero-cost rock), such that at least two mana are available by turn 2. Conditional accelerants that require a second land, additional colors, or another permanent first do not qualify.",
+        "note": "This is the only condition under which a one-land hand is kept."
+      },
+      "zero_land_hands": "reject",
+      "six_or_seven_land_hands": "reject"
+    },
+    "explicitly_not_evaluated": [
+      "combo quality",
+      "interaction quality",
+      "generic hand strength",
+      "matchup quality"
+    ],
+    "project_extension_points": {
+      "description": "Keep rules are project-scoped. The base rule above is the committed Myr Singularity rule. Other projects may override the land range, the one-land exception, or add archetype conditions without changing universal policy fields.",
+      "overridable_fields": [
+        "keep_land_count_range",
+        "one_land_exception",
+        "additional_project_conditions"
+      ],
+      "non_overridable_invariants": [
+        "zero-land hands are always rejected",
+        "keep evaluation never scores combo, interaction, generic strength, or matchup quality"
+      ]
+    }
+  },
+  "bottoming_rule": {
+    "rule_id": "deterministic-bottoming-v1",
+    "description": "When a kept hand must bottom cards (London mulligans beyond the free one), bottom exactly the required count using a deterministic priority order.",
+    "priority_order": [
+      {
+        "rank": 1,
+        "selector": "highest_mana_value_nonland",
+        "description": "The single highest-mana-value nonland card."
+      },
+      {
+        "rank": 2,
+        "selector": "remaining_high_mana_value_nonlands",
+        "description": "Remaining nonland cards in descending mana value."
+      },
+      {
+        "rank": 3,
+        "selector": "lands_above_three",
+        "description": "Lands only when more than three lands remain in hand, removing surplus lands above three."
+      },
+      {
+        "rank": 4,
+        "selector": "stable_normalized_card_identity_tiebreak",
+        "description": "Ties at any rank are broken by ascending NFKC-normalized card identity so bottoming is fully deterministic."
+      }
+    ],
+    "note": "The priority is applied top to bottom until the required number of cards has been bottomed."
+  },
+  "sequencing_semantics": {
+    "level_1_access": {
+      "name": "draw_access_goldfish",
+      "description": "Tracks what the deck has seen (drawn) by each turn: lands, ramp, individual colors, and card presence. Level 1 answers access questions only and does not assert that a seen card can be paid for.",
+      "models": ["cards seen by turn", "land count seen", "ramp source seen", "color source seen"],
+      "does_not_model": ["mana payment", "sequencing choices", "tutor resolution", "opponent interaction"]
+    },
+    "level_2_mana_development": {
+      "name": "simplified_mana_development_goldfish",
+      "description": "Adds simplified land-drop and mana-development assumptions on top of Level 1 to answer how much mana and which colors are available by each turn.",
+      "land_drop_semantics": {
+        "one_land_drop_per_turn": true,
+        "land_played_when_available": "Exactly one land is played per turn when a playable land is in hand; a card counts as a land drop only if its modeled behavior counts_as_land_drop is true (canonical land type or an explicit card_semantics override).",
+        "no_extra_land_effects_modeled": true
+      },
+      "mana_availability_semantics": {
+        "definition": "Mana available by turn t is the sum of mana produced by lands in play and by modeled unconditional nonland mana sources that are online by turn t.",
+        "nonland_mana_sources": "Only mana rocks and mana creatures whose production is resolvable from canonical produced_mana, or explicitly modeled in card_semantics.json, are counted. A nonland source is online only when it can be cast and would be untapped for use by turn t under these simplified assumptions.",
+        "no_rituals_or_conditional_mana": "Conditional, activated-cost-dependent, or one-shot ritual mana is not modeled in Sprint 2 and is treated as unsupported."
+      },
+      "individual_color_availability_semantics": {
+        "definition": "A color C is available by turn t when at least one in-play source that can produce C is online by turn t.",
+        "source_of_color": "A source produces C when C is in its canonical produced_mana list or in a card_semantics produces_colors entry."
+      },
+      "five_color_availability_semantics": {
+        "definition": "All five colors W, U, B, R, G are available by turn t when, for each color, at least one online source can produce it by turn t.",
+        "five_color_source": "A single source counts as a five-color source only when its canonical produced_mana equals the five colors or its card_semantics entry sets counts_as_five_color_source true. Colorless-only sources never contribute to color availability."
+      },
+      "ramp_access_semantics": {
+        "definition": "Ramp is accessible by turn t when a modeled ramp source (a nonland permanent that adds net mana, resolvable from canonical facts or card_semantics) has been seen by turn t under Level 1 and is castable/online under Level 2 for the availability variant of the metric.",
+        "note": "The metric records whether the ramp question is access-only (Level 1) or availability (Level 2); the two are never conflated."
+      }
+    },
+    "unmodeled_layers": [
+      "opponent behavior",
+      "combat",
+      "the stack and priority",
+      "politics and threat assessment",
+      "Level 3 heuristic sequencing",
+      "full tutor sequencing"
+    ]
+  },
+  "card_behavior_boundary": {
+    "supported_behavior_sources": [
+      "Canonical Card Facts land types and produced_mana in workshop/card-data/cards.json.",
+      "Explicit project-scoped overrides in card_semantics.json for cards whose canonical produced_mana is null or absent."
+    ],
+    "override_usage_rules": {
+      "when_overrides_may_be_used": "An override may be used only when the canonical Card Fact does not resolve the required land-drop or mana/color semantics for a card that is in the modeled deck. Overrides may only grant the specific fields they declare.",
+      "how_overrides_are_validated": "Every override entry must identify a real canonical card by name and Scryfall ID, declare source, confidence, validation status, limitations, and whether it compensates for missing canonical produced_mana. The contracts validator checks these fields and that no override edits canonical Card Facts.",
+      "override_never_global": true
+    },
+    "unsupported_behavior_handling": {
+      "rule": "Any card behavior that is neither resolvable from canonical Card Facts nor declared in card_semantics.json is unsupported.",
+      "surfacing": "Unsupported behavior must be recorded as a visible limitation on any SimulationRun and SimulationResult that touches the card, and the card contributes nothing to any success metric on account of the unsupported behavior.",
+      "hard_invariant": "Unsupported card behavior must never silently contribute to a success metric."
+    }
+  },
+  "randomness_policy": {
+    "rng_id": "pcg32-v1",
+    "seed_type": "unsigned_64_bit",
+    "canonical_seed_derivation": {
+      "algorithm_id": "sim-seed-sha256-v1",
+      "inputs_in_order": ["question_id", "policy_version", "deck_content_fingerprint", "run_role"],
+      "byte_encoding": "UTF-8",
+      "concatenation_format": "The four inputs are concatenated in the listed order with a single U+001F (unit separator) byte between adjacent inputs and no trailing separator: question_id \\x1F policy_version \\x1F deck_content_fingerprint \\x1F run_role.",
+      "hash": "SHA-256 over the UTF-8 bytes of the concatenation.",
+      "seed_extraction": "The seed is the first 64 bits of the digest read as the first 8 bytes in big-endian order, interpreted as an unsigned 64-bit integer.",
+      "digest_to_seed_byte_order": "big_endian",
+      "versioned": true,
+      "unambiguous": true
+    },
+    "rng_algorithm": {
+      "rng_id": "pcg32-v1",
+      "variant": "PCG-XSH-RR 64/32 (pcg32), O'Neill's canonical minimal C implementation",
+      "state_width_bits": 64,
+      "output_width_bits": 32,
+      "multiplier": 6364136223846793005,
+      "increment_rule": "inc = ((stream_selector << 1) | 1) mod 2^64, which forces an odd increment (stream).",
+      "stream_selector": 11400714819323198485,
+      "stream_selector_hex": "0x9E3779B97F4A7C15",
+      "unsigned_overflow_behavior": "All state and arithmetic are modulo 2^64 (wrapping unsigned 64-bit); the 32-bit output is taken modulo 2^32.",
+      "state_transition": "state_next = (state * 6364136223846793005 + inc) mod 2^64.",
+      "output_permutation": {
+        "name": "XSH-RR",
+        "steps": [
+          "Compute output from the OLD state (before the transition).",
+          "xorshifted = (((old_state >> 18) XOR old_state) >> 27) mod 2^32.",
+          "rot = (old_state >> 59) mod 32.",
+          "output = rotate_right_32(xorshifted, rot) = ((xorshifted >> rot) | (xorshifted << ((-rot) mod 32))) mod 2^32.",
+          "Then advance: state = state_transition(old_state)."
+        ]
+      },
+      "state_initialization": {
+        "procedure": "pcg32_srandom_r with initstate = seed and initseq = stream_selector.",
+        "steps": [
+          "state = 0.",
+          "inc = ((stream_selector << 1) | 1) mod 2^64.",
+          "Advance once: state = (state * multiplier + inc) mod 2^64.",
+          "state = (state + seed) mod 2^64.",
+          "Advance once more: state = (state * multiplier + inc) mod 2^64."
+        ],
+        "note": "initstate is the unsigned 64-bit seed from canonical_seed_derivation; initseq is the fixed stream_selector."
+      },
+      "bounded_integer_generation": {
+        "name": "unbiased_bounded_rand",
+        "domain": "bound is an integer in [1, 2^32].",
+        "procedure": "threshold = (2^32 - bound) mod bound; repeatedly draw r = next_u32() until r >= threshold; return r mod bound.",
+        "note": "Rejection sampling removes modulo bias; the loop terminates with probability 1."
+      },
+      "shuffle_algorithm": {
+        "name": "fisher_yates_durstenfeld",
+        "procedure": "For i from n-1 down to 1 inclusive: j = bounded_integer_generation(i + 1); swap array[i] and array[j].",
+        "note": "Deck order is shuffled in place from the last index downward; index 0 is never selected as the loop pivot."
+      },
+      "known_answer_test_vector": {
+        "seed_initstate": 42,
+        "stream_selector": 11400714819323198485,
+        "first_5_u32_outputs": [1669314965, 1897367909, 478990646, 3341671233, 3520501898],
+        "shuffle_input": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "shuffle_result": [7, 3, 1, 0, 4, 2, 8, 6, 9, 5],
+        "shuffle_note": "The shuffle_result uses a fresh generator seeded identically (initstate 42), then applies fisher_yates_durstenfeld to shuffle_input.",
+        "purpose": "Two conforming implementations must reproduce first_5_u32_outputs and shuffle_result exactly."
+      }
+    },
+    "reproducibility": {
+      "requirement": "A saved run reproduces exactly when the same policy_version, deck_content_fingerprint, question_id, run_role, iteration_count, rng_id, and seed are used.",
+      "declares_reproducibility": true,
+      "seed_required_for_saved_runs": true,
+      "non_null_seed_required_when_reproducible": true,
+      "requires_versioned_rng_algorithm": true,
+      "note": "Reproducibility is only valid because rng_algorithm fully specifies the RNG; a policy declaring reproducibility without the versioned RNG algorithm parameters is invalid."
+    }
+  },
+  "modeled_deck_zones": {
+    "included": ["commander", "main_deck"],
+    "excluded": ["sideboard", "considering", "unimplemented_candidates"],
+    "statement": "The simulated deck is exactly the commander plus the 99-card main-deck library. Excluded zones can never enter a run: they are outside the fingerprint and outside the modeled deck.",
+    "commander_count": 1,
+    "library_count": 99
+  },
+  "time_dependent_card_semantics": {
+    "description": "Some cards are not permanent mana sources. A card_semantics.json entry may declare a time_dependent_availability block. When present, the engine must honor the bounded availability window and removal event and must never treat the card as available outside that window. In particular, a windowed land must not be counted as a permanent land through the observation horizon.",
+    "model": "controller_turn_window",
+    "window_units": "controller_turns_from_play",
+    "engine_obligations": [
+      "Count the card as a land drop only on its play turn.",
+      "Count the card as a mana source only within its availability window (start_offset through end_offset inclusive, measured in the controller's turns from the play turn).",
+      "Apply the removal_event at its controller_turn_offset; after removal the card contributes nothing to any metric.",
+      "Never extend availability beyond the declared window; a windowed card is never assumed to be a permanent source through the horizon."
+    ],
+    "default_when_absent": "A card_semantics entry without a time_dependent_availability block is treated as a normal permanent source per its produced_mana or override.",
+    "horizon_interaction": "Because the observation horizon is turn 6, a card whose window ends before turn 6 must be dropped from availability for the remaining turns; treating it as a permanent land through turn 6 is a contract violation."
+  },
+  "iteration_policy": {
+    "minimum_saved_iterations": 10000,
+    "canonical_comparative_iterations": 100000,
+    "note": "A run saved as evidence uses at least the minimum. The canonical v1.0-versus-v1.1 comparison uses the canonical comparative iteration count. Iteration counts below the minimum are not valid saved evidence."
+  },
+  "uncertainty_policy": {
+    "confidence_presentation": "wilson_95",
+    "confidence_level": 0.95,
+    "interval_method": "wilson_score_interval",
+    "required_reported_fields": [
+      "raw_count",
+      "sample_size",
+      "probability",
+      "confidence_interval",
+      "absolute_delta"
+    ],
+    "relative_delta_rule": {
+      "status": "secondary",
+      "valid_only_when": "baseline probability is non-zero",
+      "note": "Relative delta is reported as secondary context only and is invalid (must be omitted or marked not-applicable) when the baseline probability is zero."
+    },
+    "false_precision_rule": "Probabilities and intervals are reported at a precision consistent with the sample size; excessive decimal precision is prohibited."
+  },
+  "deck_fingerprint_policy": {
+    "algorithm_id": "deck-content-sha256-v1",
+    "included_zones": [
+      {"zone_label": "commander", "source_field": "commander"},
+      {"zone_label": "library", "source_field": "main_deck"}
+    ],
+    "excluded_from_fingerprint": ["sideboard"],
+    "excluded_note": "The sideboard is excluded because the simulated deck is the commander plus the exact 99-card library. The DeckVersion ID is deliberately excluded from the content fingerprint so the fingerprint reflects deck content only.",
+    "input_requirements": [
+      "commander zone label, aggregated quantity, and canonical card identity",
+      "library zone label, aggregated quantity, and canonical card identity"
+    ],
+    "canonical_serialization": {
+      "text_encoding": "UTF-8",
+      "identity_normalization": "Canonical card identity is the card name after Unicode NFKC normalization with internal whitespace collapsed to single spaces and surrounding whitespace stripped; case is preserved.",
+      "aggregation": "Within each included zone, entries are aggregated by normalized card identity into total quantities (for example two Island entries of quantity one aggregate to Island quantity two).",
+      "zone_ordering": "Zones are serialized in the fixed order commander then library.",
+      "card_ordering": "Within a zone, cards are ordered ascending by normalized card identity (Unicode code point order).",
+      "line_format": "Each card serializes as the decimal quantity, a single space, then the normalized card identity.",
+      "zone_block_format": "Each zone serializes as the zone_label, a newline (U+000A), then its card lines joined by U+000A.",
+      "zone_separator": "Zone blocks are joined by the three bytes U+000A, U+001E (record separator), U+000A.",
+      "digest": "SHA-256 over the UTF-8 bytes of the full serialization.",
+      "fingerprint_string": "The literal 'deck-content-sha256-v1:' prefix followed by the lowercase hex SHA-256 digest."
+    },
+    "reference_fingerprints": {
+      "note": "Recorded as deck identity only. These are integrity anchors, not simulation results.",
+      "v1.0": "deck-content-sha256-v1:be721eb9d1662606812ceeb16ed476ebd7a0a7070bfd68b8e76efa085b364d3e",
+      "v1.1": "deck-content-sha256-v1:064801f0679b6dea14e52695efb0c1e92b095e810612d9d0929b45d6223c7cf4"
+    }
+  },
+  "metric_catalog": {
+    "description": "The committed Sprint 2 metric families. Each metric records its sequencing level and target turn. These are metric definitions only; no values are recorded here.",
+    "metrics": [
+      {"metric_id": "keepable_opening_hand_rate", "level": "level_1", "target_turn": 0, "kind": "primary"},
+      {"metric_id": "zero_land_hand_rate", "level": "level_1", "target_turn": 0, "kind": "primary"},
+      {"metric_id": "one_land_hand_rate", "level": "level_1", "target_turn": 0, "kind": "primary"},
+      {"metric_id": "excessive_land_hand_rate", "level": "level_1", "target_turn": 0, "kind": "primary"},
+      {"metric_id": "land_drop_success_by_turn", "level": "level_2", "target_turn": 6, "kind": "primary"},
+      {"metric_id": "ramp_access_by_turn", "level": "level_2", "target_turn": 3, "kind": "primary"},
+      {"metric_id": "distinct_commander_colors_by_turn", "level": "level_2", "target_turn": 6, "kind": "primary"},
+      {"metric_id": "five_color_availability_by_turn", "level": "level_2", "target_turn": 6, "kind": "primary"},
+      {"metric_id": "commander_castability_by_turn", "level": "level_2", "target_turn": 3, "kind": "optional_sanity"}
+    ]
+  },
+  "commander_castability_policy": {
+    "status": "optional_sanity_metric",
+    "is_primary_five_color_metric": false,
+    "is_success_criterion": false,
+    "note": "Urtet, Remnant of Memnarch costs {3} generic. Commander castability is included only as an optional sanity check on Level 2 mana development. It is never a primary five-color metric and never a success criterion."
+  },
+  "evidence_language_boundary": {
+    "statement": "Simulation output describes the explicit simulated model only. It reports access, land development, mana availability, and color availability under the recorded assumptions. It must never be phrased as, or converted into, real-game win rate, average win turn, gameplay performance, matchup performance, or generic deck quality.",
+    "forbidden_claims": [
+      "win rate",
+      "win probability",
+      "average win turn",
+      "gameplay performance",
+      "matchup performance",
+      "generic deck quality",
+      "the deck is better"
+    ],
+    "permitted_framing": "Under this policy's assumptions and iteration count, the deck reaches a modeled access/availability condition in a stated proportion of simulated openings, with a stated confidence interval and limitations."
+  },
+  "lifecycle_boundary": {
+    "statement": "SimulationPolicy, SimulationQuestion, SimulationRun, SimulationResult, ComparisonResult, ReasoningOutput, and Product Owner Decision are distinct lifecycle stages. Policy and question do not carry results; runs carry configuration and identity, not metrics; results carry metrics, not interpretation; interpretation and Product Owner decisions are separate later artifacts. No simulation artifact creates or edits a DeckVersion.",
+    "policy_carries_results": false,
+    "simulation_creates_deck_version": false
+  },
+  "explicit_boundary": {
+    "statement": "This policy freezes the semantic contract for Sprint 2 simulation. It contains no SimulationRun, no SimulationResult, and no comparison values. It authorizes no deck change, edits no canonical Card Facts, and makes no performance claim.",
+    "contains_production_result": false,
+    "authorizes_deck_change": false,
+    "edits_card_facts": false
+  }
+}
