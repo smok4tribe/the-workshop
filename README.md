@@ -1,24 +1,22 @@
 # The Workshop
 
-The Workshop is a local-first Deck Engineering Platform for Commander.
+The Workshop is a local-first Deck Engineering Platform for Commander. It is a structured workspace for deck analysis, recommendations, decisions, versions, reports, and evidence rather than a generic deck builder.
 
-It is not a generic deck builder.
-It is a structured workspace for deck analysis, recommendations, decisions, versions, and reports.
+## Current Delivery State
 
-## Sprint 1
-
-Sprint 1 proves the core engineering loop locally:
-
-Project -> Brief -> Deck Import -> DeckVersion -> Card Facts -> Basic Knowledge -> Analysis -> Weakness -> Recommendation -> Decision -> New DeckVersion -> Report
+- **Sprint 1** is completed and independently certified.
+- **Sprint 2 — Evidence Loop Foundation** is active at kickoff.
+- Sprint 1 certification covers local product-loop execution, structure, traceability, reproducibility, and evidence honesty. It does not claim simulation, gameplay validation, win rate, or measured deck performance.
+- Krark-Clan Ironworks and Mana Echoes remain `needs_testing` and unimplemented.
 
 ## Repository Layout
 
-- `/docs` contains product, architecture, RFC, ADR, and planning documentation.
-- `/workshop` contains the executable local prototype files.
+- [`/docs`](docs/README.md) is the operational source for product, architecture, RFC, ADR, planning, delivery, and review documentation.
+- [`/workshop`](workshop) contains the executable prototype and structured evidence.
 
 ## Storage Model
 
-- JSON stores structured data.
-- Markdown stores readable reports and notes.
+- JSON stores structured evidence and machine-validated artifacts.
+- Markdown stores readable reports, notes, and synchronized RFC documentation.
 
-This repository intentionally starts local-first. It is not a full web application yet.
+The repository remains local-first. It is not a full web application, SaaS architecture, or production database deployment.
