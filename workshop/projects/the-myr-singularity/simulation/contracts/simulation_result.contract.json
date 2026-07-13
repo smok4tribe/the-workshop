@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "simulation_result_contract",
+  "contract_id": "simulation-result-contract-v1",
+  "project_id": "the-myr-singularity",
+  "policy_version": "sim-policy-v1",
+  "generated_at": "2026-07-13T00:00:00Z",
+  "purpose": "Defines the data contract for a SimulationResult. A SimulationResult stores the metrics, uncertainty, failure patterns, observations, and limitations produced by exactly one SimulationRun. It stores no reasoning interpretation and no Product Owner decision, and it never claims gameplay performance, win rate, or generic deck quality. Task 30 defines this contract but creates no SimulationResult instance.",
+  "scope": {
+    "includes": [
+      "Required SimulationResult fields and their meaning.",
+      "The uncertainty presentation contract (raw count, sample size, probability, Wilson interval, deltas).",
+      "The requirement that failure patterns reference the taxonomy.",
+      "The evidence-honesty and lifecycle boundaries."
+    ],
+    "excludes": [
+      "Reasoning interpretation (belongs to a ReasoningOutput).",
+      "Product Owner decisions (belong to a decision artifact).",
+      "Gameplay, win-rate, or generic-quality claims.",
+      "Any deck change."
+    ]
+  },
+  "required_fields": {
+    "result_id": {"type": "string", "description": "Stable result identity."},
+    "artifact_type": {"type": "string", "const": "simulation_result", "description": "Must be 'simulation_result' for instances."},
+    "project_id": {"type": "string", "description": "Owning project id."},
+    "run_id": {"type": "string", "description": "The exact SimulationRun that produced this result; a result references exactly one run."},
+    "deck_version_id": {"type": "string", "description": "The DeckVersion tested, mirrored from the run for traceability."},
+    "deck_content_fingerprint": {"type": "string", "description": "The fingerprint mirrored from the run."},
+    "policy_version": {"type": "string", "description": "The policy version, mirrored from the run."},
+    "iteration_count": {"type": "integer", "description": "Iterations, mirrored from the run."},
+    "readable_summary": {"type": "string", "description": "A cautious plain-language summary within the evidence-language boundary."},
+    "metrics": {
+      "type": "array",
+      "description": "One entry per reported metric.",
+      "item_required_fields": ["metric_id", "target_turn", "raw_count", "sample_size", "probability", "confidence_interval"],
+      "confidence_interval_required_fields": ["method", "level", "lower", "upper"]
+    },
+    "failure_patterns": {
+      "type": "array",
+      "description": "Observed failure patterns. Each references a taxonomy category_id and records a frequency.",
+      "item_required_fields": ["category_id", "frequency"]
+    },
+    "observations": {"type": "array", "description": "Neutral observations about the run outcome."},
+    "confidence": {"type": "string", "allowed_values": ["low", "medium", "high"], "description": "Qualitative confidence reflecting iteration count and modeling assumptions."},
+    "limitations": {"type": "array", "description": "Model limitations, including any unsupported-card-behavior limitations surfaced during the run."},
+    "created_at": {"type": "string", "description": "ISO 8601 creation timestamp."},
+    "source_references": {
+      "type": "object",
+      "description": "Repo-relative references to the run, policy, question, DeckVersion, and taxonomy.",
+      "required_fields": ["run", "policy", "question", "deck_version", "failure_pattern_taxonomy"]
+    },
+    "explicit_boundary": {
+      "type": "object",
+      "description": "Boolean boundary flags.",
+      "required_fields": ["carries_interpretation", "carries_product_owner_decision", "is_gameplay_claim", "creates_deck_version"]
+    }
+  },
+  "uncertainty_contract": {
+    "confidence_presentation": "wilson_95",
+    "required_reported_fields": ["raw_count", "sample_size", "probability", "confidence_interval", "absolute_delta"],
+    "confidence_interval_method": "wilson_score_interval",
+    "confidence_level": 0.95,
+    "relative_delta_rule": "Relative delta is secondary and reported only when the compared baseline probability is non-zero; comparative deltas live in the ComparisonResult, while a standalone result reports raw_count, sample_size, probability, and interval.",
+    "false_precision_rule": "Report precision consistent with sample_size; excessive decimal precision is prohibited."
+  },
+  "boundary_rules": [
+    "A SimulationResult references exactly one SimulationRun.",
+    "Every failure_patterns entry references a category_id defined in the failure-pattern taxonomy.",
+    "A SimulationResult carries no reasoning_interpretation and no product_owner_decision field.",
+    "No metric or summary may express win rate, win probability, average win turn, gameplay or matchup performance, or generic deck quality.",
+    "Unsupported card behavior may only appear as a limitation and must never contribute to a metric success count.",
+    "A SimulationResult never creates or edits a DeckVersion."
+  ],
+  "validation_expectations": [
+    "The result JSON parses and has every required field.",
+    "run_id, deck_version_id, deck_content_fingerprint, policy_version, and iteration_count are consistent with the referenced run.",
+    "Every metric entry reports raw_count, sample_size, probability, and a Wilson 95% confidence_interval with method, level, lower, and upper.",
+    "Every failure pattern references a valid taxonomy category_id.",
+    "No forbidden evidence-language claim appears in any metric label, observation, or summary.",
+    "No reasoning_interpretation or product_owner_decision field is present.",
+    "explicit_boundary.carries_interpretation, carries_product_owner_decision, is_gameplay_claim, and creates_deck_version are all false."
+  ],
+  "task_30_state": {
+    "instances_created": 0,
+    "note": "Task 30 defines this contract only. No SimulationResult instance is created, so no production result exists."
+  }
+}

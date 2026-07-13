@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "simulation_question_contract",
+  "contract_id": "simulation-question-contract-v1",
+  "project_id": "the-myr-singularity",
+  "policy_version": "sim-policy-v1",
+  "generated_at": "2026-07-13T00:00:00Z",
+  "purpose": "Defines the data contract for a SimulationQuestion. A SimulationQuestion binds a hypothesis to the compared DeckVersions, the policy, the target metrics, and the success interpretation. It carries no metrics, results, or interpretation, and it does not itself execute a run.",
+  "scope": {
+    "includes": [
+      "Required SimulationQuestion fields and their meaning.",
+      "The requirement that a question reference the policy and exact DeckVersions by identity.",
+      "The boundary that a question never carries results."
+    ],
+    "excludes": [
+      "Metric values, raw counts, probabilities, or intervals.",
+      "Reasoning interpretation or Product Owner decisions.",
+      "Any deck change."
+    ]
+  },
+  "required_fields": {
+    "question_id": {"type": "string", "description": "Stable question identity, for example 'question-001-mana-color'."},
+    "artifact_type": {"type": "string", "const": "simulation_question", "description": "Must be 'simulation_question' for instances."},
+    "project_id": {"type": "string", "description": "Owning project id."},
+    "policy_id": {"type": "string", "description": "The SimulationPolicy policy_id this question runs under."},
+    "policy_version": {"type": "string", "description": "The SimulationPolicy policy_version this question runs under."},
+    "hypothesis": {"type": "string", "description": "The bounded hypothesis under test, phrased within the evidence-language boundary."},
+    "question_text": {"type": "string", "description": "The explicit question, phrased about the simulated model, not gameplay."},
+    "compared_versions": {
+      "type": "array",
+      "description": "Exactly the DeckVersions compared. Each entry records deck_version_id, path, run_role, and deck_content_fingerprint.",
+      "item_required_fields": ["deck_version_id", "path", "run_role", "deck_content_fingerprint"]
+    },
+    "target_metrics": {
+      "type": "array",
+      "description": "The metric_ids from the policy metric_catalog this question targets, each with its target_turn.",
+      "item_required_fields": ["metric_id", "target_turn"]
+    },
+    "success_interpretation": {
+      "type": "object",
+      "description": "How results would be read: the directional expectation and any threshold. This is interpretation guidance, not a recorded result.",
+      "required_fields": ["directional_expectation", "notes"]
+    },
+    "execution_status": {
+      "type": "string",
+      "allowed_values": ["not_executed", "executed"],
+      "description": "Task 30 questions are 'not_executed'. A question becomes 'executed' only when a real SimulationRun and SimulationResult exist in a later task."
+    },
+    "limitations": {"type": "array", "description": "Known limitations of the question scope."},
+    "explicit_boundary": {
+      "type": "object",
+      "description": "Boolean boundary flags.",
+      "required_fields": ["carries_results", "authorizes_deck_change", "is_gameplay_claim"]
+    }
+  },
+  "boundary_rules": [
+    "A SimulationQuestion references the policy by policy_id and policy_version; it never restates policy semantics.",
+    "A SimulationQuestion references DeckVersions by id, path, and deck_content_fingerprint; it never copies deck content.",
+    "A SimulationQuestion carries no metric values, raw counts, probabilities, or confidence intervals.",
+    "execution_status 'not_executed' forbids any accompanying SimulationRun or SimulationResult payload.",
+    "The hypothesis and question_text must obey the policy evidence_language_boundary and contain no forbidden gameplay/win-rate/quality claim."
+  ],
+  "validation_expectations": [
+    "The question JSON parses and has every required field.",
+    "policy_id and policy_version match the SimulationPolicy.",
+    "Every compared_versions entry resolves to an existing DeckVersion whose recomputed deck_content_fingerprint equals the recorded value.",
+    "Every target_metrics metric_id exists in the policy metric_catalog and its target_turn does not exceed the observation horizon.",
+    "execution_status is 'not_executed' in Task 30 and no result fields are present.",
+    "explicit_boundary.carries_results is false, authorizes_deck_change is false, and is_gameplay_claim is false.",
+    "No forbidden evidence-language claim appears in the hypothesis or question_text.",
+    "The companion Markdown states the hypothesis, the compared versions, the target metrics, and the not-executed status."
+  ]
+}
