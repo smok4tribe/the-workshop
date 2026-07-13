@@ -1895,17 +1895,57 @@ Accepted product and architecture decisions after Sprint 1 certification.
 
 Accepted in Sprint 1 through the local-first prototype implementation. The original proposal remains visible in the preserved v0.1 record; the implementation evidence and validation boundary are recorded in the v0.2 addendum and Sprint 1 ratification evidence.
 
+#### Original Revisit-Trigger Disposition
+
+ADR-008 — Original Revisit-Trigger Disposition: Met in Sprint 1.
+
+Explanation:
+
+The original trigger required review after the local prototype completed the MVP loop on at least one real deck project. Sprint 1 completed and certified that loop using The Myr Singularity.
+
+The review confirmed rather than superseded the decision. Local-first remains the accepted MVP implementation strategy. Migration to another delivery model requires a later explicit decision.
+
 ### ADR-009 — Sprint 1 Ratification
 
 Accepted in Sprint 1 through the Markdown/JSON structured artifact model. The original proposal remains visible in the preserved v0.1 record; the implementation evidence and validation boundary are recorded in the v0.2 addendum and Sprint 1 ratification evidence.
+
+#### Original Revisit-Trigger Disposition
+
+ADR-009 — Original Revisit-Trigger Disposition: Not met as of Sprint 1 certification.
+
+Explanation:
+
+The original trigger applies when file-based storage becomes difficult to query, validate, compare, or migrate. Sprint 1 demonstrated deterministic validation, structured comparison, traceability, and readable reporting using Markdown and JSON.
+
+The decision remains accepted. The trigger remains open for future review when the documented storage limitations actually arise.
 
 ### ADR-010 — Sprint 1 Ratification
 
 Accepted in Sprint 1 through the external-source-backed canonical Card Facts implementation. The original proposal remains visible in the preserved v0.1 record; the implementation evidence and validation boundary are recorded in the v0.2 addendum and Sprint 1 ratification evidence.
 
+#### Original Revisit-Trigger Disposition
+
+ADR-010 — Original Revisit-Trigger Disposition: Not met as of Sprint 1 certification.
+
+Explanation:
+
+Sprint 1 proved the external-source boundary for canonical Card Facts using the first controlled source. It did not require expanded price accuracy, rulings depth, popularity data, or collection integration beyond that source.
+
+The decision remains accepted. The original trigger remains open when broader data requirements appear.
+
 ### ADR-011 — Sprint 1 Ratification
 
 Accepted in Sprint 1 through delivery of the local core engineering loop before a full UI. The original proposal remains visible in the preserved v0.1 record; the implementation evidence and validation boundary are recorded in the v0.2 addendum and Sprint 1 ratification evidence.
+
+#### Original Revisit-Trigger Disposition
+
+ADR-011 — Original Revisit-Trigger Disposition: Met in Sprint 1.
+
+Explanation:
+
+The original trigger required review after the local prototype could produce useful reports and versioned decisions. Sprint 1 produced and certified the complete local engineering loop, including structured recommendations, Product Owner decisions, immutable DeckVersion v1.1, and readable reports.
+
+The review confirmed rather than superseded the decision. Full UI remained deferred, while Sprint 2 prioritizes the evidence loop. Selection of the first user-facing surface remains future ADR work.
 
 ### 1. Purpose
 
