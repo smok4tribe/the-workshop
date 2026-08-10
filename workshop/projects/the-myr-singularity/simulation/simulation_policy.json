@@ -42,7 +42,7 @@
     "table": "multiplayer",
     "seat": "first_player",
     "first_turn_draw": true,
-    "first_turn_draw_note": "By explicit Sprint 2 decision the modeled first player draws on turn 1. This is a deliberate modeling choice for reproducibility and is not the paper on-the-play rule; it is recorded here rather than hidden in engine code.",
+    "first_turn_draw_note": "The modeled first player draws on turn 1 because that is normal multiplayer Commander behavior under the paper rules. The rule is recorded explicitly so it remains visible and reproducible in the engine contract.",
     "opening_hand_size": 7,
     "commander_zone": "command_zone",
     "commander_starts_in_command_zone": true
@@ -264,7 +264,8 @@
       "non_null_seed_required_when_reproducible": true,
       "requires_versioned_rng_algorithm": true,
       "note": "Reproducibility is only valid because rng_algorithm fully specifies the RNG; a policy declaring reproducibility without the versioned RNG algorithm parameters is invalid."
-    }
+    },
+    "comparison_stream_mode": "independent_deterministic_streams"
   },
   "modeled_deck_zones": {
     "included": ["commander", "main_deck"],
@@ -274,13 +275,13 @@
     "library_count": 99
   },
   "time_dependent_card_semantics": {
-    "description": "Some cards are not permanent mana sources. A card_semantics.json entry may declare a time_dependent_availability block. When present, the engine must honor the bounded availability window and removal event and must never treat the card as available outside that window. In particular, a windowed land must not be counted as a permanent land through the observation horizon.",
+    "description": "Some cards are not permanent mana sources. A card_semantics.json entry may declare a time_dependent_availability block. When present, the engine must honor the bounded availability window and removal event and must never treat the card as available outside that window. For a chapter-based time-dependent card, the first counter occurs on entry, later counters occur as the controller's precombat main phase begins, and final removal is independent of successful final-chapter resolution. In particular, a windowed land must not be counted as a permanent land through the observation horizon.",
     "model": "controller_turn_window",
     "window_units": "controller_turns_from_play",
     "engine_obligations": [
       "Count the card as a land drop only on its play turn.",
       "Count the card as a mana source only within its availability window (start_offset through end_offset inclusive, measured in the controller's turns from the play turn).",
-      "Apply the removal_event at its controller_turn_offset; after removal the card contributes nothing to any metric.",
+      "Apply the removal_event at its controller_turn_offset; when the event is final_chapter_ability_leaves_stack, removal occurs regardless of whether that final chapter ability resolved successfully. After removal the card contributes nothing to any metric.",
       "Never extend availability beyond the declared window; a windowed card is never assumed to be a permanent source through the horizon."
     ],
     "default_when_absent": "A card_semantics entry without a time_dependent_availability block is treated as a normal permanent source per its produced_mana or override.",
@@ -299,9 +300,13 @@
       "raw_count",
       "sample_size",
       "probability",
-      "confidence_interval",
-      "absolute_delta"
+      "confidence_interval"
     ],
+    "comparison_metric_contract": {
+      "required_fields": ["baseline_estimate", "candidate_estimate", "absolute_delta"],
+      "relative_delta": "optional when the baseline probability is non-zero",
+      "delta_confidence_interval": "not defined"
+    },
     "relative_delta_rule": {
       "status": "secondary",
       "valid_only_when": "baseline probability is non-zero",

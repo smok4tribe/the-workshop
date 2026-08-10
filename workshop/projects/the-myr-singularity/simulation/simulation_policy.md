@@ -15,7 +15,7 @@ Defines the universal, versioned semantic contract for The Workshop simulation o
 - Opening hand size: 7
 - Commander starts in command zone: true
 
-By explicit Sprint 2 decision the modeled first player draws on turn 1. This is a deliberate modeling choice for reproducibility and is not the paper on-the-play rule; it is recorded here rather than hidden in engine code.
+The modeled first player draws on turn 1 because that is normal multiplayer Commander behavior under the paper rules. The rule is recorded explicitly so it remains visible and reproducible in the engine contract.
 
 ## Turn Semantics
 
@@ -106,7 +106,7 @@ Fixture-specific modeled card behavior lives in `workshop/projects/the-myr-singu
 - Minimum saved iterations: 10000
 - Canonical comparative iterations: 100000
 - Confidence presentation: wilson_95 (wilson_score_interval)
-- Required reported fields: raw_count, sample_size, probability, confidence_interval, absolute_delta
+- Required reported fields: raw_count, sample_size, probability, confidence_interval
 - Relative delta: secondary; valid only when baseline probability is non-zero
 
 ## Deck-Content Fingerprint

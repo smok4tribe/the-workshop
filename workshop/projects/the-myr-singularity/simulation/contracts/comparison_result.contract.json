@@ -5,18 +5,18 @@
   "project_id": "the-myr-singularity",
   "policy_version": "sim-policy-v1",
   "generated_at": "2026-07-13T00:00:00Z",
-  "purpose": "Defines the data contract for a ComparisonResult. A ComparisonResult compares two SimulationResults (baseline and candidate) that were produced under an identical policy, question, iteration count, and configuration, differing only in DeckVersion. It records absolute and relative deltas per metric with uncertainty. It carries no reasoning interpretation and no Product Owner decision. Task 30 defines this contract but creates no ComparisonResult instance.",
+  "purpose": "Defines the data contract for a ComparisonResult. A ComparisonResult compares two resolved SimulationResults under computed semantic parity: policy, question, iteration count, configuration, metric definitions, scenario, and RNG strategy. Identity consequences of distinct DeckVersions may differ. It records full side estimates and absolute and optional relative deltas, but no delta confidence interval. It carries no reasoning interpretation and no Product Owner decision. Task 30 defines this contract but creates no ComparisonResult instance.",
   "scope": {
     "includes": [
       "Required ComparisonResult fields and their meaning.",
-      "The configuration-parity requirement between the two compared runs.",
-      "The absolute and relative delta contract with uncertainty.",
+      "Computed semantic-parity validation between the two referenced runs and results.",
+      "Full baseline and candidate estimates plus absolute and optional relative delta.",
       "The evidence-honesty and lifecycle boundaries."
     ],
     "excludes": [
       "Reasoning interpretation and Product Owner decisions.",
       "Gameplay, win-rate, or generic-quality claims.",
-      "Comparing versions under different policies, iteration counts, seeds strategy, or metric definitions.",
+      "Comparing versions under different policies, questions, iteration counts, configurations, scenarios, RNG strategies, or metric definitions.",
       "Any deck change."
     ]
   },
@@ -37,17 +37,14 @@
       "description": "The candidate side.",
       "required_fields": ["deck_version_id", "run_id", "result_id", "deck_content_fingerprint", "run_role"]
     },
-    "config_parity": {
-      "type": "object",
-      "description": "Assertion that everything except the DeckVersion is identical across the two runs.",
-      "required_fields": ["identical_policy_version", "identical_question_id", "identical_iteration_count", "identical_config", "only_difference_is_deck_version"]
-    },
     "metric_deltas": {
       "type": "array",
       "description": "One entry per compared metric.",
-      "item_required_fields": ["metric_id", "target_turn", "baseline_probability", "candidate_probability", "absolute_delta"],
-      "absolute_delta_definition": "candidate_probability minus baseline_probability.",
-      "relative_delta_field": "relative_delta is optional and valid only when baseline_probability is non-zero; when baseline_probability is zero it must be omitted or set to null with relative_delta_applicable false."
+      "item_required_fields": ["metric_id", "target_turn", "baseline_estimate", "candidate_estimate", "absolute_delta"],
+      "estimate_required_fields": ["raw_count", "sample_size", "probability", "confidence_interval"],
+      "absolute_delta_definition": "candidate_estimate.probability minus baseline_estimate.probability.",
+      "relative_delta_field": "relative_delta is optional and valid only when baseline_estimate.probability is non-zero; when baseline is zero it must be omitted or null with relative_delta_applicable false.",
+      "delta_confidence_interval": "not defined"
     },
     "readable_summary": {"type": "string", "description": "A cautious plain-language comparison within the evidence-language boundary."},
     "limitations": {"type": "array", "description": "Comparison limitations, including any carried from either result."},
@@ -60,13 +57,13 @@
     "explicit_boundary": {
       "type": "object",
       "description": "Boolean boundary flags.",
-      "required_fields": ["carries_interpretation", "carries_product_owner_decision", "is_gameplay_claim", "creates_deck_version"]
+      "required_fields": ["carries_interpretation", "carries_product_owner_decision", "is_gameplay_claim", "creates_deck_version", "attributes_deck_content_effect"]
     }
   },
   "boundary_rules": [
-    "The two compared runs must share policy_version, question_id, iteration_count, and configuration, differing only in DeckVersion.",
-    "baseline and candidate deck_content_fingerprints must differ from each other and each match their referenced DeckVersion.",
-    "absolute_delta equals candidate_probability minus baseline_probability.",
+    "The validator resolves both referenced runs and results, then computes semantic parity across policy, question, iteration count, configuration, metric definitions, scenario, and RNG strategy. Self-declared parity booleans are not authoritative.",
+    "The compared runs must reference distinct DeckVersions, but their deck_content_fingerprints may be equal. When fingerprints are equal, the comparison must not attribute an effect to deck content.",
+    "absolute_delta equals candidate_estimate.probability minus baseline_estimate.probability. A delta confidence interval is not defined by this contract.",
     "relative_delta is secondary and valid only when baseline_probability is non-zero.",
     "A ComparisonResult carries no reasoning_interpretation and no product_owner_decision field.",
     "No summary may express win rate, gameplay performance, or generic deck quality.",
@@ -74,10 +71,10 @@
   ],
   "validation_expectations": [
     "The comparison JSON parses and has every required field.",
-    "config_parity asserts identical policy_version, question_id, iteration_count, and config, and only_difference_is_deck_version is true.",
-    "baseline and candidate reference distinct DeckVersions with distinct, DeckVersion-matching fingerprints.",
-    "Each metric_delta reports baseline_probability, candidate_probability, and an absolute_delta equal to their difference.",
-    "relative_delta is present only when baseline_probability is non-zero.",
+    "Resolved runs and results prove semantic parity across policy, question, iteration count, config, metric definitions, scenario, and RNG strategy.",
+    "baseline and candidate reference distinct DeckVersions with DeckVersion-matching fingerprints; equal fingerprints are structurally valid.",
+    "Each metric_delta reports full baseline_estimate and candidate_estimate and an absolute_delta equal to their probability difference.",
+    "relative_delta is present only when baseline_estimate.probability is non-zero.",
     "No forbidden evidence-language claim appears in any label or summary.",
     "No reasoning_interpretation or product_owner_decision field is present.",
     "explicit_boundary.carries_interpretation, carries_product_owner_decision, is_gameplay_claim, and creates_deck_version are all false."

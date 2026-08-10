@@ -7,8 +7,8 @@
   "policy_version": "sim-policy-v1",
   "generated_at": "2026-07-13T00:00:00Z",
   "generated_by": "Terra",
-  "hypothesis": "The v1.1 mana-base changes (adding City of Brass and Mana Confluence as any-color sources and Urza's Saga, removing three colorless Urza's Tron lands) improve early mana development and five-color availability relative to v1.0 while preserving acceptable keepable-hand and land-drop quality, under the simulated model only.",
-  "question_text": "Under the sim-policy-v1 model, does The Myr Singularity DeckVersion v1.1 improve early mana development and five-color availability relative to v1.0 through turn 6 under the one-free-mulligan-then-London policy, without degrading keepable-hand and land-drop rates?",
+  "hypothesis": "The v1.1 mana-base changes (adding City of Brass and Mana Confluence as any-color sources and Urza's Saga, removing three colorless Urza's Tron lands) increase the specified early mana-development and five-color-availability metrics relative to v1.0 under the simulated model only.",
+  "question_text": "Under the sim-policy-v1 model, how do The Myr Singularity DeckVersion v1.1 and v1.0 compare on the preregistered early mana-development, five-color-availability, keepable-hand, and land-drop metrics through turn 6 under the one-free-mulligan-then-London policy?",
   "compared_versions": [
     {
       "deck_version_id": "v1.0",
@@ -35,8 +35,8 @@
     {"metric_id": "commander_castability_by_turn", "target_turn": 3}
   ],
   "success_interpretation": {
-    "directional_expectation": "v1.1 shows equal-or-higher five-color-availability and distinct-color-by-turn probabilities and equal-or-higher early mana development, with keepable-hand and land-drop rates not materially lower than v1.0.",
-    "notes": "This is interpretation guidance only. Whether any observed delta is material is a reasoning-stage judgment recorded in a later task. commander_castability_by_turn is an optional sanity metric, not a success criterion. No thresholds here convert into a gameplay or win-rate claim."
+    "directional_expectation": "The primary comparison reports five-color availability, distinct colors by turn, and early mana development for v1.0 and v1.1; keepable-hand and land-drop metrics are reported alongside them.",
+    "notes": "This question preregisters metric identities, target turns, and comparison direction only. It defines no qualitative adequacy band or threshold. commander_castability_by_turn is an optional sanity metric, not a success criterion. No thresholds here convert into a gameplay or win-rate claim."
   },
   "execution_status": "not_executed",
   "execution_note": "Documented in Task 30 per RFC-015. This question is NOT executed in Task 30: no SimulationRun, no SimulationResult, and no v1.0-versus-v1.1 comparison are produced.",

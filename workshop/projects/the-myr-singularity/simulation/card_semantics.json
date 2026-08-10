@@ -111,13 +111,13 @@
           "start_offset": 0,
           "end_offset": 2,
           "inclusive": true,
-          "description": "Usable as a colorless source on the play turn (entry) and on the controller's next two turns, spanning entry through the Chapter III trigger window."
+          "description": "Usable as a colorless source on the play turn, when the first lore counter is placed on entry, and on the controller's next two precombat main phases when later lore counters are placed."
         },
         "removal_event": {
-          "trigger": "chapter_iii_resolves",
+          "trigger": "final_chapter_ability_leaves_stack",
           "controller_turn_offset": 2,
           "effect": "removed_from_battlefield",
-          "description": "After Chapter III resolves on the controller's second turn after entry, Urza's Saga is sacrificed and leaves the battlefield."
+          "description": "After the final chapter ability leaves the stack on the controller's second turn after entry, Urza's Saga is sacrificed and leaves the battlefield regardless of whether that ability resolved successfully."
         },
         "persists_as_permanent_land": false,
         "max_controller_turns_available": 3
@@ -139,7 +139,7 @@
       "limitations": [
         "Produces {C} from entry as a bounded simplification; the exact Saga chapter that grants the mana ability is not separately modeled.",
         "Construct token generation, the Chapter III artifact tutor, and any other Saga behavior are unsupported and must not contribute to any metric.",
-        "The removal after Chapter III is modeled deterministically as a controller-turn window; exact stack timing within a turn is not modeled."
+        "The first lore counter occurs on entry and later lore counters occur as the controller's precombat main phase begins. Removal is a bounded deterministic event when the final chapter ability leaves the stack, independent of successful resolution; exact stack interactions and intra-turn sequencing are unsupported."
       ],
       "compensates_for_missing_canonical_produced_mana": true
     }

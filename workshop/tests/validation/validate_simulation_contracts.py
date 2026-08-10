@@ -19,6 +19,16 @@ import unicodedata
 from collections import Counter
 from pathlib import Path
 
+VALIDATION_DIR = Path(__file__).resolve().parent
+if str(VALIDATION_DIR) not in sys.path:
+    sys.path.insert(0, str(VALIDATION_DIR))
+
+from simulation_instance_validation import (
+    validate_failure_pattern,
+    validate_question_role_bindings,
+    validate_run_role_binding,
+)
+
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PROJECT_ID = os.environ.get("WORKSHOP_PROJECT_ID", "the-myr-singularity")
@@ -65,6 +75,14 @@ FORBIDDEN_CLAIM_PHRASES = [
 ]
 
 INSTANCE_ARTIFACT_TYPES = {"simulation_run", "simulation_result", "comparison_result"}
+
+UNREGISTERED_MATERIALITY_TERMS = (
+    "acceptable",
+    "material",
+    "meaningful",
+    "significant",
+    "substantial",
+)
 
 
 def load_json(path):
@@ -116,6 +134,11 @@ def require_fields(obj, fields, label):
 def find_forbidden(text):
     lowered = str(text).casefold()
     return [phrase for phrase in FORBIDDEN_CLAIM_PHRASES if phrase in lowered]
+
+
+def find_unregistered_materiality(text):
+    lowered = str(text).casefold()
+    return [term for term in UNREGISTERED_MATERIALITY_TERMS if term in lowered]
 
 
 def report(checks):
@@ -331,6 +354,17 @@ def main():
         errors.append("time_dependent_card_semantics must forbid treating a windowed land as permanent through the horizon")
     check("policy defines deterministic consumption of time-dependent card semantics", errors)
 
+    errors = []
+    scenario = policy.get("commander_scenario", {})
+    if scenario.get("first_turn_draw") is not True:
+        errors.append("commander_scenario.first_turn_draw must be true")
+    first_draw_note = str(scenario.get("first_turn_draw_note", "")).casefold()
+    if "normal multiplayer" not in first_draw_note or "paper rules" not in first_draw_note:
+        errors.append("first-turn draw note must describe normal multiplayer paper rules")
+    if "not the paper" in first_draw_note or "deviation" in first_draw_note:
+        errors.append("first-turn draw note must not describe multiplayer draw as a paper-rule deviation")
+    check("policy records first-turn draw as normal multiplayer behavior", errors)
+
     # ---- policy: iteration and uncertainty -----------------------------------
     errors = []
     iters = policy.get("iteration_policy", {})
@@ -343,9 +377,16 @@ def main():
         errors.append("uncertainty_policy.confidence_presentation must be 'wilson_95'")
     if unc.get("confidence_level") != 0.95:
         errors.append("uncertainty_policy.confidence_level must be 0.95")
-    for field in ("raw_count", "sample_size", "probability", "confidence_interval", "absolute_delta"):
+    for field in ("raw_count", "sample_size", "probability", "confidence_interval"):
         if field not in unc.get("required_reported_fields", []):
             errors.append(f"uncertainty_policy must require reported field {field!r}")
+    if "absolute_delta" in unc.get("required_reported_fields", []):
+        errors.append("uncertainty_policy must not require absolute_delta for a standalone SimulationResult")
+    comparison_metrics = unc.get("comparison_metric_contract", {})
+    if comparison_metrics.get("required_fields") != ["baseline_estimate", "candidate_estimate", "absolute_delta"]:
+        errors.append("uncertainty_policy must define full comparison estimates and absolute_delta")
+    if comparison_metrics.get("delta_confidence_interval") != "not defined":
+        errors.append("uncertainty_policy must not define a confidence interval for delta")
     rel = unc.get("relative_delta_rule", {})
     if rel.get("status") != "secondary" or "non-zero" not in str(rel.get("valid_only_when", "")).casefold():
         errors.append("uncertainty_policy relative delta must be secondary and require non-zero baseline")
@@ -486,9 +527,15 @@ def main():
             errors.append("Urza's Saga availability window must end before the observation horizon")
         removal = window.get("removal_event", {})
         if removal.get("effect") != "removed_from_battlefield":
-            errors.append("Urza's Saga must be removed from the battlefield after Chapter III")
-        if removal.get("trigger") != "chapter_iii_resolves":
-            errors.append("Urza's Saga removal must trigger on Chapter III resolution")
+            errors.append("Urza's Saga must be removed from the battlefield after the final chapter")
+        if removal.get("trigger") != "final_chapter_ability_leaves_stack":
+            errors.append("Urza's Saga removal must trigger when the final chapter ability leaves the stack")
+        if "regardless of whether" not in str(removal.get("description", "")).casefold():
+            errors.append("Urza's Saga removal must be independent of successful final-chapter resolution")
+        saga_text = json.dumps(saga, ensure_ascii=False).casefold()
+        for required_phrase in ("first lore counter occurs on entry", "precombat main phase", "exact stack interactions", "intra-turn sequencing"):
+            if required_phrase not in saga_text:
+                errors.append(f"Urza's Saga semantics must state {required_phrase!r}")
         unsupported = set(saga.get("unsupported_behaviors", []))
         for required in ("chapter_iii_artifact_tutor", "construct_token_creation"):
             if required not in unsupported:
@@ -506,12 +553,22 @@ def main():
                 errors.append(f"{key} is missing {field!r}")
     run_required = documents["run_contract"].get("required_fields", {})
     for field in ("project_id", "deck_version_id", "deck_content_fingerprint", "question_id",
-                  "policy_id", "seed", "iteration_count", "limitations"):
+                  "policy_id", "run_role", "seed", "iteration_count", "scenario_ref", "limitations"):
         if field not in run_required:
             errors.append(f"run contract must require {field!r} so a run cannot float")
+    question_required = documents["question_contract"].get("required_fields", {})
+    compared_version_fields = question_required.get("compared_versions", {}).get("item_required_fields", [])
+    if "run_role" not in compared_version_fields:
+        errors.append("question contract must require run_role for every compared DeckVersion")
+    question_rules = " ".join(documents["question_contract"].get("boundary_rules", [])).casefold()
+    if "unique" not in question_rules or ("run role" not in question_rules and "run_role" not in question_rules):
+        errors.append("question contract must require unique DeckVersion run roles")
+    run_rules = " ".join(documents["run_contract"].get("boundary_rules", [])).casefold()
+    if "question" not in run_rules or "role" not in run_rules:
+        errors.append("run contract must bind run_role to the referenced question")
     if documents["run_contract"].get("task_30_state", {}).get("instances_created") != 0:
         errors.append("run contract must record zero instances created in Task 30")
-    check("run contract prevents a floating run and creates no instance", errors)
+    check("question and run contracts bind each DeckVersion to one unique role", errors)
 
     errors = []
     for key in ("result_contract", "comparison_contract"):
@@ -524,10 +581,30 @@ def main():
         for flag in ("carries_interpretation", "carries_product_owner_decision", "is_gameplay_claim", "creates_deck_version"):
             if flag not in flags:
                 errors.append(f"{key} explicit_boundary must include {flag!r}")
+    comparison_flags = documents["comparison_contract"].get("required_fields", {}).get("explicit_boundary", {}).get("required_fields", [])
+    if "attributes_deck_content_effect" not in comparison_flags:
+        errors.append("comparison_contract explicit_boundary must include 'attributes_deck_content_effect'")
     comparison_rules = " ".join(documents["comparison_contract"].get("boundary_rules", [])).casefold()
-    if "differing only in deckversion" not in comparison_rules and "only in deckversion" not in comparison_rules:
-        errors.append("comparison contract must require config parity except DeckVersion")
+    for required_phrase in ("resolves both referenced runs and results", "self-declared parity booleans are not authoritative", "fingerprints may be equal"):
+        if required_phrase not in comparison_rules:
+            errors.append(f"comparison contract must state {required_phrase!r}")
+    comparison_required = documents["comparison_contract"].get("required_fields", {})
+    if "config_parity" in comparison_required:
+        errors.append("comparison contract must not use self-declared config_parity")
+    delta_fields = comparison_required.get("metric_deltas", {}).get("item_required_fields", [])
+    if delta_fields != ["metric_id", "target_turn", "baseline_estimate", "candidate_estimate", "absolute_delta"]:
+        errors.append("comparison contract must require full side estimates and absolute_delta")
     check("result and comparison contracts separate result from reasoning and decision", errors)
+
+    errors = []
+    failure_fields = documents["result_contract"].get("required_fields", {}).get("failure_patterns", {}).get("item_required_fields", [])
+    for field in ("category_id", "raw_count", "sample_size", "frequency"):
+        if field not in failure_fields:
+            errors.append(f"result contract failure pattern must require {field!r}")
+    result_rules = " ".join(documents["result_contract"].get("boundary_rules", [])).casefold()
+    if "raw_count/sample_size" not in result_rules:
+        errors.append("result contract must require failure frequency to equal raw_count/sample_size")
+    check("result contract makes failure patterns quantitative and run-bound", errors)
 
     # ---- taxonomy -------------------------------------------------------------
     errors = []
@@ -561,6 +638,16 @@ def main():
         version_id = version.get("deck_version_id")
         if version_id in recomputed and version.get("deck_content_fingerprint") != recomputed[version_id]:
             errors.append(f"question fingerprint for {version_id} does not match recomputation")
+    errors.extend(validate_question_role_bindings(question.get("compared_versions")))
+    if question.get("question_id") == "question-001-mana-color":
+        expected_roles = {"v1.0": "baseline_v1.0", "v1.1": "candidate_v1.1"}
+        actual_roles = {
+            entry.get("deck_version_id"): entry.get("run_role")
+            for entry in question.get("compared_versions", []) if isinstance(entry, dict)
+        }
+        for version_id, expected_role in expected_roles.items():
+            if actual_roles.get(version_id) != expected_role:
+                errors.append(f"question-001 role for {version_id} must be {expected_role!r}")
     catalog_ids = set(catalog)
     horizon = turns.get("observation_horizon_turn", 6)
     for metric in question.get("target_metrics", []):
@@ -584,6 +671,15 @@ def main():
         found = find_forbidden(interp.get(field, ""))
         if found:
             errors.append(f"question success_interpretation.{field} contains forbidden claim(s): {found}")
+    for field, value in (
+        ("hypothesis", question.get("hypothesis", "")),
+        ("question_text", question.get("question_text", "")),
+        ("success_interpretation.directional_expectation", interp.get("directional_expectation", "")),
+        ("success_interpretation.notes", interp.get("notes", "")),
+    ):
+        found = find_unregistered_materiality(value)
+        if found:
+            errors.append(f"question {field} contains unregistered materiality term(s): {found}")
     check("documented question uses honest evidence language", errors)
 
     # ---- no production run / result / comparison instance exists -------------

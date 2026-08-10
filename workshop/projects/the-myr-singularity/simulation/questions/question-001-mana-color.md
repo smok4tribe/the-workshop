@@ -8,11 +8,11 @@ Documented in Task 30 per RFC-015. This question is NOT executed in Task 30: no 
 
 ## Hypothesis
 
-The v1.1 mana-base changes (adding City of Brass and Mana Confluence as any-color sources and Urza's Saga, removing three colorless Urza's Tron lands) improve early mana development and five-color availability relative to v1.0 while preserving acceptable keepable-hand and land-drop quality, under the simulated model only.
+The v1.1 mana-base changes (adding City of Brass and Mana Confluence as any-color sources and Urza's Saga, removing three colorless Urza's Tron lands) increase the specified early mana-development and five-color-availability metrics relative to v1.0 under the simulated model only.
 
 ## Question
 
-Under the sim-policy-v1 model, does The Myr Singularity DeckVersion v1.1 improve early mana development and five-color availability relative to v1.0 through turn 6 under the one-free-mulligan-then-London policy, without degrading keepable-hand and land-drop rates?
+Under the sim-policy-v1 model, how do The Myr Singularity DeckVersion v1.1 and v1.0 compare on the preregistered early mana-development, five-color-availability, keepable-hand, and land-drop metrics through turn 6 under the one-free-mulligan-then-London policy?
 
 ## Compared Versions
 
@@ -33,9 +33,9 @@ Under the sim-policy-v1 model, does The Myr Singularity DeckVersion v1.1 improve
 
 ## Success Interpretation
 
-v1.1 shows equal-or-higher five-color-availability and distinct-color-by-turn probabilities and equal-or-higher early mana development, with keepable-hand and land-drop rates not materially lower than v1.0.
+The primary comparison reports five-color availability, distinct colors by turn, and early mana development for v1.0 and v1.1; keepable-hand and land-drop metrics are reported alongside them.
 
-This is interpretation guidance only. Whether any observed delta is material is a reasoning-stage judgment recorded in a later task. commander_castability_by_turn is an optional sanity metric, not a success criterion. No thresholds here convert into a gameplay or win-rate claim.
+This question preregisters metric identities, target turns, and comparison direction only. It defines no qualitative adequacy band or threshold. commander_castability_by_turn is an optional sanity metric, not a success criterion. No thresholds here convert into a gameplay or win-rate claim.
 
 ## Limitations
 

@@ -39,6 +39,9 @@ def load_module(name, path):
 CONTRACTS_MODULE = load_module(
     "validate_simulation_contracts", VALIDATION / "validate_simulation_contracts.py"
 )
+INSTANCE_MODULE = load_module(
+    "simulation_instance_validation", VALIDATION / "simulation_instance_validation.py"
+)
 
 
 def load_json(path):
@@ -147,100 +150,145 @@ class FixtureConformanceTests(unittest.TestCase):
     """Exercise committed valid/invalid instance fixtures against the contracts."""
 
     def setUp(self):
-        self.run_required = list(load_json(CONTRACTS / "simulation_run.contract.json")["required_fields"])
-        self.result_required = list(load_json(CONTRACTS / "simulation_result.contract.json")["required_fields"])
-        self.comparison_required = list(load_json(CONTRACTS / "comparison_result.contract.json")["required_fields"])
+        self.run_contract = load_json(CONTRACTS / "simulation_run.contract.json")
+        self.result_contract = load_json(CONTRACTS / "simulation_result.contract.json")
+        self.comparison_contract = load_json(CONTRACTS / "comparison_result.contract.json")
+        self.question = load_json(SIM / "questions" / "question-001-mana-color.json")
+        self.policy = load_json(SIM / "simulation_policy.json")
+        self.valid_run = load_json(FIXTURES / "valid" / "simulation_run.valid.json")
+        self.baseline_run = load_json(FIXTURES / "valid" / "simulation_run.baseline.valid.json")
+        self.valid_result = load_json(FIXTURES / "valid" / "simulation_result.valid.json")
+        self.baseline_result = load_json(FIXTURES / "valid" / "simulation_result.baseline.valid.json")
         self.taxonomy_ids = {
             c["category_id"] for c in load_json(CONTRACTS / "failure_pattern_taxonomy.json")["categories"]
         }
 
-    def check_run_instance(self, run):
-        errors = [f"missing {field}" for field in self.run_required if field not in run]
-        version = load_json(REPO_ROOT / run["deck_version_path"]) if run.get("deck_version_path") else None
-        if version is not None:
-            expected_fp = CONTRACTS_MODULE.deck_content_fingerprint(version)
-            if run.get("deck_content_fingerprint") != expected_fp:
-                errors.append("fingerprint does not match DeckVersion")
-        if "seed" not in run:
-            errors.append("missing seed")
-        elif version is not None:
-            expected_seed = CONTRACTS_MODULE.derive_seed(
-                run["question_id"], run["policy_version"], run["deck_content_fingerprint"], run["run_role"]
-            )
-            if run["seed"] != expected_seed:
-                errors.append("seed is not policy-derived")
-        if isinstance(run.get("iteration_count"), int) and run["iteration_count"] < 10000:
-            errors.append("iteration_count below minimum")
-        flags = run.get("explicit_boundary", {})
-        if any(flags.get(flag) for flag in ("carries_metrics", "carries_interpretation", "creates_deck_version")):
-            errors.append("boundary flag is true")
-        return errors
+    @staticmethod
+    def load_reference(path):
+        return load_json(REPO_ROOT / path)
 
-    def check_result_instance(self, result):
-        errors = [f"missing {field}" for field in self.result_required if field not in result]
-        if "reasoning_interpretation" in result or "product_owner_decision" in result:
-            errors.append("carries interpretation or decision")
-        text_fields = [result.get("readable_summary", "")] + list(result.get("observations", []))
-        for text in text_fields:
-            if CONTRACTS_MODULE.find_forbidden(text):
-                errors.append("forbidden evidence-language claim")
-        for pattern in result.get("failure_patterns", []):
-            if pattern.get("category_id") not in self.taxonomy_ids:
-                errors.append("failure pattern references undefined category")
-        for metric in result.get("metrics", []):
-            interval = metric.get("confidence_interval", {})
-            if not all(k in interval for k in ("method", "level", "lower", "upper")):
-                errors.append("metric missing Wilson interval fields")
-        return errors
+    def check_run_instance(self, run):
+        return INSTANCE_MODULE.validate_simulation_run(
+            run, question=self.question, policy=self.policy, run_contract=self.run_contract,
+            project_id="the-myr-singularity", load_reference=self.load_reference,
+            fingerprint_for_version=CONTRACTS_MODULE.deck_content_fingerprint,
+            derive_seed=CONTRACTS_MODULE.derive_seed,
+        )
+
+    def check_result_instance(self, result, run=None):
+        return INSTANCE_MODULE.validate_simulation_result(
+            result, run=run or self.valid_run, policy=self.policy,
+            result_contract=self.result_contract, taxonomy_ids=self.taxonomy_ids,
+            forbidden_claims=CONTRACTS_MODULE.find_forbidden,
+        )
 
     def check_comparison_instance(self, comparison):
-        errors = [f"missing {field}" for field in self.comparison_required if field not in comparison]
-        parity = comparison.get("config_parity", {})
-        if not all(parity.get(flag) for flag in (
-            "identical_policy_version", "identical_question_id", "identical_iteration_count",
-            "identical_config", "only_difference_is_deck_version",
-        )):
-            errors.append("config parity broken")
-        base_fp = comparison.get("baseline", {}).get("deck_content_fingerprint")
-        cand_fp = comparison.get("candidate", {}).get("deck_content_fingerprint")
-        if base_fp == cand_fp:
-            errors.append("baseline and candidate fingerprints must differ")
-        for delta in comparison.get("metric_deltas", []):
-            expected = round(delta.get("candidate_probability", 0) - delta.get("baseline_probability", 0), 9)
-            if round(delta.get("absolute_delta", 0), 9) != expected:
-                errors.append("absolute_delta is inconsistent")
-            if delta.get("baseline_probability") == 0 and delta.get("relative_delta") is not None:
-                errors.append("relative_delta present with zero baseline")
-        return errors
+        return INSTANCE_MODULE.validate_comparison_result(
+            comparison, baseline_run=self.baseline_run, candidate_run=self.valid_run,
+            baseline_result=self.baseline_result, candidate_result=self.valid_result,
+            policy=self.policy, question=self.question, comparison_contract=self.comparison_contract,
+            forbidden_claims=CONTRACTS_MODULE.find_forbidden, load_reference=self.load_reference,
+        )
 
     def test_valid_fixtures_conform(self):
-        self.assertEqual(self.check_run_instance(load_json(FIXTURES / "valid" / "simulation_run.valid.json")), [])
-        self.assertEqual(self.check_result_instance(load_json(FIXTURES / "valid" / "simulation_result.valid.json")), [])
+        self.assertEqual(self.check_run_instance(self.valid_run), [])
+        self.assertEqual(self.check_result_instance(self.valid_result, self.valid_run), [])
+        self.assertEqual(self.check_run_instance(self.baseline_run), [])
+        self.assertEqual(self.check_result_instance(self.baseline_result, self.baseline_run), [])
         self.assertEqual(self.check_comparison_instance(load_json(FIXTURES / "valid" / "comparison_result.valid.json")), [])
 
     def test_invalid_run_missing_seed(self):
         errors = self.check_run_instance(load_json(FIXTURES / "invalid" / "simulation_run.missing_seed.json"))
-        self.assertIn("missing seed", errors)
+        self.assertIn("run is missing required field 'seed'", errors)
 
     def test_invalid_run_fingerprint_mismatch(self):
         errors = self.check_run_instance(load_json(FIXTURES / "invalid" / "simulation_run.fingerprint_mismatch.json"))
-        self.assertIn("fingerprint does not match DeckVersion", errors)
+        self.assertIn("run fingerprint does not match DeckVersion", errors)
 
     def test_invalid_result_carries_interpretation(self):
         errors = self.check_result_instance(load_json(FIXTURES / "invalid" / "simulation_result.carries_interpretation.json"))
-        self.assertIn("carries interpretation or decision", errors)
+        self.assertIn("result carries interpretation or decision", errors)
 
     def test_invalid_result_forbidden_claim(self):
         errors = self.check_result_instance(load_json(FIXTURES / "invalid" / "simulation_result.forbidden_claim.json"))
-        self.assertIn("forbidden evidence-language claim", errors)
+        self.assertIn("result contains forbidden evidence-language claim", errors)
 
     def test_invalid_result_unknown_failure_category(self):
         errors = self.check_result_instance(load_json(FIXTURES / "invalid" / "simulation_result.unknown_failure_category.json"))
         self.assertIn("failure pattern references undefined category", errors)
 
+    def test_run_role_must_match_question_deck_version(self):
+        run = dict(self.valid_run)
+        run["run_role"] = "baseline_v1.0"
+        errors = self.check_run_instance(run)
+        self.assertIn("run role is not bound to the question DeckVersion", errors)
+
+    def test_failure_pattern_inconsistent_frequency_fails(self):
+        result = load_json(FIXTURES / "valid" / "simulation_result.valid.json")
+        result["failure_patterns"][0]["frequency"] = 0.38
+        errors = self.check_result_instance(result)
+        self.assertIn("failure pattern frequency does not equal raw_count/sample_size", errors)
+
+    def test_failure_pattern_denominator_must_match_run_iterations(self):
+        result = load_json(FIXTURES / "valid" / "simulation_result.valid.json")
+        result["failure_patterns"][0]["sample_size"] = 99999
+        errors = self.check_result_instance(result)
+        self.assertIn("failure pattern sample_size does not match run iteration_count", errors)
+
+    def test_failure_pattern_count_must_be_in_range(self):
+        result = load_json(FIXTURES / "valid" / "simulation_result.valid.json")
+        result["failure_patterns"][0]["raw_count"] = 100001
+        result["failure_patterns"][0]["frequency"] = 1.00001
+        errors = self.check_result_instance(result)
+        self.assertIn("failure pattern raw_count must be within 0..sample_size", errors)
+
+    def test_failure_pattern_unknown_category_fails(self):
+        result = load_json(FIXTURES / "valid" / "simulation_result.valid.json")
+        result["failure_patterns"][0]["category_id"] = "not_a_real_category"
+        errors = self.check_result_instance(result)
+        self.assertIn("failure pattern references undefined category", errors)
+
     def test_invalid_comparison_no_parity(self):
         errors = self.check_comparison_instance(load_json(FIXTURES / "invalid" / "comparison_result.no_parity.json"))
-        self.assertIn("config parity broken", errors)
+        self.assertIn("comparison baseline_estimate does not match resolved result metric", errors)
+
+    def test_comparison_computes_semantic_parity_from_resolved_runs(self):
+        comparison = load_json(FIXTURES / "valid" / "comparison_result.valid.json")
+        candidate_run = dict(self.valid_run)
+        candidate_run["config"] = dict(candidate_run["config"])
+        candidate_run["config"]["observation_horizon_turn"] = 5
+        errors = INSTANCE_MODULE.validate_comparison_result(
+            comparison, baseline_run=self.baseline_run, candidate_run=candidate_run,
+            baseline_result=self.baseline_result, candidate_result=self.valid_result,
+            policy=self.policy, question=self.question, comparison_contract=self.comparison_contract,
+            forbidden_claims=CONTRACTS_MODULE.find_forbidden,
+        )
+        self.assertIn("comparison semantic parity failed: config differs", errors)
+
+    def test_equal_content_comparison_is_structurally_valid_without_attribution(self):
+        comparison = load_json(FIXTURES / "valid" / "comparison_result.valid.json")
+        baseline_run = dict(self.baseline_run)
+        baseline_result = json.loads(json.dumps(self.baseline_result))
+        comparison = json.loads(json.dumps(comparison))
+        baseline_run["deck_content_fingerprint"] = self.valid_run["deck_content_fingerprint"]
+        baseline_result["deck_content_fingerprint"] = self.valid_run["deck_content_fingerprint"]
+        comparison["baseline"]["deck_content_fingerprint"] = self.valid_run["deck_content_fingerprint"]
+        self.assertEqual(
+            INSTANCE_MODULE.validate_comparison_result(
+                comparison, baseline_run=baseline_run, candidate_run=self.valid_run,
+                baseline_result=baseline_result, candidate_result=self.valid_result,
+                policy=self.policy, question=self.question, comparison_contract=self.comparison_contract,
+                forbidden_claims=CONTRACTS_MODULE.find_forbidden,
+            ), [],
+        )
+        comparison["explicit_boundary"]["attributes_deck_content_effect"] = True
+        errors = INSTANCE_MODULE.validate_comparison_result(
+            comparison, baseline_run=baseline_run, candidate_run=self.valid_run,
+            baseline_result=baseline_result, candidate_result=self.valid_result,
+            policy=self.policy, question=self.question, comparison_contract=self.comparison_contract,
+            forbidden_claims=CONTRACTS_MODULE.find_forbidden,
+        )
+        self.assertIn("equal-content comparison must not attribute a deck-content effect", errors)
 
 
 class AdversarialContractTests(unittest.TestCase):
@@ -347,6 +395,63 @@ class AdversarialContractTests(unittest.TestCase):
         self.write("questions/question-001-mana-color.json", question)
         self.assert_fails("forbidden claim")
 
+    def test_question_missing_role_fails(self):
+        question = self.load("questions/question-001-mana-color.json")
+        question["compared_versions"][0].pop("run_role")
+        self.write("questions/question-001-mana-color.json", question)
+        self.assert_fails("is missing run_role")
+
+    def test_question_duplicate_role_fails(self):
+        question = self.load("questions/question-001-mana-color.json")
+        question["compared_versions"][1]["run_role"] = "baseline_v1.0"
+        self.write("questions/question-001-mana-color.json", question)
+        self.assert_fails("must use unique run_role values")
+
+    def test_question_arbitrary_role_fails(self):
+        question = self.load("questions/question-001-mana-color.json")
+        question["compared_versions"][1]["run_role"] = "experimental_v1.1"
+        self.write("questions/question-001-mana-color.json", question)
+        self.assert_fails("must be 'candidate_v1.1'")
+
+    def test_question_swapped_roles_fail(self):
+        question = self.load("questions/question-001-mana-color.json")
+        question["compared_versions"][0]["run_role"] = "candidate_v1.1"
+        question["compared_versions"][1]["run_role"] = "baseline_v1.0"
+        self.write("questions/question-001-mana-color.json", question)
+        self.assert_fails("question-001 role for v1.0 must be 'baseline_v1.0'")
+
+    def test_question_unregistered_materiality_fails(self):
+        question = self.load("questions/question-001-mana-color.json")
+        question["success_interpretation"]["directional_expectation"] += " v1.1 must be materially higher."
+        self.write("questions/question-001-mana-color.json", question)
+        self.assert_fails("contains unregistered materiality term")
+
+    def test_question_unregistered_acceptable_materiality_fails(self):
+        question = self.load("questions/question-001-mana-color.json")
+        question["success_interpretation"]["notes"] += " An acceptable result is required."
+        self.write("questions/question-001-mana-color.json", question)
+        self.assert_fails("contains unregistered materiality term")
+
+    def test_urza_saga_removal_is_not_resolution_bound(self):
+        semantics = self.load("card_semantics.json")
+        for entry in semantics["entries"]:
+            if entry["card_identity"]["name"] == "Urza's Saga":
+                entry["time_dependent_availability"]["removal_event"]["trigger"] = "chapter_iii_resolves"
+        self.write("card_semantics.json", semantics)
+        self.assert_fails("must trigger when the final chapter ability leaves the stack")
+
+    def test_first_turn_draw_must_be_normal_multiplayer_rule(self):
+        policy = self.load("simulation_policy.json")
+        policy["commander_scenario"]["first_turn_draw_note"] = "This is a deviation from paper rules."
+        self.write("simulation_policy.json", policy)
+        self.assert_fails("must describe normal multiplayer paper rules")
+
+    def test_standalone_result_policy_must_not_require_absolute_delta(self):
+        policy = self.load("simulation_policy.json")
+        policy["uncertainty_policy"]["required_reported_fields"].append("absolute_delta")
+        self.write("simulation_policy.json", policy)
+        self.assert_fails("must not require absolute_delta")
+
     def test_urza_saga_permanent_land_fails(self):
         semantics = self.load("card_semantics.json")
         for entry in semantics["entries"]:
@@ -380,6 +485,12 @@ class AdversarialContractTests(unittest.TestCase):
         contract["required_fields"].pop("seed", None)
         self.write("contracts/simulation_run.contract.json", contract)
         self.assert_fails("run contract must require 'seed'")
+
+    def test_run_contract_dropping_role_field_fails(self):
+        contract = self.load("contracts/simulation_run.contract.json")
+        contract["required_fields"].pop("run_role", None)
+        self.write("contracts/simulation_run.contract.json", contract)
+        self.assert_fails("run contract must require 'run_role'")
 
     def test_production_instance_in_project_dir_fails(self):
         instance = json.loads(

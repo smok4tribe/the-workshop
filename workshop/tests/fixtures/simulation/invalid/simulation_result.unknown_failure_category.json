@@ -27,6 +27,8 @@
   "failure_patterns": [
     {
       "category_id": "not_a_real_category",
+      "raw_count": 10000,
+      "sample_size": 100000,
       "frequency": 0.1
     }
   ],

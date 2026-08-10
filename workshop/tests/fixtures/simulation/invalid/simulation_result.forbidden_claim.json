@@ -27,6 +27,8 @@
   "failure_patterns": [
     {
       "category_id": "five_color_not_complete_by_turn",
+      "raw_count": 39000,
+      "sample_size": 100000,
       "frequency": 0.39
     }
   ],
