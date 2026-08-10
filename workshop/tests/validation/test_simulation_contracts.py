@@ -13,6 +13,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import copy
 import shutil
 import subprocess
 import sys
@@ -177,17 +178,29 @@ class FixtureConformanceTests(unittest.TestCase):
 
     def check_result_instance(self, result, run=None):
         return INSTANCE_MODULE.validate_simulation_result(
-            result, run=run or self.valid_run, policy=self.policy,
+            result, run=run or self.valid_run, policy=self.policy, question=self.question,
             result_contract=self.result_contract, taxonomy_ids=self.taxonomy_ids,
-            forbidden_claims=CONTRACTS_MODULE.find_forbidden,
+            forbidden_claims=CONTRACTS_MODULE.find_forbidden, load_reference=self.load_reference,
         )
 
     def check_comparison_instance(self, comparison):
-        return INSTANCE_MODULE.validate_comparison_result(
+        return self.validate_comparison(
             comparison, baseline_run=self.baseline_run, candidate_run=self.valid_run,
             baseline_result=self.baseline_result, candidate_result=self.valid_result,
+            load_reference=self.load_reference,
+        )
+
+    def validate_comparison(self, comparison, *, baseline_run, candidate_run,
+                            baseline_result, candidate_result, load_reference):
+        return INSTANCE_MODULE.validate_comparison_result(
+            comparison, baseline_run=baseline_run, candidate_run=candidate_run,
+            baseline_result=baseline_result, candidate_result=candidate_result,
             policy=self.policy, question=self.question, comparison_contract=self.comparison_contract,
-            forbidden_claims=CONTRACTS_MODULE.find_forbidden, load_reference=self.load_reference,
+            run_contract=self.run_contract, result_contract=self.result_contract,
+            project_id="the-myr-singularity", taxonomy_ids=self.taxonomy_ids,
+            forbidden_claims=CONTRACTS_MODULE.find_forbidden, load_reference=load_reference,
+            fingerprint_for_version=CONTRACTS_MODULE.deck_content_fingerprint,
+            derive_seed=CONTRACTS_MODULE.derive_seed,
         )
 
     def test_valid_fixtures_conform(self):
@@ -261,34 +274,190 @@ class FixtureConformanceTests(unittest.TestCase):
             comparison, baseline_run=self.baseline_run, candidate_run=candidate_run,
             baseline_result=self.baseline_result, candidate_result=self.valid_result,
             policy=self.policy, question=self.question, comparison_contract=self.comparison_contract,
-            forbidden_claims=CONTRACTS_MODULE.find_forbidden,
+            run_contract=self.run_contract, result_contract=self.result_contract,
+            project_id="the-myr-singularity", taxonomy_ids=self.taxonomy_ids,
+            forbidden_claims=CONTRACTS_MODULE.find_forbidden, load_reference=self.load_reference,
+            fingerprint_for_version=CONTRACTS_MODULE.deck_content_fingerprint,
+            derive_seed=CONTRACTS_MODULE.derive_seed,
         )
         self.assertIn("comparison semantic parity failed: config differs", errors)
 
     def test_equal_content_comparison_is_structurally_valid_without_attribution(self):
-        comparison = load_json(FIXTURES / "valid" / "comparison_result.valid.json")
-        baseline_run = dict(self.baseline_run)
-        baseline_result = json.loads(json.dumps(self.baseline_result))
-        comparison = json.loads(json.dumps(comparison))
-        baseline_run["deck_content_fingerprint"] = self.valid_run["deck_content_fingerprint"]
-        baseline_result["deck_content_fingerprint"] = self.valid_run["deck_content_fingerprint"]
-        comparison["baseline"]["deck_content_fingerprint"] = self.valid_run["deck_content_fingerprint"]
+        source_version = load_json(PROJECT / "versions" / "v1.0.json")
+        baseline_version = copy.deepcopy(source_version)
+        candidate_version = copy.deepcopy(source_version)
+        baseline_version["version_id"] = "synthetic-equal-baseline"
+        candidate_version["version_id"] = "synthetic-equal-candidate"
+        fingerprint = CONTRACTS_MODULE.deck_content_fingerprint(baseline_version)
+        self.assertEqual(fingerprint, CONTRACTS_MODULE.deck_content_fingerprint(candidate_version))
+
+        question = copy.deepcopy(self.question)
+        question["question_id"] = "question-synthetic-equal-content"
+        question["compared_versions"] = [
+            {"deck_version_id": baseline_version["version_id"], "path": "synthetic/baseline.json", "run_role": "equal_baseline", "deck_content_fingerprint": fingerprint},
+            {"deck_version_id": candidate_version["version_id"], "path": "synthetic/candidate.json", "run_role": "equal_candidate", "deck_content_fingerprint": fingerprint},
+        ]
+
+        def synthetic_run(version, path, role, run_id):
+            run = copy.deepcopy(self.baseline_run)
+            run.update({
+                "run_id": run_id,
+                "question_id": question["question_id"],
+                "deck_version_id": version["version_id"],
+                "deck_version_path": path,
+                "deck_content_fingerprint": fingerprint,
+                "run_role": role,
+            })
+            run["seed"] = CONTRACTS_MODULE.derive_seed(
+                run["question_id"], run["policy_version"], fingerprint, role
+            )
+            run["source_references"].update({
+                "policy": self.baseline_run["source_references"]["policy"],
+                "question": "synthetic/question.json",
+                "deck_version": path,
+                "card_semantics": self.policy["references"]["card_semantics"],
+            })
+            return run
+
+        baseline_run = synthetic_run(baseline_version, "synthetic/baseline.json", "equal_baseline", "synthetic-run-baseline")
+        candidate_run = synthetic_run(candidate_version, "synthetic/candidate.json", "equal_candidate", "synthetic-run-candidate")
+
+        def synthetic_result(template, run, result_id):
+            result = copy.deepcopy(template)
+            result.update({
+                "result_id": result_id,
+                "run_id": run["run_id"],
+                "deck_version_id": run["deck_version_id"],
+                "deck_content_fingerprint": run["deck_content_fingerprint"],
+            })
+            result["source_references"].update({
+                "run": f"synthetic/{run['run_id']}.json",
+                "policy": self.baseline_run["source_references"]["policy"],
+                "question": "synthetic/question.json",
+                "deck_version": run["deck_version_path"],
+                "failure_pattern_taxonomy": self.policy["references"]["failure_pattern_taxonomy"],
+            })
+            return result
+
+        baseline_result = synthetic_result(self.baseline_result, baseline_run, "synthetic-result-baseline")
+        candidate_result = synthetic_result(self.baseline_result, candidate_run, "synthetic-result-candidate")
+        comparison = copy.deepcopy(load_json(FIXTURES / "valid" / "comparison_result.valid.json"))
+        comparison.update({"question_id": question["question_id"], "readable_summary": "Synthetic equal-content fixture for structural comparison validation only."})
+        for label, run, result in (
+            ("baseline", baseline_run, baseline_result),
+            ("candidate", candidate_run, candidate_result),
+        ):
+            comparison[label].update({
+                "deck_version_id": run["deck_version_id"], "run_id": run["run_id"],
+                "result_id": result["result_id"], "deck_content_fingerprint": fingerprint,
+                "run_role": run["run_role"],
+            })
+        metric = baseline_result["metrics"][0]
+        comparison["metric_deltas"] = [{
+            "metric_id": metric["metric_id"], "target_turn": metric["target_turn"],
+            "baseline_estimate": {field: copy.deepcopy(metric[field]) for field in ("raw_count", "sample_size", "probability", "confidence_interval")},
+            "candidate_estimate": {field: copy.deepcopy(metric[field]) for field in ("raw_count", "sample_size", "probability", "confidence_interval")},
+            "absolute_delta": 0.0, "relative_delta": 0.0, "relative_delta_applicable": True,
+        }]
+        references = {
+            "synthetic/baseline.json": baseline_version,
+            "synthetic/candidate.json": candidate_version,
+            "synthetic/baseline-run.json": baseline_run,
+            "synthetic/candidate-run.json": candidate_run,
+            "synthetic/baseline-result.json": baseline_result,
+            "synthetic/candidate-result.json": candidate_result,
+            "synthetic/question.json": question,
+            f"synthetic/{baseline_run['run_id']}.json": baseline_run,
+            f"synthetic/{candidate_run['run_id']}.json": candidate_run,
+        }
+        comparison["source_references"].update({
+            "baseline_run": "synthetic/baseline-run.json", "candidate_run": "synthetic/candidate-run.json",
+            "baseline_result": "synthetic/baseline-result.json", "candidate_result": "synthetic/candidate-result.json",
+        })
+
+        def load_synthetic(path):
+            return references[path] if path in references else self.load_reference(path)
+
         self.assertEqual(
             INSTANCE_MODULE.validate_comparison_result(
-                comparison, baseline_run=baseline_run, candidate_run=self.valid_run,
-                baseline_result=baseline_result, candidate_result=self.valid_result,
-                policy=self.policy, question=self.question, comparison_contract=self.comparison_contract,
-                forbidden_claims=CONTRACTS_MODULE.find_forbidden,
+                comparison, baseline_run=baseline_run, candidate_run=candidate_run,
+                baseline_result=baseline_result, candidate_result=candidate_result,
+                policy=self.policy, question=question, comparison_contract=self.comparison_contract,
+                run_contract=self.run_contract, result_contract=self.result_contract,
+                project_id="the-myr-singularity", taxonomy_ids=self.taxonomy_ids,
+                forbidden_claims=CONTRACTS_MODULE.find_forbidden, load_reference=load_synthetic,
+                fingerprint_for_version=CONTRACTS_MODULE.deck_content_fingerprint,
+                derive_seed=CONTRACTS_MODULE.derive_seed,
             ), [],
         )
         comparison["explicit_boundary"]["attributes_deck_content_effect"] = True
         errors = INSTANCE_MODULE.validate_comparison_result(
-            comparison, baseline_run=baseline_run, candidate_run=self.valid_run,
-            baseline_result=baseline_result, candidate_result=self.valid_result,
-            policy=self.policy, question=self.question, comparison_contract=self.comparison_contract,
-            forbidden_claims=CONTRACTS_MODULE.find_forbidden,
+            comparison, baseline_run=baseline_run, candidate_run=candidate_run,
+            baseline_result=baseline_result, candidate_result=candidate_result,
+            policy=self.policy, question=question, comparison_contract=self.comparison_contract,
+            run_contract=self.run_contract, result_contract=self.result_contract,
+            project_id="the-myr-singularity", taxonomy_ids=self.taxonomy_ids,
+            forbidden_claims=CONTRACTS_MODULE.find_forbidden, load_reference=load_synthetic,
+            fingerprint_for_version=CONTRACTS_MODULE.deck_content_fingerprint,
+            derive_seed=CONTRACTS_MODULE.derive_seed,
         )
         self.assertIn("equal-content comparison must not attribute a deck-content effect", errors)
+
+    def test_comparison_rejects_invalid_baseline_run_fingerprint(self):
+        baseline_run = copy.deepcopy(self.baseline_run)
+        baseline_run["deck_content_fingerprint"] = self.valid_run["deck_content_fingerprint"]
+        errors = self.validate_comparison(
+            load_json(FIXTURES / "valid" / "comparison_result.valid.json"),
+            baseline_run=baseline_run, candidate_run=self.valid_run,
+            baseline_result=self.baseline_result, candidate_result=self.valid_result,
+            load_reference=self.load_reference,
+        )
+        self.assertIn("comparison baseline SimulationRun is invalid: run fingerprint does not match DeckVersion", errors)
+
+    def test_comparison_rejects_invalid_candidate_run_seed(self):
+        candidate_run = copy.deepcopy(self.valid_run)
+        candidate_run["seed"] += 1
+        errors = self.validate_comparison(
+            load_json(FIXTURES / "valid" / "comparison_result.valid.json"),
+            baseline_run=self.baseline_run, candidate_run=candidate_run,
+            baseline_result=self.baseline_result, candidate_result=self.valid_result,
+            load_reference=self.load_reference,
+        )
+        self.assertIn("comparison candidate SimulationRun is invalid: run seed is not policy-derived", errors)
+
+    def test_comparison_rejects_baseline_result_with_wrong_run(self):
+        baseline_result = copy.deepcopy(self.baseline_result)
+        baseline_result["run_id"] = self.valid_run["run_id"]
+        errors = self.validate_comparison(
+            load_json(FIXTURES / "valid" / "comparison_result.valid.json"),
+            baseline_run=self.baseline_run, candidate_run=self.valid_run,
+            baseline_result=baseline_result, candidate_result=self.valid_result,
+            load_reference=self.load_reference,
+        )
+        self.assertIn("comparison baseline SimulationResult is invalid: result run_id does not match run", errors)
+
+    def test_comparison_rejects_candidate_result_fingerprint_mismatch(self):
+        candidate_result = copy.deepcopy(self.valid_result)
+        candidate_result["deck_content_fingerprint"] = self.baseline_run["deck_content_fingerprint"]
+        errors = self.validate_comparison(
+            load_json(FIXTURES / "valid" / "comparison_result.valid.json"),
+            baseline_run=self.baseline_run, candidate_run=self.valid_run,
+            baseline_result=self.baseline_result, candidate_result=candidate_result,
+            load_reference=self.load_reference,
+        )
+        self.assertIn("comparison candidate SimulationResult is invalid: result deck_content_fingerprint does not match run", errors)
+
+    def test_run_rejects_stale_source_deck_reference(self):
+        run = copy.deepcopy(self.valid_run)
+        run["source_references"]["deck_version"] = self.baseline_run["deck_version_path"]
+        errors = self.check_run_instance(run)
+        self.assertIn("run source_references.deck_version must equal run deck_version_path", errors)
+
+    def test_result_rejects_stale_source_run_reference(self):
+        result = copy.deepcopy(self.valid_result)
+        result["source_references"]["run"] = self.baseline_result["source_references"]["run"]
+        errors = self.check_result_instance(result)
+        self.assertIn("result source_references.run does not resolve to the expected artifact", errors)
 
 
 class AdversarialContractTests(unittest.TestCase):

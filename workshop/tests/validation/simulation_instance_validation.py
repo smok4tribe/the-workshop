@@ -35,6 +35,20 @@ def _rounded_matches(actual, expected):
     return round(expected, _decimal_places(actual)) == actual
 
 
+def _resolve_reference(load_reference, path, label, errors, expected=None):
+    if not isinstance(path, str) or not path:
+        errors.append(f"{label} must be a non-empty path")
+        return None
+    try:
+        resolved = load_reference(path)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        errors.append(f"{label} does not resolve: {exc}")
+        return None
+    if expected is not None and resolved != expected:
+        errors.append(f"{label} does not resolve to the expected artifact")
+    return resolved
+
+
 def wilson_interval(raw_count, sample_size, confidence_level=0.95):
     """Return the two-sided Wilson interval for the frozen 95% policy."""
     if not _is_int(raw_count) or not _is_int(sample_size) or sample_size <= 0:
@@ -160,6 +174,20 @@ def validate_simulation_run(run, *, question, policy, run_contract, project_id, 
         if run.get("deck_content_fingerprint") != expected_fingerprint:
             errors.append("run fingerprint does not match DeckVersion")
 
+    references = run.get("source_references")
+    if not isinstance(references, dict):
+        errors.append("run source_references must be an object")
+    else:
+        _resolve_reference(load_reference, references.get("policy"), "run source_references.policy", errors, policy)
+        _resolve_reference(load_reference, references.get("question"), "run source_references.question", errors, question)
+        if references.get("deck_version") != path:
+            errors.append("run source_references.deck_version must equal run deck_version_path")
+        _resolve_reference(load_reference, references.get("deck_version"), "run source_references.deck_version", errors, version)
+        expected_card_semantics = (policy.get("references") or {}).get("card_semantics")
+        if references.get("card_semantics") != expected_card_semantics:
+            errors.append("run source_references.card_semantics must match policy")
+        _resolve_reference(load_reference, references.get("card_semantics"), "run source_references.card_semantics", errors)
+
     seed = run.get("seed")
     if not _is_int(seed) or seed < 0 or seed >= 2 ** 64:
         errors.append("run seed must be an unsigned 64-bit integer")
@@ -182,6 +210,25 @@ def validate_simulation_run(run, *, question, policy, run_contract, project_id, 
     expected_scenario_ref = f"{policy.get('policy_version')}:commander_scenario"
     if run.get("scenario_ref") != expected_scenario_ref:
         errors.append("run scenario_ref does not match the policy scenario")
+    config = run.get("config")
+    config_fields = ((run_contract.get("required_fields") or {}).get("config") or {}).get("required_fields", [])
+    if not isinstance(config, dict):
+        errors.append("run config must be an object")
+    else:
+        for field in config_fields:
+            if field not in config:
+                errors.append(f"run config is missing required field {field!r}")
+        expected_config = {
+            "mulligan_policy_ref": f"{policy.get('policy_version')}:mulligan_policy",
+            "keep_rule_ref": f"{policy.get('policy_version')}:keep_rule",
+            "bottoming_rule_ref": f"{policy.get('policy_version')}:bottoming_rule",
+            "observation_horizon_turn": (policy.get("turn_semantics") or {}).get("observation_horizon_turn"),
+            "sequencing_levels": ["level_1", "level_2"],
+            "card_semantics_ref": (policy.get("references") or {}).get("card_semantics"),
+        }
+        for field, expected in expected_config.items():
+            if config.get(field) != expected:
+                errors.append(f"run config {field} does not match policy")
     flags = run.get("explicit_boundary") or {}
     for field in ("carries_metrics", "carries_interpretation", "creates_deck_version"):
         if flags.get(field) is not False:
@@ -192,7 +239,7 @@ def validate_simulation_run(run, *, question, policy, run_contract, project_id, 
     return errors
 
 
-def validate_simulation_result(result, *, run, policy, result_contract, taxonomy_ids, forbidden_claims):
+def validate_simulation_result(result, *, run, policy, question, result_contract, taxonomy_ids, forbidden_claims, load_reference):
     """Validate a Result against exactly one resolved SimulationRun."""
     required = (result_contract.get("required_fields") or {}).keys()
     errors = _required_fields(result, required, "result")
@@ -203,6 +250,22 @@ def validate_simulation_result(result, *, run, policy, result_contract, taxonomy
     for field in ("project_id", "run_id", "deck_version_id", "deck_content_fingerprint", "policy_version", "iteration_count"):
         if result.get(field) != run.get(field):
             errors.append(f"result {field} does not match run")
+    references = result.get("source_references")
+    if not isinstance(references, dict):
+        errors.append("result source_references must be an object")
+    else:
+        _resolve_reference(load_reference, references.get("run"), "result source_references.run", errors, run)
+        _resolve_reference(load_reference, references.get("policy"), "result source_references.policy", errors, policy)
+        _resolve_reference(load_reference, references.get("question"), "result source_references.question", errors, question)
+        run_deck_path = run.get("deck_version_path")
+        if references.get("deck_version") != run_deck_path:
+            errors.append("result source_references.deck_version must equal run deck_version_path")
+        expected_version = _resolve_reference(load_reference, run_deck_path, "run deck_version_path", errors)
+        _resolve_reference(load_reference, references.get("deck_version"), "result source_references.deck_version", errors, expected_version)
+        expected_taxonomy = (policy.get("references") or {}).get("failure_pattern_taxonomy")
+        if references.get("failure_pattern_taxonomy") != expected_taxonomy:
+            errors.append("result source_references.failure_pattern_taxonomy must match policy")
+        _resolve_reference(load_reference, references.get("failure_pattern_taxonomy"), "result source_references.failure_pattern_taxonomy", errors)
     catalog = {
         (metric.get("metric_id"), metric.get("target_turn"))
         for metric in (policy.get("metric_catalog") or {}).get("metrics", [])
@@ -247,7 +310,12 @@ def validate_simulation_result(result, *, run, policy, result_contract, taxonomy
     return errors
 
 
-def validate_comparison_result(comparison, *, baseline_run, candidate_run, baseline_result, candidate_result, policy, question, comparison_contract, forbidden_claims, load_reference=None):
+def validate_comparison_result(
+    comparison, *, baseline_run, candidate_run, baseline_result, candidate_result,
+    policy, question, comparison_contract, run_contract, result_contract,
+    project_id, taxonomy_ids, forbidden_claims, load_reference,
+    fingerprint_for_version, derive_seed,
+):
     """Validate a ComparisonResult from resolved Runs and Results, not parity flags."""
     required = (comparison_contract.get("required_fields") or {}).keys()
     errors = _required_fields(comparison, required, "comparison")
@@ -266,6 +334,24 @@ def validate_comparison_result(comparison, *, baseline_run, candidate_run, basel
     if baseline_run.get("deck_version_id") == candidate_run.get("deck_version_id"):
         errors.append("comparison must reference distinct DeckVersions")
 
+    for label, run in (("baseline", baseline_run), ("candidate", candidate_run)):
+        for error in validate_simulation_run(
+            run, question=question, policy=policy, run_contract=run_contract,
+            project_id=project_id, load_reference=load_reference,
+            fingerprint_for_version=fingerprint_for_version, derive_seed=derive_seed,
+        ):
+            errors.append(f"comparison {label} SimulationRun is invalid: {error}")
+    for label, result, run in (
+        ("baseline", baseline_result, baseline_run),
+        ("candidate", candidate_result, candidate_run),
+    ):
+        for error in validate_simulation_result(
+            result, run=run, policy=policy, question=question,
+            result_contract=result_contract, taxonomy_ids=taxonomy_ids,
+            forbidden_claims=forbidden_claims, load_reference=load_reference,
+        ):
+            errors.append(f"comparison {label} SimulationResult is invalid: {error}")
+
     for label, side, run, result in (
         ("baseline", comparison.get("baseline") or {}, baseline_run, baseline_result),
         ("candidate", comparison.get("candidate") or {}, candidate_run, candidate_result),
@@ -278,19 +364,18 @@ def validate_comparison_result(comparison, *, baseline_run, candidate_run, basel
             if side.get(field) != expected:
                 errors.append(f"comparison {label}.{field} does not match resolved evidence")
 
-    if load_reference is not None:
-        for reference_key, expected in (
-            ("baseline_run", baseline_run), ("candidate_run", candidate_run),
-            ("baseline_result", baseline_result), ("candidate_result", candidate_result),
-        ):
-            path = (comparison.get("source_references") or {}).get(reference_key)
-            try:
-                resolved = load_reference(path)
-            except (OSError, ValueError, KeyError, TypeError) as exc:
-                errors.append(f"comparison {reference_key} does not resolve: {exc}")
-                continue
-            if resolved != expected:
-                errors.append(f"comparison {reference_key} does not resolve to supplied evidence")
+    for reference_key, expected in (
+        ("baseline_run", baseline_run), ("candidate_run", candidate_run),
+        ("baseline_result", baseline_result), ("candidate_result", candidate_result),
+    ):
+        path = (comparison.get("source_references") or {}).get(reference_key)
+        try:
+            resolved = load_reference(path)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            errors.append(f"comparison {reference_key} does not resolve: {exc}")
+            continue
+        if resolved != expected:
+            errors.append(f"comparison {reference_key} does not resolve to supplied evidence")
 
     if baseline_run.get("policy_version") != candidate_run.get("policy_version"):
         errors.append("comparison semantic parity failed: policy differs")
