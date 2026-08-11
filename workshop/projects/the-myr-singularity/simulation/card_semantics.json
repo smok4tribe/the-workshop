@@ -1,9 +1,9 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "artifact_type": "project_scoped_simulation_card_semantics",
   "artifact_id": "the-myr-singularity-simulation-card-semantics",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v1",
+  "policy_version": "sim-policy-v2",
   "generated_at": "2026-07-13T00:00:00Z",
   "generated_by": "Terra",
   "purpose": "Records project-scoped, source-aware modeled card behavior for the Simulation Policy. This artifact exists so that fixture-specific card behavior lives outside the universal Simulation Policy. The policy defines when overrides may be used, how they are validated, and how unsupported behavior is surfaced; this artifact supplies the concrete per-card modeled behavior for The Myr Singularity. It never edits canonical Card Facts and never records simulation results.",
@@ -47,7 +47,13 @@
       },
       "modeled_behavior": {
         "counts_as_land_drop": true,
-        "produces_colors": ["W", "U", "B", "R", "G"],
+        "produces_colors": [
+          "W",
+          "U",
+          "B",
+          "R",
+          "G"
+        ],
         "produces_colorless": false,
         "counts_as_five_color_source": true
       },
@@ -73,7 +79,13 @@
       },
       "modeled_behavior": {
         "counts_as_land_drop": true,
-        "produces_colors": ["W", "U", "B", "R", "G"],
+        "produces_colors": [
+          "W",
+          "U",
+          "B",
+          "R",
+          "G"
+        ],
         "produces_colorless": false,
         "counts_as_five_color_source": true
       },
@@ -131,7 +143,7 @@
       "source": {
         "type": "modeled_from_canonical_oracle_text",
         "canonical_card_fact": "workshop/card-data/cards.json",
-        "oracle_basis": "Saga land that adds {C} while in play, gains a lore counter each of the controller's upkeeps, and is sacrificed after Chapter III.",
+        "oracle_basis": "Saga land with a Chapter I {T}: Add {C} ability and a Chapter III ability.",
         "reason": "Canonical produced_mana is null for this card. It is modeled as a colorless-only land drop that produces {C} from entry and remains a colorless source only through the Chapter III window, after which it is removed. It is explicitly not a five-color source and never a permanent land through the horizon."
       },
       "confidence": "medium",

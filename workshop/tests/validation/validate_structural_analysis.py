@@ -7,7 +7,10 @@ import json
 import sys
 from pathlib import Path
 
-from structural_analysis import (
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
+
+from workshop.analysis.structural_analysis import (
     ANALYSIS_METHOD_ID,
     ANALYSIS_METHOD_VERSION,
     PROJECT_ID,
@@ -19,7 +22,6 @@ from structural_analysis import (
 )
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
 ANALYSIS_PATH = REPO_ROOT / "workshop" / "projects" / PROJECT_ID / "analysis" / "current_v1.1.json"
 FORBIDDEN_KEYS = {
     "simulation_run",

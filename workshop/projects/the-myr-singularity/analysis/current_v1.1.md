@@ -6,9 +6,9 @@ repository-derived deck facts; it does not report simulated or gameplay outcomes
 ## Identity and Provenance
 
 - Analysis id: `current_v1.1`
-- Method: `structural-analysis-v1` v1.0
+- Method: `structural-analysis-v1` v1.1
 - DeckVersion: `v1.1`
-- Deck-content fingerprint: `deck-content-sha256-v1:064801f0679b6dea14e52695efb0c1e92b095e810612d9d0929b45d6223c7cf4`
+- Deck-content fingerprint: `deck-content-sha256-canonical-v2:510ba8e90025aec8d289edbf895405b7ddde6614161502a3ec47d4beaa56b120`
 - Commander: Urtet, Remnant of Memnarch
 - Format: Commander
 

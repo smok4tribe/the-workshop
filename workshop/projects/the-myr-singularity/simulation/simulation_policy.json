@@ -1,12 +1,17 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "artifact_type": "simulation_policy",
   "policy_id": "the-myr-singularity-simulation-policy",
-  "policy_version": "sim-policy-v1",
+  "policy_version": "sim-policy-v2",
   "project_id": "the-myr-singularity",
   "generated_at": "2026-07-13T00:00:00Z",
   "generated_by": "Terra",
-  "depends_on_rfcs": ["RFC-005", "RFC-010", "RFC-014", "RFC-015"],
+  "depends_on_rfcs": [
+    "RFC-005",
+    "RFC-010",
+    "RFC-014",
+    "RFC-015"
+  ],
   "purpose": "Defines the universal, versioned semantic contract for The Workshop simulation of The Myr Singularity. It owns every result-changing assumption that is not deck content: mulligan, keep and bottoming rules, draw/play and turn semantics, observation horizon, Level 1 and Level 2 sequencing semantics, mana/color/ramp resolution rules, the supported-versus-unsupported card-behavior boundary, deterministic seed and RNG identity, iteration and uncertainty policy, the deck-content fingerprint definition, and the evidence-language boundary. Deck identity is owned by immutable DeckVersion files; fixture-specific modeled card behavior is owned by the project-scoped card_semantics.json artifact this policy references.",
   "scope": {
     "includes": [
@@ -29,13 +34,34 @@
     ]
   },
   "references": {
-    "card_semantics": "workshop/projects/the-myr-singularity/simulation/card_semantics.json",
-    "question_contract": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json",
-    "run_contract": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_run.contract.json",
-    "result_contract": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_result.contract.json",
-    "comparison_contract": "workshop/projects/the-myr-singularity/simulation/contracts/comparison_result.contract.json",
-    "failure_pattern_taxonomy": "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json",
-    "canonical_card_facts": "workshop/card-data/cards.json"
+    "card_semantics": {
+      "path": "workshop/projects/the-myr-singularity/simulation/card_semantics.json",
+      "content_fingerprint": "artifact-content-sha256-v1:899703e6b2d07243f075505adf3ebbff05b0a784cb787f634464d7da6cb8e4f3"
+    },
+    "canonical_card_facts": {
+      "path": "workshop/card-data/cards.json",
+      "content_fingerprint": "artifact-content-sha256-v1:08ddc5a05bd4572fa5a5aa85d1751181c62dde16576489f3f52b486e36d1f971"
+    },
+    "failure_pattern_taxonomy": {
+      "path": "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json",
+      "content_fingerprint": "artifact-content-sha256-v1:c62383f49b255c5c231132629006bfdc4fad634720a1ac44f13e4847bebcbce7"
+    },
+    "simulation_question_contract": {
+      "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json",
+      "content_fingerprint": "artifact-content-sha256-v1:12ced0927bcaf21056848199cf79bb321acf518578c21e2a4971f251c27d9151"
+    },
+    "simulation_run_contract": {
+      "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_run.contract.json",
+      "content_fingerprint": "artifact-content-sha256-v1:292be06ebba3f57d778f8a0af147e643ee307035a792c49977dc547d5c9e69d2"
+    },
+    "simulation_result_contract": {
+      "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_result.contract.json",
+      "content_fingerprint": "artifact-content-sha256-v1:8b5b2f5b0d53669f6a2421071f6762a1d8c34be44c47e7cb02ed58b26cf46d92"
+    },
+    "comparison_result_contract": {
+      "path": "workshop/projects/the-myr-singularity/simulation/contracts/comparison_result.contract.json",
+      "content_fingerprint": "artifact-content-sha256-v1:c8883d3e99b23ce5d08990aa9bdc5becde95a11e3c88fb8fa7dd89cb35472374"
+    }
   },
   "commander_scenario": {
     "format": "Commander",
@@ -106,38 +132,44 @@
     }
   },
   "bottoming_rule": {
-    "rule_id": "deterministic-bottoming-v1",
-    "description": "When a kept hand must bottom cards (London mulligans beyond the free one), bottom exactly the required count using a deterministic priority order.",
+    "rule_id": "deterministic-bottoming-v2",
+    "description": "When London bottoms are owed, select exactly the required cards with deterministic oracle-id ordering, including deep-mulligan fallback.",
     "priority_order": [
       {
         "rank": 1,
-        "selector": "highest_mana_value_nonland",
-        "description": "The single highest-mana-value nonland card."
+        "selector": "nonlands_descending_mana_value",
+        "description": "All nonlands by descending mana value, then lowercase oracle_id and duplicate ordinal ascending."
       },
       {
         "rank": 2,
-        "selector": "remaining_high_mana_value_nonlands",
-        "description": "Remaining nonland cards in descending mana value."
+        "selector": "lands_above_three",
+        "description": "Lands while more than three remain, by lowercase oracle_id and duplicate ordinal ascending."
       },
       {
         "rank": 3,
-        "selector": "lands_above_three",
-        "description": "Lands only when more than three lands remain in hand, removing surplus lands above three."
-      },
-      {
-        "rank": 4,
-        "selector": "stable_normalized_card_identity_tiebreak",
-        "description": "Ties at any rank are broken by ascending NFKC-normalized card identity so bottoming is fully deterministic."
+        "selector": "remaining_lands",
+        "description": "If bottoms remain owed, remaining lands by lowercase oracle_id and duplicate ordinal ascending."
       }
     ],
-    "note": "The priority is applied top to bottom until the required number of cards has been bottomed."
+    "note": "The priority is applied top to bottom until the required number of cards has been bottomed.",
+    "placement": "Append selected cards to the bottom of the post-draw library in selection order."
   },
   "sequencing_semantics": {
     "level_1_access": {
       "name": "draw_access_goldfish",
       "description": "Tracks what the deck has seen (drawn) by each turn: lands, ramp, individual colors, and card presence. Level 1 answers access questions only and does not assert that a seen card can be paid for.",
-      "models": ["cards seen by turn", "land count seen", "ramp source seen", "color source seen"],
-      "does_not_model": ["mana payment", "sequencing choices", "tutor resolution", "opponent interaction"]
+      "models": [
+        "cards seen by turn",
+        "land count seen",
+        "ramp source seen",
+        "color source seen"
+      ],
+      "does_not_model": [
+        "mana payment",
+        "sequencing choices",
+        "tutor resolution",
+        "opponent interaction"
+      ]
     },
     "level_2_mana_development": {
       "name": "simplified_mana_development_goldfish",
@@ -194,15 +226,17 @@
     "rng_id": "pcg32-v1",
     "seed_type": "unsigned_64_bit",
     "canonical_seed_derivation": {
-      "algorithm_id": "sim-seed-sha256-v1",
-      "inputs_in_order": ["question_id", "policy_version", "deck_content_fingerprint", "run_role"],
+      "algorithm_id": "sim-seed-sha256-v2",
+      "inputs_in_order": [
+        "question_content_fingerprint",
+        "policy_content_fingerprint",
+        "deck_content_fingerprint",
+        "run_role"
+      ],
       "byte_encoding": "UTF-8",
-      "concatenation_format": "The four inputs are concatenated in the listed order with a single U+001F (unit separator) byte between adjacent inputs and no trailing separator: question_id \\x1F policy_version \\x1F deck_content_fingerprint \\x1F run_role.",
-      "hash": "SHA-256 over the UTF-8 bytes of the concatenation.",
-      "seed_extraction": "The seed is the first 64 bits of the digest read as the first 8 bytes in big-endian order, interpreted as an unsigned 64-bit integer.",
-      "digest_to_seed_byte_order": "big_endian",
-      "versioned": true,
-      "unambiguous": true
+      "concatenation_format": "The four inputs are concatenated in order with U+001F and no trailing separator.",
+      "hash": "SHA-256",
+      "seed_extraction": "first 8 digest bytes, big-endian unsigned 64-bit"
     },
     "rng_algorithm": {
       "rng_id": "pcg32-v1",
@@ -250,9 +284,37 @@
       "known_answer_test_vector": {
         "seed_initstate": 42,
         "stream_selector": 11400714819323198485,
-        "first_5_u32_outputs": [1669314965, 1897367909, 478990646, 3341671233, 3520501898],
-        "shuffle_input": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        "shuffle_result": [7, 3, 1, 0, 4, 2, 8, 6, 9, 5],
+        "first_5_u32_outputs": [
+          1669314965,
+          1897367909,
+          478990646,
+          3341671233,
+          3520501898
+        ],
+        "shuffle_input": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "shuffle_result": [
+          7,
+          3,
+          1,
+          0,
+          4,
+          2,
+          8,
+          6,
+          9,
+          5
+        ],
         "shuffle_note": "The shuffle_result uses a fresh generator seeded identically (initstate 42), then applies fisher_yates_durstenfeld to shuffle_input.",
         "purpose": "Two conforming implementations must reproduce first_5_u32_outputs and shuffle_result exactly."
       }
@@ -265,11 +327,32 @@
       "requires_versioned_rng_algorithm": true,
       "note": "Reproducibility is only valid because rng_algorithm fully specifies the RNG; a policy declaring reproducibility without the versioned RNG algorithm parameters is invalid."
     },
-    "comparison_stream_mode": "independent_deterministic_streams"
+    "comparison_stream_mode": "independent_deterministic_streams",
+    "iteration_seed_derivation": {
+      "algorithm_id": "sim-iteration-seed-sha256-v1",
+      "inputs_in_order": [
+        "literal algorithm id",
+        "run_seed decimal",
+        "one_based_iteration_index decimal"
+      ],
+      "concatenation_format": "sim-iteration-seed-sha256-v1 U+001F run_seed U+001F iteration_index",
+      "hash": "SHA-256",
+      "seed_extraction": "first 8 digest bytes, big-endian unsigned 64-bit",
+      "fresh_rng_per_iteration": true,
+      "continuous_rng_within_iteration": true
+    },
+    "trace_contract_id": "simulation-iteration-trace-v1"
   },
   "modeled_deck_zones": {
-    "included": ["commander", "main_deck"],
-    "excluded": ["sideboard", "considering", "unimplemented_candidates"],
+    "included": [
+      "commander",
+      "main_deck"
+    ],
+    "excluded": [
+      "sideboard",
+      "considering",
+      "unimplemented_candidates"
+    ],
     "statement": "The simulated deck is exactly the commander plus the 99-card main-deck library. Excluded zones can never enter a run: they are outside the fingerprint and outside the modeled deck.",
     "commander_count": 1,
     "library_count": 99
@@ -303,7 +386,11 @@
       "confidence_interval"
     ],
     "comparison_metric_contract": {
-      "required_fields": ["baseline_estimate", "candidate_estimate", "absolute_delta"],
+      "required_fields": [
+        "baseline_estimate",
+        "candidate_estimate",
+        "absolute_delta"
+      ],
       "relative_delta": "optional when the baseline probability is non-zero",
       "delta_confidence_interval": "not defined"
     },
@@ -315,47 +402,113 @@
     "false_precision_rule": "Probabilities and intervals are reported at a precision consistent with the sample size; excessive decimal precision is prohibited."
   },
   "deck_fingerprint_policy": {
-    "algorithm_id": "deck-content-sha256-v1",
+    "algorithm_id": "deck-content-sha256-canonical-v2",
     "included_zones": [
-      {"zone_label": "commander", "source_field": "commander"},
-      {"zone_label": "library", "source_field": "main_deck"}
+      {
+        "zone_label": "commander",
+        "source_field": "commander"
+      },
+      {
+        "zone_label": "library",
+        "source_field": "main_deck"
+      }
     ],
-    "excluded_from_fingerprint": ["sideboard"],
-    "excluded_note": "The sideboard is excluded because the simulated deck is the commander plus the exact 99-card library. The DeckVersion ID is deliberately excluded from the content fingerprint so the fingerprint reflects deck content only.",
-    "input_requirements": [
-      "commander zone label, aggregated quantity, and canonical card identity",
-      "library zone label, aggregated quantity, and canonical card identity"
+    "excluded_from_fingerprint": [
+      "sideboard"
     ],
+    "canonical_identity": "DeckVersion name/alias resolves to exactly one Card Facts record and uses lowercase oracle_id.",
     "canonical_serialization": {
-      "text_encoding": "UTF-8",
-      "identity_normalization": "Canonical card identity is the card name after Unicode NFKC normalization with internal whitespace collapsed to single spaces and surrounding whitespace stripped; case is preserved.",
-      "aggregation": "Within each included zone, entries are aggregated by normalized card identity into total quantities (for example two Island entries of quantity one aggregate to Island quantity two).",
-      "zone_ordering": "Zones are serialized in the fixed order commander then library.",
-      "card_ordering": "Within a zone, cards are ordered ascending by normalized card identity (Unicode code point order).",
-      "line_format": "Each card serializes as the decimal quantity, a single space, then the normalized card identity.",
-      "zone_block_format": "Each zone serializes as the zone_label, a newline (U+000A), then its card lines joined by U+000A.",
-      "zone_separator": "Zone blocks are joined by the three bytes U+000A, U+001E (record separator), U+000A.",
-      "digest": "SHA-256 over the UTF-8 bytes of the full serialization.",
-      "fingerprint_string": "The literal 'deck-content-sha256-v1:' prefix followed by the lowercase hex SHA-256 digest."
+      "zone_order": [
+        "commander",
+        "library"
+      ],
+      "aggregation": "per lowercase oracle_id in each zone",
+      "card_order": "ascending lowercase oracle_id",
+      "card_line": "<positive decimal quantity><SPACE><lowercase oracle_id>",
+      "zone_separator": "LF + U+001E + LF",
+      "encoding": "UTF-8",
+      "digest": "SHA-256"
     },
     "reference_fingerprints": {
-      "note": "Recorded as deck identity only. These are integrity anchors, not simulation results.",
-      "v1.0": "deck-content-sha256-v1:be721eb9d1662606812ceeb16ed476ebd7a0a7070bfd68b8e76efa085b364d3e",
-      "v1.1": "deck-content-sha256-v1:064801f0679b6dea14e52695efb0c1e92b095e810612d9d0929b45d6223c7cf4"
+      "v1.0": "deck-content-sha256-canonical-v2:d70d0097753c001192e49f1e270359bf3b5bf20b53fd91c16e69c3bed1e337fa",
+      "v1.1": "deck-content-sha256-canonical-v2:510ba8e90025aec8d289edbf895405b7ddde6614161502a3ec47d4beaa56b120"
     }
   },
   "metric_catalog": {
     "description": "The committed Sprint 2 metric families. Each metric records its sequencing level and target turn. These are metric definitions only; no values are recorded here.",
     "metrics": [
-      {"metric_id": "keepable_opening_hand_rate", "level": "level_1", "target_turn": 0, "kind": "primary"},
-      {"metric_id": "zero_land_hand_rate", "level": "level_1", "target_turn": 0, "kind": "primary"},
-      {"metric_id": "one_land_hand_rate", "level": "level_1", "target_turn": 0, "kind": "primary"},
-      {"metric_id": "excessive_land_hand_rate", "level": "level_1", "target_turn": 0, "kind": "primary"},
-      {"metric_id": "land_drop_success_by_turn", "level": "level_2", "target_turn": 6, "kind": "primary"},
-      {"metric_id": "ramp_access_by_turn", "level": "level_2", "target_turn": 3, "kind": "primary"},
-      {"metric_id": "distinct_commander_colors_by_turn", "level": "level_2", "target_turn": 6, "kind": "primary"},
-      {"metric_id": "five_color_availability_by_turn", "level": "level_2", "target_turn": 6, "kind": "primary"},
-      {"metric_id": "commander_castability_by_turn", "level": "level_2", "target_turn": 3, "kind": "optional_sanity"}
+      {
+        "metric_id": "keepable_opening_hand_rate",
+        "level": "level_1",
+        "target_turn": 0,
+        "kind": "primary",
+        "shape": "bernoulli_probability"
+      },
+      {
+        "metric_id": "zero_land_hand_rate",
+        "level": "level_1",
+        "target_turn": 0,
+        "kind": "primary",
+        "shape": "bernoulli_probability"
+      },
+      {
+        "metric_id": "one_land_hand_rate",
+        "level": "level_1",
+        "target_turn": 0,
+        "kind": "primary",
+        "shape": "bernoulli_probability"
+      },
+      {
+        "metric_id": "excessive_land_hand_rate",
+        "level": "level_1",
+        "target_turn": 0,
+        "kind": "primary",
+        "shape": "bernoulli_probability"
+      },
+      {
+        "metric_id": "land_drop_success_by_turn",
+        "level": "level_2",
+        "target_turn": 6,
+        "kind": "primary",
+        "shape": "bernoulli_probability"
+      },
+      {
+        "metric_id": "ramp_access_by_turn",
+        "level": "level_1",
+        "target_turn": 3,
+        "kind": "primary",
+        "shape": "bernoulli_probability",
+        "definition": "At least one explicitly registered ramp-access identity is seen in the final kept hand plus normal draws through target turn; it does not mean castable, deployed, online, or mana produced."
+      },
+      {
+        "metric_id": "distinct_commander_colors_by_turn",
+        "level": "level_2",
+        "target_turn": 6,
+        "kind": "primary",
+        "shape": "categorical_count",
+        "domain": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      {
+        "metric_id": "five_color_availability_by_turn",
+        "level": "level_2",
+        "target_turn": 6,
+        "kind": "primary",
+        "shape": "bernoulli_probability"
+      },
+      {
+        "metric_id": "commander_castability_by_turn",
+        "level": "level_2",
+        "target_turn": 3,
+        "kind": "optional_sanity",
+        "shape": "bernoulli_probability"
+      }
     ]
   },
   "commander_castability_policy": {
@@ -387,5 +540,362 @@
     "contains_production_result": false,
     "authorizes_deck_change": false,
     "edits_card_facts": false
-  }
+  },
+  "ramp_access_registry": {
+    "authority": "policy-registered canonical oracle identities",
+    "definition": "Level 1 access only.",
+    "oracle_ids": [
+      "0bc7f093-bef0-4f1a-852c-4b75ebf54838",
+      "2f328e05-5edf-4b21-9c2a-50dcf1e7b3ec",
+      "4d9554de-c005-41ab-a941-39328ebff9de",
+      "66e8f7f8-3a6d-46ba-837c-b9713ddf7f40",
+      "6abf433e-27da-4abb-b262-3af792a1db23",
+      "6ad8011d-3471-4369-9d68-b264cc027487",
+      "6b8cf2a0-b045-4d91-9d91-c602d40c6237",
+      "6c5cbab6-ee27-46f5-97a7-df85698d1e9f",
+      "7346c266-19d8-4432-acf5-f00aff074ad5",
+      "7b0767b8-b504-456e-93bd-218502f73b3d",
+      "8b52f30c-5e38-4333-88ab-901b37105b36",
+      "bd6af7b3-b30f-4a65-a18f-8655f778e76a",
+      "bdeb440d-a714-40e8-9038-f651e6ae45fb",
+      "e3056f28-868b-401a-a528-7528d639bdeb"
+    ]
+  },
+  "level_2_sequencing": {
+    "contract_id": "simulation-iteration-trace-v1",
+    "turn_order": [
+      "untap_and_clear_floating_mana",
+      "draw",
+      "advance_time_dependent_state",
+      "select_and_play_one_land",
+      "repeatedly_deploy_payable_registered_ramp",
+      "resolve_pending_time_dependent_removals",
+      "record_end_of_turn_observations"
+    ],
+    "land_selection_priority": [
+      "new_commander_colors_desc",
+      "five_color_capability_desc",
+      "permanent_desc",
+      "remaining_availability_desc",
+      "mana_units_desc",
+      "oracle_id_asc",
+      "duplicate_ordinal_asc"
+    ],
+    "ramp_deployment_priority": [
+      "same_turn_online_noncreature_desc",
+      "output_units_desc",
+      "color_flexibility_desc",
+      "mana_value_asc",
+      "oracle_id_asc",
+      "duplicate_ordinal_asc"
+    ],
+    "payment_priority": [
+      "flexible_source_mana_spent_on_generic_asc",
+      "tapped_source_count_asc",
+      "oracle_id_ordinal_output_lexicographic"
+    ],
+    "observation_projections": {
+      "source_capability": "surviving online source color capabilities, irrespective of earlier tapping",
+      "spendable_mana": "actual remaining untapped payable sources after deterministic development"
+    },
+    "urzas_saga_final_chapter_timing": "At controller-turn offset 2, Urza's Saga remains usable during the approved development window, then its final-chapter removal occurs before end-of-turn observation; once removed it contributes to no end-of-turn metric.",
+    "unsupported_actions": "Actions without explicit complete policy registration cannot be selected or improve a metric."
+  },
+  "level_2_mana_source_registry": {
+    "authority": "explicit policy registration only",
+    "entries": [
+      {
+        "oracle_id": "0bc7f093-bef0-4f1a-852c-4b75ebf54838",
+        "card_name": "Arcane Signet",
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 1,
+          "colors": [
+            "B",
+            "G",
+            "R",
+            "U",
+            "W"
+          ]
+        },
+        "source_kind": "mana_rock",
+        "same_turn_online_noncreature": true,
+        "online_timing": "same_turn_after_resolution",
+        "activation_conditions": "self_tap_only",
+        "eligible_for_deployment": true
+      },
+      {
+        "oracle_id": "2f328e05-5edf-4b21-9c2a-50dcf1e7b3ec",
+        "card_name": "Plague Myr",
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 1,
+          "colors": [
+            "C"
+          ]
+        },
+        "source_kind": "mana_creature",
+        "same_turn_online_noncreature": false,
+        "online_timing": "next_controller_turn",
+        "activation_conditions": "self_tap_only",
+        "eligible_for_deployment": true
+      },
+      {
+        "oracle_id": "4d9554de-c005-41ab-a941-39328ebff9de",
+        "card_name": "Relic of Legends",
+        "casting_cost": {
+          "generic": 3,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 1,
+          "colors": [
+            "B",
+            "G",
+            "R",
+            "U",
+            "W"
+          ]
+        },
+        "source_kind": "mana_rock",
+        "same_turn_online_noncreature": true,
+        "online_timing": "same_turn_after_resolution",
+        "activation_conditions": "self_tap_only",
+        "eligible_for_deployment": true
+      },
+      {
+        "oracle_id": "66e8f7f8-3a6d-46ba-837c-b9713ddf7f40",
+        "card_name": "Silver Myr",
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 1,
+          "colors": [
+            "U"
+          ]
+        },
+        "source_kind": "mana_creature",
+        "same_turn_online_noncreature": false,
+        "online_timing": "next_controller_turn",
+        "activation_conditions": "self_tap_only",
+        "eligible_for_deployment": true
+      },
+      {
+        "oracle_id": "6abf433e-27da-4abb-b262-3af792a1db23",
+        "card_name": "Myr Convert",
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 1,
+          "colors": [
+            "B",
+            "G",
+            "R",
+            "U",
+            "W"
+          ]
+        },
+        "source_kind": "mana_creature",
+        "same_turn_online_noncreature": false,
+        "online_timing": "next_controller_turn",
+        "activation_conditions": "requires_unmodeled_life_payment",
+        "eligible_for_deployment": false
+      },
+      {
+        "oracle_id": "6ad8011d-3471-4369-9d68-b264cc027487",
+        "card_name": "Sol Ring",
+        "casting_cost": {
+          "generic": 1,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 2,
+          "colors": [
+            "C"
+          ]
+        },
+        "source_kind": "mana_rock",
+        "same_turn_online_noncreature": true,
+        "online_timing": "same_turn_after_resolution",
+        "activation_conditions": "self_tap_only",
+        "eligible_for_deployment": true
+      },
+      {
+        "oracle_id": "6b8cf2a0-b045-4d91-9d91-c602d40c6237",
+        "card_name": "Basalt Monolith",
+        "casting_cost": {
+          "generic": 3,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 3,
+          "colors": [
+            "C"
+          ]
+        },
+        "source_kind": "mana_rock",
+        "same_turn_online_noncreature": false,
+        "online_timing": "same_turn_after_resolution",
+        "activation_conditions": "does_not_untap_without_unmodeled_untap_cost",
+        "eligible_for_deployment": false
+      },
+      {
+        "oracle_id": "6c5cbab6-ee27-46f5-97a7-df85698d1e9f",
+        "card_name": "Iron Myr",
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 1,
+          "colors": [
+            "R"
+          ]
+        },
+        "source_kind": "mana_creature",
+        "same_turn_online_noncreature": false,
+        "online_timing": "next_controller_turn",
+        "activation_conditions": "self_tap_only",
+        "eligible_for_deployment": true
+      },
+      {
+        "oracle_id": "7346c266-19d8-4432-acf5-f00aff074ad5",
+        "card_name": "Moonsnare Prototype",
+        "casting_cost": {
+          "generic": 1,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 1,
+          "colors": [
+            "C"
+          ]
+        },
+        "source_kind": "mana_rock",
+        "same_turn_online_noncreature": false,
+        "online_timing": "same_turn_after_resolution",
+        "activation_conditions": "requires_unmodeled_artifact_or_creature_tap",
+        "eligible_for_deployment": false
+      },
+      {
+        "oracle_id": "7b0767b8-b504-456e-93bd-218502f73b3d",
+        "card_name": "Palladium Myr",
+        "casting_cost": {
+          "generic": 3,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 2,
+          "colors": [
+            "C"
+          ]
+        },
+        "source_kind": "mana_creature",
+        "same_turn_online_noncreature": false,
+        "online_timing": "next_controller_turn",
+        "activation_conditions": "self_tap_only",
+        "eligible_for_deployment": true
+      },
+      {
+        "oracle_id": "8b52f30c-5e38-4333-88ab-901b37105b36",
+        "card_name": "Copper Myr",
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 1,
+          "colors": [
+            "G"
+          ]
+        },
+        "source_kind": "mana_creature",
+        "same_turn_online_noncreature": false,
+        "online_timing": "next_controller_turn",
+        "activation_conditions": "self_tap_only",
+        "eligible_for_deployment": true
+      },
+      {
+        "oracle_id": "bd6af7b3-b30f-4a65-a18f-8655f778e76a",
+        "card_name": "Gold Myr",
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 1,
+          "colors": [
+            "W"
+          ]
+        },
+        "source_kind": "mana_creature",
+        "same_turn_online_noncreature": false,
+        "online_timing": "next_controller_turn",
+        "activation_conditions": "self_tap_only",
+        "eligible_for_deployment": true
+      },
+      {
+        "oracle_id": "bdeb440d-a714-40e8-9038-f651e6ae45fb",
+        "card_name": "Springleaf Drum",
+        "casting_cost": {
+          "generic": 1,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 1,
+          "colors": [
+            "B",
+            "G",
+            "R",
+            "U",
+            "W"
+          ]
+        },
+        "source_kind": "mana_rock",
+        "same_turn_online_noncreature": false,
+        "online_timing": "same_turn_after_resolution",
+        "activation_conditions": "requires_unmodeled_creature_tap",
+        "eligible_for_deployment": false
+      },
+      {
+        "oracle_id": "e3056f28-868b-401a-a528-7528d639bdeb",
+        "card_name": "Prismatic Lens",
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "mana_output": {
+          "units": 1,
+          "colors": [
+            "B",
+            "C",
+            "G",
+            "R",
+            "U",
+            "W"
+          ]
+        },
+        "source_kind": "mana_rock",
+        "same_turn_online_noncreature": false,
+        "online_timing": "same_turn_after_resolution",
+        "activation_conditions": "colored_filter_activation_requires_unmodeled_extra_payment",
+        "eligible_for_deployment": false
+      }
+    ],
+    "rule": "Only entries with eligible_for_deployment true may be selected. Every excluded entry is surfaced as unsupported and contributes nothing to a success metric."
+  },
+  "ramp_access_semantics": [
+    "ramp_access_by_turn is Level 1 access-only: an explicitly registered ramp-access identity is seen in the final kept hand plus normal draws through target turn.",
+    "It does not require castability, deployment, online state, or produced mana."
+  ]
 }
