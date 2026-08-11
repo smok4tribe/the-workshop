@@ -15,25 +15,72 @@ EXPECTED_BASE_COMMIT = "7387afcb9a6345a97083506245fa6414504ad654"
 PROJECT_ID = "the-myr-singularity"
 SPRINT_ID = "Sprint 1"
 CERTIFICATION_SCOPE = "sprint_1_local_prototype"
-PROTECTED_PREFIXES = (
-    "workshop/card-data/",
+HISTORICALLY_IMMUTABLE_SPRINT_1_ARTIFACTS = frozenset({
+    "workshop/projects/the-myr-singularity/versions/v1.0.json",
+    "workshop/projects/the-myr-singularity/versions/v1.1.json",
+    "workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json",
+    "workshop/projects/the-myr-singularity/analysis/baseline_v1.0.md",
+    "workshop/projects/the-myr-singularity/recommendations/rec-001.json",
+    "workshop/projects/the-myr-singularity/recommendations/rec-002.json",
+    "workshop/projects/the-myr-singularity/recommendations/review-rec-002.json",
+    "workshop/projects/the-myr-singularity/decisions/decision-002.json",
+    "workshop/projects/the-myr-singularity/decisions/decision-003.json",
+    "workshop/projects/the-myr-singularity/decisions/decision-004.json",
+    "workshop/projects/the-myr-singularity/decisions/deck-change-design-v1.1.json",
+    "workshop/projects/the-myr-singularity/reports/project_report_v1.1.json",
+    "workshop/projects/the-myr-singularity/reports/project_report_v1.1.md",
+    "workshop/card-data/cards.json",
+    "workshop/card-data/candidate_cards.json",
+    "workshop/card-data/candidate_card_import_metadata.json",
     "workshop/knowledge/functional_roles.json",
-    "workshop/projects/the-myr-singularity/analysis/",
-    "workshop/projects/the-myr-singularity/deck/",
-    "workshop/projects/the-myr-singularity/decisions/",
-    "workshop/projects/the-myr-singularity/recommendations/",
-    "workshop/projects/the-myr-singularity/versions/",
-)
+})
 
-REQUIRED_SOURCE_KEYS = {
-    "project", "brief", "current_decklist", "baseline_deck_version",
-    "resulting_deck_version", "card_facts", "active_candidate_facts",
-    "functional_knowledge", "candidate_lifecycle_metadata", "baseline_analysis",
-    "rec_001", "rec_002", "product_owner_review", "decisions",
-    "deck_change_design", "project_report", "changelog", "notes", "backlog",
-    "regression_checklists", "validation_documentation", "project_readme",
-    "documentation_handoff",
+CERTIFICATION_RECORDING_PATHS = {
+    "certification": "workshop/projects/the-myr-singularity/reports/sprint_1_certification.json",
+    "markdown": "workshop/projects/the-myr-singularity/reports/sprint_1_certification.md",
+    "independent_review": "workshop/projects/the-myr-singularity/reports/sprint_1_certification_review.json",
 }
+
+CANONICAL_INDEPENDENT_REVIEW_SOURCE = {
+    "path": CERTIFICATION_RECORDING_PATHS["independent_review"],
+}
+
+SPRINT_1_SOURCE_REFERENCE_CONTRACT = {
+    "project": {"path": "workshop/projects/the-myr-singularity/project.json", "id": "the-myr-singularity"},
+    "brief": {"path": "workshop/projects/the-myr-singularity/brief/brief.json", "project_id": "the-myr-singularity"},
+    "current_decklist": {"path": "workshop/projects/the-myr-singularity/deck/current.txt"},
+    "baseline_deck_version": {"path": "workshop/projects/the-myr-singularity/versions/v1.0.json", "id": "v1.0"},
+    "resulting_deck_version": {"path": "workshop/projects/the-myr-singularity/versions/v1.1.json", "id": "v1.1"},
+    "card_facts": {"path": "workshop/card-data/cards.json"},
+    "active_candidate_facts": {"path": "workshop/card-data/candidate_cards.json"},
+    "functional_knowledge": {"path": "workshop/knowledge/functional_roles.json"},
+    "candidate_lifecycle_metadata": {"path": "workshop/card-data/candidate_card_import_metadata.json"},
+    "baseline_analysis": {"path": "workshop/projects/the-myr-singularity/analysis/baseline_v1.0.json", "id": "baseline_v1.0"},
+    "rec_001": {"path": "workshop/projects/the-myr-singularity/recommendations/rec-001.json", "id": "rec-001"},
+    "rec_002": {"path": "workshop/projects/the-myr-singularity/recommendations/rec-002.json", "id": "rec-002"},
+    "product_owner_review": {"path": "workshop/projects/the-myr-singularity/recommendations/review-rec-002.json", "recommendation_id": "rec-002"},
+    "decisions": [
+        {"path": "workshop/projects/the-myr-singularity/decisions/decision-002.json", "id": "decision-002"},
+        {"path": "workshop/projects/the-myr-singularity/decisions/decision-003.json", "id": "decision-003"},
+        {"path": "workshop/projects/the-myr-singularity/decisions/decision-004.json", "id": "decision-004"},
+    ],
+    "deck_change_design": {"path": "workshop/projects/the-myr-singularity/decisions/deck-change-design-v1.1.json", "id": "deck-change-design-v1.1"},
+    "project_report": {"path": "workshop/projects/the-myr-singularity/reports/project_report_v1.1.json", "id": "project-report-v1.1"},
+    "changelog": {"path": "workshop/projects/the-myr-singularity/reports/changelog.md"},
+    "notes": {"path": "workshop/projects/the-myr-singularity/notes/notes.md"},
+    "backlog": {"path": "workshop/projects/the-myr-singularity/notes/backlog.json"},
+    "regression_checklists": [
+        {"path": "workshop/tests/regression/product_principles.md"},
+        {"path": "workshop/tests/regression/data_model.md"},
+        {"path": "workshop/tests/regression/reasoning.md"},
+        {"path": "workshop/tests/regression/simulation.md"},
+    ],
+    "validation_documentation": {"path": "workshop/tests/validation/README.md"},
+    "project_readme": {"path": "workshop/projects/the-myr-singularity/README.md"},
+    "documentation_handoff": {"path": "workshop/projects/the-myr-singularity/notes/sprint_1_documentation_handoff.md"},
+}
+
+REQUIRED_SOURCE_KEYS = frozenset(SPRINT_1_SOURCE_REFERENCE_CONTRACT)
 
 LOOP_CONTRACT = [
     ("loop-01", "Project", ["project"], ["the-myr-singularity"]),
@@ -194,6 +241,58 @@ def run(root, args, env=None):
 
 def git(root, *args):
     return run(root, ["git", *args])
+
+
+def normalize_git_path(value):
+    if not isinstance(value, str):
+        raise ValueError("Git name-status path is not text")
+    path = value.strip().replace("\\", "/")
+    if not path or path.startswith("/") or path.startswith("../") or "/../" in path:
+        raise ValueError(f"invalid Git name-status path: {value!r}")
+    return path
+
+
+def parse_git_name_status(output):
+    """Parse ``git diff --name-status -M`` output without dropping rename sides."""
+    records = []
+    for raw_line in output.splitlines():
+        if not raw_line:
+            raise ValueError("empty Git name-status record")
+        fields = raw_line.split("\t")
+        status = fields[0]
+        kind = status[:1]
+        if kind in {"A", "M", "D", "T"}:
+            if status != kind or len(fields) != 2:
+                raise ValueError(f"malformed Git name-status record: {raw_line!r}")
+            paths = (normalize_git_path(fields[1]),)
+        elif kind in {"R", "C"}:
+            if not status[1:].isdigit() or len(fields) != 3:
+                raise ValueError(f"malformed Git name-status record: {raw_line!r}")
+            paths = (normalize_git_path(fields[1]), normalize_git_path(fields[2]))
+        else:
+            raise ValueError(f"unsupported Git name-status record: {raw_line!r}")
+        records.append((status, paths))
+    return tuple(sorted(records, key=lambda record: (record[1], record[0])))
+
+
+def immutable_name_status_changes(records):
+    """Return deterministic (status, paths) records touching historical evidence."""
+    return tuple(
+        record for record in records
+        if any(path in HISTORICALLY_IMMUTABLE_SPRINT_1_ARTIFACTS for path in record[1])
+    )
+
+
+def source_reference_contract_errors(references):
+    if not isinstance(references, dict):
+        return ["source_references must be an object"]
+    errors = []
+    if set(references) != REQUIRED_SOURCE_KEYS:
+        errors.append("certification source contract does not match the required source set")
+    for key, expected in SPRINT_1_SOURCE_REFERENCE_CONTRACT.items():
+        if references.get(key) != expected:
+            errors.append(f"source {key!r} does not match the canonical Sprint 1 source-reference contract")
+    return errors
 
 
 def parse_checklist(root, path, expected_heading, expected_ids):
