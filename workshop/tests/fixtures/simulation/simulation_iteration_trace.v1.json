@@ -1,0 +1,41 @@
+{
+  "fixture_note": "Contract KAT only; not a production simulation trace or evidence artifact.",
+  "trace_contract_id": "simulation-iteration-trace-v1",
+  "run_seed": 17507270021680097520,
+  "iteration_index": 1,
+  "iteration_seed": 6055234187381229165,
+  "canonical_library": {
+    "count": 99,
+    "first_tokens": [
+      "02f16726-f2f6-4943-b71a-93f8e26251d3#1",
+      "03f5c566-825c-4c46-9c01-a2f9b1e70a13#1",
+      "0826cf7d-7ccc-459b-a92f-29dc169628f8#1"
+    ],
+    "last_tokens": [
+      "ea9709b6-4c37-4d5a-b04d-cd4c42e4f9dd#1",
+      "f25351e3-539b-4bbc-b92d-6480acf4d722#1",
+      "f4819061-b0b5-48ab-af7b-6525c3d2eab7#1"
+    ]
+  },
+  "first_opening_hand": [
+    "8dc067bf-f78f-4ac4-b6e7-b305c42cf0bc#1",
+    "82004860-e589-4e38-8d61-8c0210e4ea39#1",
+    "42a3855d-25ab-45b3-9e5d-9a0f3da35a05#1",
+    "39451b4d-cd7a-40da-b457-cb51b609173f#1",
+    "f4819061-b0b5-48ab-af7b-6525c3d2eab7#1",
+    "1b388371-f9ef-45b4-82a3-ca20a8cd7807#1",
+    "18bdc181-9592-4147-81fb-7f83ce137f70#1"
+  ],
+  "required_cases": [
+    "ordinary_keep",
+    "rejected_free_mulligan_continues_same_rng_stream",
+    "london_bottoming",
+    "bounded_rng_rejection_consumption",
+    "deep_london_remaining_lands",
+    "level_2_land_tie_break",
+    "level_2_ramp_deployment_order",
+    "level_2_payment_tie_break",
+    "mana_creature_online_delay",
+    "urzas_saga_removal_before_end_of_turn_observation"
+  ]
+}

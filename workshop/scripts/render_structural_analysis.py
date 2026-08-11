@@ -9,9 +9,8 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-VALIDATION_DIR = REPO_ROOT / "workshop" / "tests" / "validation"
-sys.path.insert(0, str(VALIDATION_DIR))
-from structural_analysis import PROJECT_ID  # noqa: E402
+sys.path.insert(0, str(REPO_ROOT))
+from workshop.analysis.structural_analysis import PROJECT_ID  # noqa: E402
 
 
 DEFAULT_ANALYSIS = REPO_ROOT / "workshop" / "projects" / PROJECT_ID / "analysis" / "current_v1.1.json"

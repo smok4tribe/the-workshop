@@ -38,6 +38,7 @@ def render_policy(policy):
     unc = policy["uncertainty_policy"]
     fp = policy["deck_fingerprint_policy"]
     boundary = policy["card_behavior_boundary"]
+    level_two = policy["level_2_sequencing"]
     lines = [
         f"# Simulation Policy {policy['policy_version']}",
         "",
@@ -124,7 +125,7 @@ def render_policy(policy):
         "",
         f"Hard invariant: {boundary['unsupported_behavior_handling']['hard_invariant']}",
         "",
-        f"Fixture-specific modeled card behavior lives in `{policy['references']['card_semantics']}`.",
+        f"Fixture-specific modeled card behavior lives in `{policy['references']['card_semantics']['path']}`.",
         "",
         "## Randomness Policy",
         "",
@@ -132,6 +133,7 @@ def render_policy(policy):
         f"- Seed type: {rng['seed_type']}",
         f"- Seed derivation: `{rng['canonical_seed_derivation']['algorithm_id']}` over "
         f"{' + '.join(rng['canonical_seed_derivation']['inputs_in_order'])}",
+        f"- Iteration derivation: `{rng['iteration_seed_derivation']['algorithm_id']}`; fresh RNG per iteration and continuous stream across mulligans.",
         f"- Seed extraction: {rng['canonical_seed_derivation']['seed_extraction']}",
         "",
         "## Iteration and Uncertainty",
@@ -152,6 +154,27 @@ def render_policy(policy):
         "",
         f"Reference fingerprints (deck identity only, not results): v1.0 "
         f"`{fp['reference_fingerprints']['v1.0']}`; v1.1 `{fp['reference_fingerprints']['v1.1']}`.",
+        "",
+        "## Metric Registry",
+        "",
+        "| Metric | Target turn | Shape | Required |",
+        "| --- | ---: | --- | --- |",
+        *[
+            f"| {metric['metric_id']} | {metric['target_turn']} | {metric['shape']} | "
+            f"{'yes' if metric['kind'] == 'primary' else 'no'} |"
+            for metric in policy["metric_catalog"]["metrics"]
+        ],
+        "",
+        "## Deterministic Level 2 Trace",
+        "",
+        *[f"{index}. `{step}`" for index, step in enumerate(level_two["turn_order"], start=1)],
+        "",
+        f"Urza's Saga timing: {level_two['urzas_saga_final_chapter_timing']}",
+        "",
+        f"Source-capability projection: {level_two['observation_projections']['source_capability']}",
+        f"Spendable-mana projection: {level_two['observation_projections']['spendable_mana']}",
+        "",
+        f"Unsupported actions: {level_two['unsupported_actions']}",
         "",
         "## Evidence-Language Boundary",
         "",
@@ -203,7 +226,14 @@ def render_question(question):
         "",
         *[
             f"- {metric['metric_id']} by turn {metric['target_turn']}"
-            for metric in question["target_metrics"]
+            for metric in question["required_metrics"]
+        ],
+        "",
+        "## Optional Sanity Metrics",
+        "",
+        *[
+            f"- {metric['metric_id']} by turn {metric['target_turn']}"
+            for metric in question["optional_metrics"]
         ],
         "",
         "## Success Interpretation",

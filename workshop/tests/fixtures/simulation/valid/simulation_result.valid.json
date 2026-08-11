@@ -5,11 +5,127 @@
   "project_id": "the-myr-singularity",
   "run_id": "fixture-run-candidate-v1.1",
   "deck_version_id": "v1.1",
-  "deck_content_fingerprint": "deck-content-sha256-v1:064801f0679b6dea14e52695efb0c1e92b095e810612d9d0929b45d6223c7cf4",
-  "policy_version": "sim-policy-v1",
+  "deck_content_fingerprint": "deck-content-sha256-canonical-v2:510ba8e90025aec8d289edbf895405b7ddde6614161502a3ec47d4beaa56b120",
+  "policy_version": "sim-policy-v2",
   "iteration_count": 100000,
-  "readable_summary": "Illustrative fixture: under the sim-policy-v1 model the deck reached full five-color availability by turn six in a synthetic proportion of simulated openings. Values are placeholders for shape validation only.",
+  "readable_summary": "metric_estimate:keepable_opening_hand_rate@0 | metric_estimate:zero_land_hand_rate@0 | metric_estimate:one_land_hand_rate@0 | metric_estimate:excessive_land_hand_rate@0 | metric_estimate:land_drop_success_by_turn@6 | metric_estimate:ramp_access_by_turn@3 | metric_estimate:distinct_commander_colors_by_turn@6 | metric_estimate:five_color_availability_by_turn@6",
   "metrics": [
+    {
+      "metric_id": "keepable_opening_hand_rate",
+      "target_turn": 0,
+      "raw_count": 70000,
+      "sample_size": 100000,
+      "probability": 0.7,
+      "confidence_interval": {
+        "method": "wilson_score_interval",
+        "level": 0.95,
+        "lower": 0.697152,
+        "upper": 0.702833
+      }
+    },
+    {
+      "metric_id": "zero_land_hand_rate",
+      "target_turn": 0,
+      "raw_count": 8000,
+      "sample_size": 100000,
+      "probability": 0.08,
+      "confidence_interval": {
+        "method": "wilson_score_interval",
+        "level": 0.95,
+        "lower": 0.078335,
+        "upper": 0.081698
+      }
+    },
+    {
+      "metric_id": "one_land_hand_rate",
+      "target_turn": 0,
+      "raw_count": 18000,
+      "sample_size": 100000,
+      "probability": 0.18,
+      "confidence_interval": {
+        "method": "wilson_score_interval",
+        "level": 0.95,
+        "lower": 0.177631,
+        "upper": 0.182393
+      }
+    },
+    {
+      "metric_id": "excessive_land_hand_rate",
+      "target_turn": 0,
+      "raw_count": 5000,
+      "sample_size": 100000,
+      "probability": 0.05,
+      "confidence_interval": {
+        "method": "wilson_score_interval",
+        "level": 0.95,
+        "lower": 0.048666,
+        "upper": 0.051368
+      }
+    },
+    {
+      "metric_id": "land_drop_success_by_turn",
+      "target_turn": 6,
+      "raw_count": 62000,
+      "sample_size": 100000,
+      "probability": 0.62,
+      "confidence_interval": {
+        "method": "wilson_score_interval",
+        "level": 0.95,
+        "lower": 0.616987,
+        "upper": 0.623004
+      }
+    },
+    {
+      "metric_id": "ramp_access_by_turn",
+      "target_turn": 3,
+      "raw_count": 65000,
+      "sample_size": 100000,
+      "probability": 0.65,
+      "confidence_interval": {
+        "method": "wilson_score_interval",
+        "level": 0.95,
+        "lower": 0.647038,
+        "upper": 0.65295
+      }
+    },
+    {
+      "metric_id": "distinct_commander_colors_by_turn",
+      "target_turn": 6,
+      "sample_size": 100000,
+      "bins": [
+        {
+          "value": 0,
+          "raw_count": 12000,
+          "proportion": 0.12
+        },
+        {
+          "value": 1,
+          "raw_count": 16000,
+          "proportion": 0.16
+        },
+        {
+          "value": 2,
+          "raw_count": 18000,
+          "proportion": 0.18
+        },
+        {
+          "value": 3,
+          "raw_count": 20000,
+          "proportion": 0.2
+        },
+        {
+          "value": 4,
+          "raw_count": 19000,
+          "proportion": 0.19
+        },
+        {
+          "value": 5,
+          "raw_count": 15000,
+          "proportion": 0.15
+        }
+      ],
+      "mean": 2.63
+    },
     {
       "metric_id": "five_color_availability_by_turn",
       "target_turn": 6,
@@ -19,8 +135,8 @@
       "confidence_interval": {
         "method": "wilson_score_interval",
         "level": 0.95,
-        "lower": 0.607,
-        "upper": 0.613
+        "lower": 0.606973,
+        "upper": 0.613019
       }
     }
   ],
@@ -32,25 +148,242 @@
       "frequency": 0.39
     }
   ],
-  "observations": [
-    "Fixture illustrates result shape only."
-  ],
   "confidence": "medium",
   "limitations": [
     "Synthetic fixture values; not measured evidence."
   ],
   "created_at": "2026-07-13T00:00:00Z",
   "source_references": {
-    "run": "workshop/tests/fixtures/simulation/valid/simulation_run.valid.json",
-    "policy": "workshop/projects/the-myr-singularity/simulation/simulation_policy.json",
-    "question": "workshop/projects/the-myr-singularity/simulation/questions/question-001-mana-color.json",
-    "deck_version": "workshop/projects/the-myr-singularity/versions/v1.1.json",
-    "failure_pattern_taxonomy": "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json"
+    "run": {
+      "path": "workshop/tests/fixtures/simulation/valid/simulation_run.valid.json",
+      "content_fingerprint": "artifact-content-sha256-v1:a1b35c2ceb3a2948f5c9b8978bf74ae154dfb20b8c2335b1eb2a16079ff498c6"
+    }
   },
   "explicit_boundary": {
     "carries_interpretation": false,
     "carries_product_owner_decision": false,
     "is_gameplay_claim": false,
     "creates_deck_version": false
+  },
+  "evidence_claims": [
+    {
+      "claim_type": "metric_estimate",
+      "subject": "mana_development",
+      "metric_id": "keepable_opening_hand_rate",
+      "target_turn": 0,
+      "estimate": {
+        "metric_id": "keepable_opening_hand_rate",
+        "target_turn": 0,
+        "raw_count": 70000,
+        "sample_size": 100000,
+        "probability": 0.7,
+        "confidence_interval": {
+          "method": "wilson_score_interval",
+          "level": 0.95,
+          "lower": 0.697152,
+          "upper": 0.702833
+        }
+      }
+    },
+    {
+      "claim_type": "metric_estimate",
+      "subject": "mana_development",
+      "metric_id": "zero_land_hand_rate",
+      "target_turn": 0,
+      "estimate": {
+        "metric_id": "zero_land_hand_rate",
+        "target_turn": 0,
+        "raw_count": 8000,
+        "sample_size": 100000,
+        "probability": 0.08,
+        "confidence_interval": {
+          "method": "wilson_score_interval",
+          "level": 0.95,
+          "lower": 0.078335,
+          "upper": 0.081698
+        }
+      }
+    },
+    {
+      "claim_type": "metric_estimate",
+      "subject": "mana_development",
+      "metric_id": "one_land_hand_rate",
+      "target_turn": 0,
+      "estimate": {
+        "metric_id": "one_land_hand_rate",
+        "target_turn": 0,
+        "raw_count": 18000,
+        "sample_size": 100000,
+        "probability": 0.18,
+        "confidence_interval": {
+          "method": "wilson_score_interval",
+          "level": 0.95,
+          "lower": 0.177631,
+          "upper": 0.182393
+        }
+      }
+    },
+    {
+      "claim_type": "metric_estimate",
+      "subject": "mana_development",
+      "metric_id": "excessive_land_hand_rate",
+      "target_turn": 0,
+      "estimate": {
+        "metric_id": "excessive_land_hand_rate",
+        "target_turn": 0,
+        "raw_count": 5000,
+        "sample_size": 100000,
+        "probability": 0.05,
+        "confidence_interval": {
+          "method": "wilson_score_interval",
+          "level": 0.95,
+          "lower": 0.048666,
+          "upper": 0.051368
+        }
+      }
+    },
+    {
+      "claim_type": "metric_estimate",
+      "subject": "mana_development",
+      "metric_id": "land_drop_success_by_turn",
+      "target_turn": 6,
+      "estimate": {
+        "metric_id": "land_drop_success_by_turn",
+        "target_turn": 6,
+        "raw_count": 62000,
+        "sample_size": 100000,
+        "probability": 0.62,
+        "confidence_interval": {
+          "method": "wilson_score_interval",
+          "level": 0.95,
+          "lower": 0.616987,
+          "upper": 0.623004
+        }
+      }
+    },
+    {
+      "claim_type": "metric_estimate",
+      "subject": "mana_development",
+      "metric_id": "ramp_access_by_turn",
+      "target_turn": 3,
+      "estimate": {
+        "metric_id": "ramp_access_by_turn",
+        "target_turn": 3,
+        "raw_count": 65000,
+        "sample_size": 100000,
+        "probability": 0.65,
+        "confidence_interval": {
+          "method": "wilson_score_interval",
+          "level": 0.95,
+          "lower": 0.647038,
+          "upper": 0.65295
+        }
+      }
+    },
+    {
+      "claim_type": "metric_estimate",
+      "subject": "mana_development",
+      "metric_id": "distinct_commander_colors_by_turn",
+      "target_turn": 6,
+      "estimate": {
+        "metric_id": "distinct_commander_colors_by_turn",
+        "target_turn": 6,
+        "sample_size": 100000,
+        "bins": [
+          {
+            "value": 0,
+            "raw_count": 12000,
+            "proportion": 0.12
+          },
+          {
+            "value": 1,
+            "raw_count": 16000,
+            "proportion": 0.16
+          },
+          {
+            "value": 2,
+            "raw_count": 18000,
+            "proportion": 0.18
+          },
+          {
+            "value": 3,
+            "raw_count": 20000,
+            "proportion": 0.2
+          },
+          {
+            "value": 4,
+            "raw_count": 19000,
+            "proportion": 0.19
+          },
+          {
+            "value": 5,
+            "raw_count": 15000,
+            "proportion": 0.15
+          }
+        ],
+        "mean": 2.63
+      }
+    },
+    {
+      "claim_type": "metric_estimate",
+      "subject": "mana_development",
+      "metric_id": "five_color_availability_by_turn",
+      "target_turn": 6,
+      "estimate": {
+        "metric_id": "five_color_availability_by_turn",
+        "target_turn": 6,
+        "raw_count": 61000,
+        "sample_size": 100000,
+        "probability": 0.61,
+        "confidence_interval": {
+          "method": "wilson_score_interval",
+          "level": 0.95,
+          "lower": 0.606973,
+          "upper": 0.613019
+        }
+      }
+    }
+  ],
+  "semantic_dependencies": {
+    "policy": {
+      "path": "workshop/projects/the-myr-singularity/simulation/simulation_policy.json",
+      "content_fingerprint": "artifact-content-sha256-v1:5f7bf09f7ab9bf33b7afe2bed6c6e89b7647127d9764e4b336419c5a61a51426"
+    },
+    "question": {
+      "path": "workshop/projects/the-myr-singularity/simulation/questions/question-001-mana-color.json",
+      "content_fingerprint": "artifact-content-sha256-v1:cc6d341054dfc8cf5774cbab3f92a01b274e7480b85774991272e23a8b5fbd15"
+    },
+    "card_semantics": {
+      "path": "workshop/projects/the-myr-singularity/simulation/card_semantics.json",
+      "content_fingerprint": "artifact-content-sha256-v1:899703e6b2d07243f075505adf3ebbff05b0a784cb787f634464d7da6cb8e4f3"
+    },
+    "canonical_card_facts": {
+      "path": "workshop/card-data/cards.json",
+      "content_fingerprint": "artifact-content-sha256-v1:08ddc5a05bd4572fa5a5aa85d1751181c62dde16576489f3f52b486e36d1f971"
+    },
+    "failure_pattern_taxonomy": {
+      "path": "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json",
+      "content_fingerprint": "artifact-content-sha256-v1:c62383f49b255c5c231132629006bfdc4fad634720a1ac44f13e4847bebcbce7"
+    },
+    "simulation_question_contract": {
+      "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json",
+      "content_fingerprint": "artifact-content-sha256-v1:12ced0927bcaf21056848199cf79bb321acf518578c21e2a4971f251c27d9151"
+    },
+    "simulation_run_contract": {
+      "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_run.contract.json",
+      "content_fingerprint": "artifact-content-sha256-v1:292be06ebba3f57d778f8a0af147e643ee307035a792c49977dc547d5c9e69d2"
+    },
+    "simulation_result_contract": {
+      "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_result.contract.json",
+      "content_fingerprint": "artifact-content-sha256-v1:8b5b2f5b0d53669f6a2421071f6762a1d8c34be44c47e7cb02ed58b26cf46d92"
+    },
+    "comparison_result_contract": {
+      "path": "workshop/projects/the-myr-singularity/simulation/contracts/comparison_result.contract.json",
+      "content_fingerprint": "artifact-content-sha256-v1:c8883d3e99b23ce5d08990aa9bdc5becde95a11e3c88fb8fa7dd89cb35472374"
+    },
+    "deck_version": {
+      "path": "workshop/projects/the-myr-singularity/versions/v1.1.json",
+      "deck_content_fingerprint": "deck-content-sha256-canonical-v2:510ba8e90025aec8d289edbf895405b7ddde6614161502a3ec47d4beaa56b120"
+    }
   }
 }

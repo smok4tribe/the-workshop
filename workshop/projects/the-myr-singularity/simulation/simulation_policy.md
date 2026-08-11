@@ -1,4 +1,4 @@
-# Simulation Policy sim-policy-v1
+# Simulation Policy sim-policy-v2
 
 Policy id: `the-myr-singularity-simulation-policy` — project `the-myr-singularity`
 
@@ -74,12 +74,11 @@ Non-overridable invariants:
 
 ## Bottoming Rule
 
-Rule id: `deterministic-bottoming-v1`
+Rule id: `deterministic-bottoming-v2`
 
-1. highest_mana_value_nonland — The single highest-mana-value nonland card.
-2. remaining_high_mana_value_nonlands — Remaining nonland cards in descending mana value.
-3. lands_above_three — Lands only when more than three lands remain in hand, removing surplus lands above three.
-4. stable_normalized_card_identity_tiebreak — Ties at any rank are broken by ascending NFKC-normalized card identity so bottoming is fully deterministic.
+1. nonlands_descending_mana_value — All nonlands by descending mana value, then lowercase oracle_id and duplicate ordinal ascending.
+2. lands_above_three — Lands while more than three remain, by lowercase oracle_id and duplicate ordinal ascending.
+3. remaining_lands — If bottoms remain owed, remaining lands by lowercase oracle_id and duplicate ordinal ascending.
 
 ## Card Behavior Boundary
 
@@ -98,8 +97,9 @@ Fixture-specific modeled card behavior lives in `workshop/projects/the-myr-singu
 
 - RNG id: pcg32-v1
 - Seed type: unsigned_64_bit
-- Seed derivation: `sim-seed-sha256-v1` over question_id + policy_version + deck_content_fingerprint + run_role
-- Seed extraction: The seed is the first 64 bits of the digest read as the first 8 bytes in big-endian order, interpreted as an unsigned 64-bit integer.
+- Seed derivation: `sim-seed-sha256-v2` over question_content_fingerprint + policy_content_fingerprint + deck_content_fingerprint + run_role
+- Iteration derivation: `sim-iteration-seed-sha256-v1`; fresh RNG per iteration and continuous stream across mulligans.
+- Seed extraction: first 8 digest bytes, big-endian unsigned 64-bit
 
 ## Iteration and Uncertainty
 
@@ -111,12 +111,43 @@ Fixture-specific modeled card behavior lives in `workshop/projects/the-myr-singu
 
 ## Deck-Content Fingerprint
 
-Algorithm id: `deck-content-sha256-v1`
+Algorithm id: `deck-content-sha256-canonical-v2`
 
 - Included zones: commander, library
 - Excluded: sideboard
 
-Reference fingerprints (deck identity only, not results): v1.0 `deck-content-sha256-v1:be721eb9d1662606812ceeb16ed476ebd7a0a7070bfd68b8e76efa085b364d3e`; v1.1 `deck-content-sha256-v1:064801f0679b6dea14e52695efb0c1e92b095e810612d9d0929b45d6223c7cf4`.
+Reference fingerprints (deck identity only, not results): v1.0 `deck-content-sha256-canonical-v2:d70d0097753c001192e49f1e270359bf3b5bf20b53fd91c16e69c3bed1e337fa`; v1.1 `deck-content-sha256-canonical-v2:510ba8e90025aec8d289edbf895405b7ddde6614161502a3ec47d4beaa56b120`.
+
+## Metric Registry
+
+| Metric | Target turn | Shape | Required |
+| --- | ---: | --- | --- |
+| keepable_opening_hand_rate | 0 | bernoulli_probability | yes |
+| zero_land_hand_rate | 0 | bernoulli_probability | yes |
+| one_land_hand_rate | 0 | bernoulli_probability | yes |
+| excessive_land_hand_rate | 0 | bernoulli_probability | yes |
+| land_drop_success_by_turn | 6 | bernoulli_probability | yes |
+| ramp_access_by_turn | 3 | bernoulli_probability | yes |
+| distinct_commander_colors_by_turn | 6 | categorical_count | yes |
+| five_color_availability_by_turn | 6 | bernoulli_probability | yes |
+| commander_castability_by_turn | 3 | bernoulli_probability | no |
+
+## Deterministic Level 2 Trace
+
+1. `untap_and_clear_floating_mana`
+2. `draw`
+3. `advance_time_dependent_state`
+4. `select_and_play_one_land`
+5. `repeatedly_deploy_payable_registered_ramp`
+6. `resolve_pending_time_dependent_removals`
+7. `record_end_of_turn_observations`
+
+Urza's Saga timing: At controller-turn offset 2, Urza's Saga remains usable during the approved development window, then its final-chapter removal occurs before end-of-turn observation; once removed it contributes to no end-of-turn metric.
+
+Source-capability projection: surviving online source color capabilities, irrespective of earlier tapping
+Spendable-mana projection: actual remaining untapped payable sources after deterministic development
+
+Unsupported actions: Actions without explicit complete policy registration cannot be selected or improve a metric.
 
 ## Evidence-Language Boundary
 
