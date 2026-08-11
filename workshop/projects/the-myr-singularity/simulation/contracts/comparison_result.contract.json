@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "comparison_result_contract",
+  "contract_id": "comparison-result-contract-v1",
+  "project_id": "the-myr-singularity",
+  "policy_version": "sim-policy-v1",
+  "generated_at": "2026-07-13T00:00:00Z",
+  "purpose": "Defines the data contract for a ComparisonResult. A ComparisonResult compares two resolved SimulationResults under computed semantic parity: policy, question, iteration count, configuration, metric definitions, scenario, and RNG strategy. Identity consequences of distinct DeckVersions may differ. It records full side estimates and absolute and optional relative deltas, but no delta confidence interval. It carries no reasoning interpretation and no Product Owner decision. Task 30 defines this contract but creates no ComparisonResult instance.",
+  "scope": {
+    "includes": [
+      "Required ComparisonResult fields and their meaning.",
+      "Computed semantic-parity validation between the two referenced runs and results.",
+      "Full baseline and candidate estimates plus absolute and optional relative delta.",
+      "The evidence-honesty and lifecycle boundaries."
+    ],
+    "excludes": [
+      "Reasoning interpretation and Product Owner decisions.",
+      "Gameplay, win-rate, or generic-quality claims.",
+      "Comparing versions under different policies, questions, iteration counts, configurations, scenarios, RNG strategies, or metric definitions.",
+      "Any deck change."
+    ]
+  },
+  "required_fields": {
+    "comparison_id": {"type": "string", "description": "Stable comparison identity."},
+    "artifact_type": {"type": "string", "const": "comparison_result", "description": "Must be 'comparison_result' for instances."},
+    "project_id": {"type": "string", "description": "Owning project id."},
+    "question_id": {"type": "string", "description": "The shared SimulationQuestion both runs answered."},
+    "policy_version": {"type": "string", "description": "The shared policy version."},
+    "iteration_count": {"type": "integer", "description": "The shared iteration count used by both runs."},
+    "baseline": {
+      "type": "object",
+      "description": "The baseline side.",
+      "required_fields": ["deck_version_id", "run_id", "result_id", "deck_content_fingerprint", "run_role"]
+    },
+    "candidate": {
+      "type": "object",
+      "description": "The candidate side.",
+      "required_fields": ["deck_version_id", "run_id", "result_id", "deck_content_fingerprint", "run_role"]
+    },
+    "metric_deltas": {
+      "type": "array",
+      "description": "One entry per compared metric.",
+      "item_required_fields": ["metric_id", "target_turn", "baseline_estimate", "candidate_estimate", "absolute_delta"],
+      "estimate_required_fields": ["raw_count", "sample_size", "probability", "confidence_interval"],
+      "absolute_delta_definition": "candidate_estimate.probability minus baseline_estimate.probability.",
+      "relative_delta_field": "relative_delta is optional and valid only when baseline_estimate.probability is non-zero; when baseline is zero it must be omitted or null with relative_delta_applicable false.",
+      "delta_confidence_interval": "not defined"
+    },
+    "readable_summary": {"type": "string", "description": "A cautious plain-language comparison within the evidence-language boundary."},
+    "limitations": {"type": "array", "description": "Comparison limitations, including any carried from either result."},
+    "created_at": {"type": "string", "description": "ISO 8601 creation timestamp."},
+    "source_references": {
+      "type": "object",
+      "description": "Repo-relative references to both runs, both results, the policy, and the question.",
+      "required_fields": ["baseline_run", "candidate_run", "baseline_result", "candidate_result", "policy", "question"]
+    },
+    "explicit_boundary": {
+      "type": "object",
+      "description": "Boolean boundary flags.",
+      "required_fields": ["carries_interpretation", "carries_product_owner_decision", "is_gameplay_claim", "creates_deck_version", "attributes_deck_content_effect"]
+    }
+  },
+  "boundary_rules": [
+    "The validator resolves both referenced runs and results, then computes semantic parity across policy, question, iteration count, configuration, metric definitions, scenario, and RNG strategy. Self-declared parity booleans are not authoritative.",
+    "The compared runs must reference distinct DeckVersions, but their deck_content_fingerprints may be equal. When fingerprints are equal, the comparison must not attribute an effect to deck content.",
+    "absolute_delta equals candidate_estimate.probability minus baseline_estimate.probability. A delta confidence interval is not defined by this contract.",
+    "relative_delta is secondary and valid only when baseline_probability is non-zero.",
+    "A ComparisonResult carries no reasoning_interpretation and no product_owner_decision field.",
+    "No summary may express win rate, gameplay performance, or generic deck quality.",
+    "A ComparisonResult never creates or edits a DeckVersion."
+  ],
+  "validation_expectations": [
+    "The comparison JSON parses and has every required field.",
+    "Resolved runs and results prove semantic parity across policy, question, iteration count, config, metric definitions, scenario, and RNG strategy.",
+    "baseline and candidate reference distinct DeckVersions with DeckVersion-matching fingerprints; equal fingerprints are structurally valid.",
+    "Each metric_delta reports full baseline_estimate and candidate_estimate and an absolute_delta equal to their probability difference.",
+    "relative_delta is present only when baseline_estimate.probability is non-zero.",
+    "No forbidden evidence-language claim appears in any label or summary.",
+    "No reasoning_interpretation or product_owner_decision field is present.",
+    "explicit_boundary.carries_interpretation, carries_product_owner_decision, is_gameplay_claim, and creates_deck_version are all false."
+  ],
+  "task_30_state": {
+    "instances_created": 0,
+    "note": "Task 30 defines this contract only. No ComparisonResult instance is created, and the v1.0-versus-v1.1 comparison is not executed."
+  }
+}

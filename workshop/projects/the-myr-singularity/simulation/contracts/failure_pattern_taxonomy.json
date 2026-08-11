@@ -1,0 +1,111 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "failure_pattern_taxonomy",
+  "taxonomy_id": "sim-failure-taxonomy-v1",
+  "taxonomy_version": "v1",
+  "project_id": "the-myr-singularity",
+  "policy_version": "sim-policy-v1",
+  "generated_at": "2026-07-13T00:00:00Z",
+  "purpose": "Defines the controlled vocabulary of failure-pattern categories that a SimulationResult may reference. Results reference these category IDs; they never invent new failure categories inline. Categories cover hand, land, mana, ramp, and color failures for the committed Sprint 2 metrics.",
+  "scope": {
+    "includes": [
+      "The closed set of failure-pattern category IDs and their meaning.",
+      "The metric family each category relates to.",
+      "The distinction between mana-quantity failures and color-access failures."
+    ],
+    "excludes": [
+      "Observed frequencies (those belong to a SimulationResult).",
+      "Interpretation of why a pattern matters (that belongs to reasoning).",
+      "Gameplay, combat, or opponent failure modes."
+    ]
+  },
+  "category_id_rule": "Every category_id is lowercase snake_case, unique, and stable across the taxonomy version. A SimulationResult failure pattern must reference exactly one category_id from this set.",
+  "categories": [
+    {
+      "category_id": "zero_land_hand",
+      "family": "hand",
+      "description": "Opening or post-mulligan hand contained no lands and was rejected by the keep rule.",
+      "distinguishes": "hand_composition"
+    },
+    {
+      "category_id": "one_land_hand_unkept",
+      "family": "hand",
+      "description": "One-land hand that failed the modeled early-acceleration exception and was mulliganed.",
+      "distinguishes": "hand_composition"
+    },
+    {
+      "category_id": "excessive_land_hand",
+      "family": "hand",
+      "description": "Hand contained six or seven lands and was rejected by the keep rule.",
+      "distinguishes": "hand_composition"
+    },
+    {
+      "category_id": "mulligan_to_low_hand",
+      "family": "hand",
+      "description": "Repeated mulligans reduced the final kept hand size via London bottoming.",
+      "distinguishes": "hand_composition"
+    },
+    {
+      "category_id": "missed_land_drop",
+      "family": "land",
+      "description": "A required land drop for the target turn was not made because no playable land was available.",
+      "distinguishes": "mana_quantity"
+    },
+    {
+      "category_id": "insufficient_mana_by_turn",
+      "family": "mana",
+      "description": "Total available mana by the target turn fell below the amount the metric required.",
+      "distinguishes": "mana_quantity"
+    },
+    {
+      "category_id": "ramp_not_available_by_turn",
+      "family": "ramp",
+      "description": "No modeled ramp source was available (or accessible, per the metric variant) by the target turn.",
+      "distinguishes": "mana_quantity"
+    },
+    {
+      "category_id": "single_color_missing_by_turn",
+      "family": "color",
+      "description": "One required commander color had no online source by the target turn while other colors were available.",
+      "distinguishes": "color_access"
+    },
+    {
+      "category_id": "multiple_colors_missing_by_turn",
+      "family": "color",
+      "description": "Two or more required colors had no online source by the target turn.",
+      "distinguishes": "color_access"
+    },
+    {
+      "category_id": "five_color_not_complete_by_turn",
+      "family": "color",
+      "description": "At least one of the five colors was missing an online source by the target turn, so full five-color availability was not reached.",
+      "distinguishes": "color_access"
+    },
+    {
+      "category_id": "mana_present_wrong_colors",
+      "family": "color",
+      "description": "Sufficient total mana was available but the specific required colors were not, isolating a color-access failure from a mana-quantity failure.",
+      "distinguishes": "color_access"
+    },
+    {
+      "category_id": "unsupported_card_behavior_limited_run",
+      "family": "boundary",
+      "description": "A card in the modeled deck had behavior that is neither resolvable from canonical Card Facts nor declared in card_semantics.json; it was surfaced as a limitation and contributed nothing to any success metric.",
+      "distinguishes": "evidence_boundary"
+    }
+  ],
+  "family_summary": {
+    "hand": "Keepability and mulligan outcomes.",
+    "land": "Land-drop development.",
+    "mana": "Total mana quantity by turn.",
+    "ramp": "Access to or availability of acceleration.",
+    "color": "Individual-color and five-color access.",
+    "boundary": "Evidence-boundary limitation, not a gameplay failure."
+  },
+  "quantity_versus_color_distinction": {
+    "statement": "The taxonomy deliberately separates mana-quantity failures (missed_land_drop, insufficient_mana_by_turn, ramp_not_available_by_turn) from color-access failures (single_color_missing_by_turn, multiple_colors_missing_by_turn, five_color_not_complete_by_turn, mana_present_wrong_colors) so that a SimulationResult can distinguish 'not enough mana' from 'not the right colors'."
+  },
+  "explicit_boundary": {
+    "statement": "This taxonomy defines category identities only. It records no frequencies, no results, and no interpretation, and it authorizes no deck change."
+  }
+}

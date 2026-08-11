@@ -1,0 +1,44 @@
+{
+  "fixture_note": "INVALID fixture: deck_content_fingerprint does not match v1.1.",
+  "run_id": "fixture-run-fp-mismatch",
+  "artifact_type": "simulation_run",
+  "project_id": "the-myr-singularity",
+  "question_id": "question-001-mana-color",
+  "policy_id": "the-myr-singularity-simulation-policy",
+  "policy_version": "sim-policy-v1",
+  "deck_version_id": "v1.1",
+  "deck_version_path": "workshop/projects/the-myr-singularity/versions/v1.1.json",
+  "deck_content_fingerprint": "deck-content-sha256-v1:0000000000000000000000000000000000000000000000000000000000000000",
+  "run_role": "candidate_v1.1",
+  "rng_id": "pcg32-v1",
+  "seed_type": "unsigned_64_bit",
+  "seed": 16223877654710272897,
+  "seed_derivation_algorithm_id": "sim-seed-sha256-v1",
+  "iteration_count": 100000,
+  "config": {
+    "mulligan_policy_ref": "sim-policy-v1:mulligan_policy",
+    "keep_rule_ref": "sim-policy-v1:keep_rule",
+    "bottoming_rule_ref": "sim-policy-v1:bottoming_rule",
+    "observation_horizon_turn": 6,
+    "sequencing_levels": [
+      "level_1",
+      "level_2"
+    ],
+    "card_semantics_ref": "workshop/projects/the-myr-singularity/simulation/card_semantics.json"
+  },
+  "status": "planned",
+  "limitations": [
+    "Fixture illustrates run shape only; it is not executed."
+  ],
+  "source_references": {
+    "policy": "workshop/projects/the-myr-singularity/simulation/simulation_policy.json",
+    "question": "workshop/projects/the-myr-singularity/simulation/questions/question-001-mana-color.json",
+    "deck_version": "workshop/projects/the-myr-singularity/versions/v1.1.json",
+    "card_semantics": "workshop/projects/the-myr-singularity/simulation/card_semantics.json"
+  },
+  "explicit_boundary": {
+    "carries_metrics": false,
+    "carries_interpretation": false,
+    "creates_deck_version": false
+  }
+}

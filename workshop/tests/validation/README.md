@@ -15,6 +15,7 @@ checks. Every validator is read-only and uses only the Python standard library.
 | `validate_deck_versions.py` | Current deck, parent/child DeckVersions, quantity-aware diffs, and implementation integrity |
 | `validate_project_reports.py` | Structured project reports, source traceability, exact DeckVersion deltas, evidence status, and deterministic Markdown |
 | `validate_sprint_1_certification.py` | Sprint closure, exit criteria, backlog/checklist closure, evidence honesty, and independent-review state |
+| `validate_simulation_contracts.py` | Sprint 2 Task 30 simulation policy, card semantics, question/run/result/comparison contracts, failure-pattern taxonomy, deck-content fingerprint recomputation, and no-production-result boundary |
 
 `validate_recommendation_review.py` intentionally does not validate decisions,
 designs, approval, implementation, DeckVersions, or `deck/current.txt`.
@@ -249,6 +250,42 @@ established lower-level suite remains in `test_validation_architecture.py` so
 the certification validator can run it without recursion. The production
 candidate remains `pending_independent_review`; passing validation does not by
 itself certify Sprint 1.
+
+## Simulation contracts validation (Sprint 2, Task 30)
+
+`validate_simulation_contracts.py` validates the frozen simulation semantic
+contract before any engine or run exists. It checks:
+
+- The Simulation Policy owns the universal result-changing assumptions
+  (commander scenario, turn/draw semantics, observation horizon, mulligan,
+  keep, bottoming, sequencing levels, mana/color/ramp resolution, seed/RNG
+  identity, iteration and uncertainty policy, fingerprint definition, and the
+  evidence-language boundary), and does not encode fixture-specific card
+  behavior.
+- `card_semantics.json` supplies project-scoped, source-aware overrides only
+  for cards whose canonical `produced_mana` is null (City of Brass and Mana
+  Confluence as any-color five-color sources; Urza's Saga as a colorless-only,
+  non-five-color land), each flagged as compensating for the missing canonical
+  data and never editing canonical Card Facts.
+- The deck-content fingerprint (`deck-content-sha256-v1`) recomputes from the
+  immutable DeckVersions to the recorded reference values for v1.0 and v1.1.
+- The SimulationRun contract prevents a run from floating without Project,
+  DeckVersion, fingerprint, question, policy, seed, iterations, and limitations;
+  the SimulationResult and ComparisonResult contracts keep result data separate
+  from reasoning and Product Owner decisions.
+- The documented first evidence question is bound but `not_executed`, uses
+  honest evidence language, and carries no results.
+- No production SimulationRun, SimulationResult, or comparison instance exists
+  under the project simulation directory.
+
+`render_simulation_policy.py` renders `simulation_policy.json` and
+`questions/question-001-mana-color.json` to their Markdown companions; a clean
+render must leave the committed Markdown unchanged. Positive and adversarial
+coverage lives in `test_simulation_contracts.py`, which also exercises the valid
+and invalid instance fixtures under `workshop/tests/fixtures/simulation/`.
+
+This task creates no production simulation result and changes no DeckVersion,
+deck, canonical Card Facts, or Sprint 1 certification state.
 
 ## Regression tests
 
