@@ -14,6 +14,7 @@ checks. Every validator is read-only and uses only the Python standard library.
 | `validate_decision_pipeline.py` | Recommendation, review, decisions, deck-change design, and Product Owner approval |
 | `validate_deck_versions.py` | Current deck, parent/child DeckVersions, quantity-aware diffs, and implementation integrity |
 | `validate_project_reports.py` | Structured project reports, source traceability, exact DeckVersion deltas, evidence status, and deterministic Markdown |
+| `validate_structural_analysis.py` | Post-v1.1 current-state structural analysis, DeckVersion fingerprint and count recomputation, and evidence-language boundaries |
 | `validate_sprint_1_certification.py` | Sprint closure, exit criteria, backlog/checklist closure, evidence honesty, and independent-review state |
 | `validate_simulation_contracts.py` | Sprint 2 Task 30 simulation policy, card semantics, question/run/result/comparison contracts, failure-pattern taxonomy, deck-content fingerprint recomputation, and no-production-result boundary |
 
@@ -32,6 +33,7 @@ python workshop/tests/validation/validate_recommendation_review.py
 python workshop/tests/validation/validate_decision_pipeline.py
 python workshop/tests/validation/validate_deck_versions.py
 python workshop/tests/validation/validate_project_reports.py
+python workshop/tests/validation/validate_structural_analysis.py
 python workshop/tests/validation/validate_sprint_1_certification.py
 ```
 
