@@ -212,18 +212,33 @@ commands must match those derived contracts; certification JSON cannot override
 the repository evidence.
 
 `candidate_base_commit` is verified through local git. It must be the configured
-Sprint integration base, be a real ancestor of `HEAD`, and have no protected
-product-artifact changes in the base-to-candidate diff. Production validation
-orchestrates both recommendation validators, every other layer validator, the
-non-recursive lower-level regression suite, recursive parsing of every Workshop
-JSON file, all three renderer parity checks, and the scope-control diff.
+Sprint integration base and a real ancestor of `HEAD`. The certification contract
+owns the exact historical Sprint 1 evidence identities whose later mutation,
+deletion, type change, copy, or rename invalidates certification. It separately
+owns exact source-reference paths and identity metadata, so certification JSON
+cannot redirect or shrink that evidence graph.
+
+Shared operational sources remain semantically validated but evolvable: project
+metadata, the current decklist, backlog and notes, checklists, and validation
+documentation may legitimately gain later-Sprint content. Later Sprint analysis,
+simulation, DeckVersion, recommendation, and decision artifacts do not
+retroactively invalidate completed Sprint 1 certification. They never permit a
+change to certified historical evidence.
+
+Production validation orchestrates both recommendation validators, every other
+layer validator, the non-recursive lower-level regression suite, recursive
+parsing of every Workshop JSON file, all three renderer parity checks, and the
+scope-control diff.
 
 Independent review uses a structured `sprint_certification_review` JSON source.
 Pending state forbids reviewer and finding data. Certified, certified-with-
 follow-ups, and not-certified states require a completed independent review,
 valid reviewed commit, resolvable review artifact, matching review fields, and
-state-appropriate findings or follow-ups. Changes after the reviewed candidate
-commit are limited to certification review-recording artifacts.
+state-appropriate findings or follow-ups. The reviewed-commit boundary protects
+the same exact historical evidence identities while permitting unrelated later-
+Sprint evolution. Certification recording paths remain governed by review-source
+agreement, canonical pending-candidate equivalence, and deterministic rendering;
+they are not a generic Git-scope exception.
 
 Backlog validation requires one structured record for each required work type,
 unique IDs, project ownership, controlled status/priority values, version and

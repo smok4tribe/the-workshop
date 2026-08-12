@@ -15,6 +15,7 @@ if str(_IMPORT_ROOT) not in sys.path:
 
 from workshop.tests.validation.certification_contract import (
     BACKLOG_WORK_TYPES,
+    CANONICAL_INDEPENDENT_REVIEW_SOURCE,
     CLAIM_BOUNDARY,
     CERTIFICATION_SCOPE,
     CHECKLIST_CONTRACT,
@@ -22,12 +23,14 @@ from workshop.tests.validation.certification_contract import (
     DOD_CAPABILITIES,
     EXPECTED_BASE_COMMIT,
     GATE_CONTRACT,
+    immutable_name_status_changes,
     LOOP_CONTRACT,
     NON_GOALS,
+    parse_git_name_status,
     PROJECT_ID,
-    PROTECTED_PREFIXES,
     REQUIRED_SOURCE_KEYS,
     SPRINT_ID,
+    source_reference_contract_errors,
     VALIDATION_COMMANDS,
     card_names_from_candidate,
     git,
@@ -74,11 +77,9 @@ def renderer_matches(markdown_path, render):
 
 def load_sources(cert, errors):
     references = cert.get("source_references")
+    errors.extend(source_reference_contract_errors(references))
     if not isinstance(references, dict):
-        errors.append("source_references must be an object")
         return {}, {}, {}
-    if set(references) != REQUIRED_SOURCE_KEYS:
-        errors.append("certification source contract does not match the required source set")
     paths, documents, texts = {}, {}, {}
     for key, value in references.items():
         loaded_paths, loaded_docs, loaded_texts = [], [], []
@@ -177,6 +178,21 @@ def validate_source_identities(cert, docs, texts):
     return errors
 
 
+def immutable_changes_since(commit, boundary_name):
+    diff = git(ROOT, "diff", "--name-status", "-M", f"{commit}..HEAD")
+    if diff.returncode:
+        return [], [f"cannot inspect {boundary_name} scope diff"]
+    try:
+        records = parse_git_name_status(diff.stdout)
+    except ValueError as exc:
+        return [], [f"cannot parse {boundary_name} scope diff: {exc}"]
+    return immutable_name_status_changes(records), []
+
+
+def format_name_status_changes(records):
+    return [f"{status}: {' -> '.join(paths)}" for status, paths in records]
+
+
 def validate_git_boundary(cert, expected_base_commit):
     errors = []
     base = cert.get("candidate_base_commit")
@@ -189,14 +205,13 @@ def validate_git_boundary(cert, expected_base_commit):
         return errors, False
     if git(ROOT, "merge-base", "--is-ancestor", base, "HEAD").returncode:
         errors.append("candidate_base_commit is not an ancestor of HEAD")
-    diff = git(ROOT, "diff", "--name-only", f"{base}..HEAD")
-    if diff.returncode:
-        errors.append("cannot inspect certification candidate scope diff")
-        return errors, False
-    changed = [line.strip().replace("\\", "/") for line in diff.stdout.splitlines() if line.strip()]
-    protected = [path for path in changed if any(path.startswith(prefix) for prefix in PROTECTED_PREFIXES)]
-    if protected:
-        errors.append(f"protected artifacts changed since candidate base: {protected}")
+    immutable_changes, diff_errors = immutable_changes_since(base, "certification candidate")
+    errors.extend(diff_errors)
+    if immutable_changes:
+        errors.append(
+            "historically immutable Sprint 1 artifacts changed since candidate base: "
+            f"{format_name_status_changes(immutable_changes)}"
+        )
     return errors, not errors
 
 
@@ -406,18 +421,17 @@ def validate_review_lifecycle(cert):
             errors.append("reviewed_commit pending certification candidate contains completed review data")
         elif reviewed_candidate != canonical_pending_projection(cert):
             errors.append("reviewed_commit certification candidate differs from the canonical pending projection of the recorded certification")
-        changed = git(ROOT, "diff", "--name-only", f"{review['reviewed_commit']}..HEAD")
-        allowed = (
-            "workshop/projects/the-myr-singularity/reports/sprint_1_certification.json",
-            "workshop/projects/the-myr-singularity/reports/sprint_1_certification.md",
-            "workshop/projects/the-myr-singularity/reports/sprint_1_certification_review",
+        immutable_changes, diff_errors = immutable_changes_since(
+            review["reviewed_commit"], "independent review"
         )
-        unexpected = [
-            line.strip().replace("\\", "/") for line in changed.stdout.splitlines()
-            if line.strip() and not line.strip().replace("\\", "/").startswith(allowed)
-        ]
-        if changed.returncode or unexpected:
-            errors.append("changes after reviewed_commit exceed certification review recording scope")
+        errors.extend(diff_errors)
+        if immutable_changes:
+            errors.append(
+                "historically immutable Sprint 1 artifacts changed after reviewed_commit: "
+                f"{format_name_status_changes(immutable_changes)}"
+            )
+    if review.get("review_source") != CANONICAL_INDEPENDENT_REVIEW_SOURCE:
+        errors.append("independent review source is not the canonical Sprint 1 certification review artifact")
     source = resolve_repo_path(ROOT, review.get("review_source"))
     if not source or not source.is_file():
         errors.append("independent review source does not resolve")

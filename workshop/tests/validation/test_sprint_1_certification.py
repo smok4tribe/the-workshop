@@ -14,6 +14,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from workshop.tests.validation.certification_contract import (
+    CANONICAL_INDEPENDENT_REVIEW_SOURCE,
+    HISTORICALLY_IMMUTABLE_SPRINT_1_ARTIFACTS,
+    immutable_name_status_changes,
+    parse_git_name_status,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -109,6 +115,10 @@ class CertificationFixture:
         self.write(self.backlog_path, backlog)
         self.render()
 
+    def commit_workshop(self, message):
+        self.git("add", "workshop")
+        self.git("commit", "-m", message)
+
     def complete_review(self, *, status="certified", verdict="APPROVE", followups=None, blockers=None, rationale=None, reviewed_commit=None, source=True):
         followups = [] if followups is None else followups
         blockers = [] if blockers is None else blockers
@@ -148,7 +158,7 @@ class CertificationFixture:
                 "status": "completed", "reviewer": "Sol",
                 "reviewer_role": "independent_reviewer", "verdict": verdict,
                 "reviewed_commit": reviewed_commit, "reviewed_at": "2026-07-12T12:00:00Z",
-                "review_source": {"path": "workshop/projects/the-myr-singularity/reports/sprint_1_certification_review.json"},
+                "review_source": dict(CANONICAL_INDEPENDENT_REVIEW_SOURCE),
                 "blocking_findings": blockers, "non_blocking_followups": followups,
                 "rationale": rationale,
             }
@@ -170,7 +180,7 @@ class SprintCertificationTests(unittest.TestCase):
                 copied["independent_review"] = {
                     "status": "completed", "reviewer_role": "independent_reviewer", "reviewer": "Sol",
                     "verdict": verdict, "reviewed_commit": "a" * 40, "reviewed_at": "2026-07-12T12:00:00Z",
-                    "review_source": {"path": "workshop/projects/the-myr-singularity/reports/sprint_1_certification_review.json"},
+                    "review_source": dict(CANONICAL_INDEPENDENT_REVIEW_SOURCE),
                     "blocking_findings": blockers, "non_blocking_followups": followups, "rationale": "Recorded review",
                 }
                 copied["next_action"] = {"action_id": "recorded", "description": "Recorded lifecycle state."}
@@ -316,10 +326,10 @@ class SprintCertificationTests(unittest.TestCase):
 
     def test_02_source_and_base_mutations(self):
         cases = [
-            ("wrong source", lambda f: f.mutate_cert(lambda c: c["source_references"]["project_report"].update(path="workshop/projects/the-myr-singularity/project.json")), "project report source identity"),
-            ("wrong source ID", lambda f: f.mutate_cert(lambda c: c["source_references"]["rec_002"].update(id="rec-999")), "rec-002 source identity"),
+            ("wrong source", lambda f: f.mutate_cert(lambda c: c["source_references"]["project_report"].update(path="workshop/projects/the-myr-singularity/project.json")), "source 'project_report' does not match the canonical Sprint 1 source-reference contract"),
+            ("wrong source ID", lambda f: f.mutate_cert(lambda c: c["source_references"]["rec_002"].update(id="rec-999")), "source 'rec_002' does not match the canonical Sprint 1 source-reference contract"),
             ("arbitrary base", lambda f: f.mutate_cert(lambda c: c.update(candidate_base_commit="a" * 40)), "candidate_base_commit"),
-            ("protected change", self._commit_protected_change, "protected artifacts changed"),
+            ("protected change", self._commit_protected_change, "historically immutable Sprint 1 artifacts changed"),
         ]
         for name, mutate, expected in cases:
             with self.subTest(name=name), CertificationFixture() as fixture:
@@ -328,10 +338,107 @@ class SprintCertificationTests(unittest.TestCase):
 
     @staticmethod
     def _commit_protected_change(fixture):
-        path = fixture.project / "deck" / "current.txt"
+        path = fixture.project / "versions" / "v1.1.json"
         path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
         fixture.git("add", str(path.relative_to(fixture.root)))
         fixture.git("commit", "-m", "protected mutation")
+
+    def test_02a_canonical_source_references_cannot_redefine_sprint_1_boundary(self):
+        with CertificationFixture() as fixture:
+            fixture.mutate_cert(lambda cert: cert["source_references"].pop("baseline_analysis"))
+            self.assert_fails(
+                fixture,
+                "source 'baseline_analysis' does not match the canonical Sprint 1 source-reference contract",
+            )
+
+        with CertificationFixture() as fixture:
+            fixture.mutate_cert(
+                lambda cert: cert["source_references"]["baseline_analysis"].update(
+                    path="workshop/projects/the-myr-singularity/analysis/current_v1.1.json"
+                )
+            )
+            self.assert_fails(
+                fixture,
+                "source 'baseline_analysis' does not match the canonical Sprint 1 source-reference contract",
+            )
+
+        with CertificationFixture() as fixture:
+            fixture.mutate_cert(
+                lambda cert: cert["source_references"]["baseline_analysis"].update(
+                    path="workshop/projects/the-myr-singularity/analysis/current_v1.1.json"
+                )
+            )
+            historical = fixture.project / "analysis" / "baseline_v1.0.json"
+            historical.write_text(historical.read_text(encoding="utf-8") + " ", encoding="utf-8")
+            fixture.commit_workshop("attempt to shrink historical scope")
+            output = fixture.run_validator().stdout
+            self.assertIn("canonical Sprint 1 source-reference contract", output)
+            self.assertIn("historically immutable Sprint 1 artifacts changed", output)
+
+    def test_02b_historical_scope_permits_later_sprint_evolution(self):
+        cases = [
+            ("current_v1.1 JSON", "analysis/current_v1.1.json", lambda path: path.write_text(path.read_text(encoding="utf-8") + " ", encoding="utf-8")),
+            ("current_v1.1 Markdown", "analysis/current_v1.1.md", lambda path: path.write_text(path.read_text(encoding="utf-8") + "\nLater analysis note.\n", encoding="utf-8")),
+            ("future analysis", "analysis/future-v1.2.json", lambda path: path.write_text("{}\n", encoding="utf-8")),
+            ("Sprint 2 simulation", "simulation/later-sprint.json", lambda path: (path.parent.mkdir(parents=True, exist_ok=True), path.write_text("{}\n", encoding="utf-8"))),
+            ("DeckVersion v1.2", "versions/v1.2.json", lambda path: path.write_text("{}\n", encoding="utf-8")),
+            ("later recommendation", "recommendations/rec-003.json", lambda path: path.write_text("{}\n", encoding="utf-8")),
+            ("later decision", "decisions/decision-005.json", lambda path: path.write_text("{}\n", encoding="utf-8")),
+            ("validation documentation", "../../tests/validation/README.md", lambda path: path.write_text(path.read_text(encoding="utf-8") + "\n## Sprint 2 Extension\n\nLater validation documentation.\n", encoding="utf-8")),
+        ]
+        for name, relative, mutate in cases:
+            with self.subTest(name=name), CertificationFixture() as fixture:
+                fixture.complete_review()
+                path = fixture.project / relative
+                mutate(path)
+                fixture.commit_workshop(f"later evolution: {name}")
+                result = fixture.run_validator()
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_02c_historical_scope_rejects_immutable_evidence_changes(self):
+        for relative in sorted(HISTORICALLY_IMMUTABLE_SPRINT_1_ARTIFACTS):
+            with self.subTest(path=relative), CertificationFixture() as fixture:
+                path = fixture.root / relative
+                path.write_text(path.read_text(encoding="utf-8") + " ", encoding="utf-8")
+                fixture.commit_workshop(f"mutate {relative}")
+                self.assert_fails(
+                    fixture,
+                    "historically immutable Sprint 1 artifacts changed since candidate base",
+                )
+
+    def test_02d_name_status_parser_rejects_every_historical_intersection(self):
+        protected = "workshop/projects/the-myr-singularity/versions/v1.1.json"
+        outside = "workshop/projects/the-myr-singularity/analysis/current_v1.1.json"
+        records = parse_git_name_status(
+            "\n".join((
+                f"A\t{protected}", f"M\t{protected}", f"D\t{protected}",
+                f"T\t{protected}", f"R100\t{protected}\t{outside}",
+                f"R100\t{outside}\t{protected}", f"C100\t{outside}\t{protected}",
+            ))
+        )
+        self.assertEqual(len(immutable_name_status_changes(records)), 7)
+        with self.assertRaisesRegex(ValueError, "malformed Git name-status record"):
+            parse_git_name_status(f"R100\t{protected}")
+
+    def test_02e_historical_scope_rejects_protected_delete_and_rename_away(self):
+        relative = "workshop/projects/the-myr-singularity/analysis/baseline_v1.0.md"
+        with CertificationFixture() as fixture:
+            fixture.git("rm", relative)
+            fixture.git("commit", "-m", "delete protected evidence")
+            self.assert_fails(
+                fixture,
+                "historically immutable Sprint 1 artifacts changed since candidate base",
+            )
+        with CertificationFixture() as fixture:
+            fixture.git(
+                "mv", relative,
+                "workshop/projects/the-myr-singularity/analysis/baseline-retired.md",
+            )
+            fixture.git("commit", "-m", "rename protected evidence")
+            self.assert_fails(
+                fixture,
+                "historically immutable Sprint 1 artifacts changed since candidate base",
+            )
 
     def test_03_product_loop_mutations(self):
         cases = [
@@ -478,6 +585,58 @@ class SprintCertificationTests(unittest.TestCase):
             with self.subTest(name=name), CertificationFixture() as fixture:
                 mutate(fixture)
                 self.assert_fails(fixture, expected)
+
+    def test_09c_reviewed_commit_rejects_historical_mutation(self):
+        with CertificationFixture() as fixture:
+            fixture.complete_review()
+            fixture.commit_workshop("record valid review")
+            path = fixture.project / "reports" / "project_report_v1.1.json"
+            path.write_text(path.read_text(encoding="utf-8") + " ", encoding="utf-8")
+            fixture.commit_workshop("mutate historical evidence after review")
+            self.assert_fails(
+                fixture,
+                "historically immutable Sprint 1 artifacts changed after reviewed_commit",
+            )
+
+    def test_09d_certification_recording_tampering_remains_invalid(self):
+        with CertificationFixture() as fixture:
+            fixture.complete_review()
+            review_path = fixture.project / "reports" / "sprint_1_certification_review.json"
+            review = fixture.load(review_path)
+            review["reviewer"] = "Forged reviewer"
+            fixture.write(review_path, review)
+            self.assert_fails(fixture, "independent review source does not agree")
+
+    def test_09e_certification_review_source_cannot_be_redirected(self):
+        alternate_path = "workshop/projects/the-myr-singularity/reports/alternate_review.json"
+        with self.subTest("redirected copy"), CertificationFixture() as fixture:
+            fixture.complete_review()
+            review = fixture.load(fixture.project / "reports" / "sprint_1_certification_review.json")
+            fixture.write(fixture.root / alternate_path, review)
+            fixture.mutate_cert(
+                lambda cert: cert["independent_review"].update(
+                    review_source={"path": alternate_path}
+                )
+            )
+            self.assert_fails(
+                fixture,
+                "independent review source is not the canonical Sprint 1 certification review artifact",
+            )
+
+        with self.subTest("renamed canonical artifact"), CertificationFixture() as fixture:
+            fixture.complete_review()
+            canonical = fixture.project / "reports" / "sprint_1_certification_review.json"
+            alternate = fixture.project / "reports" / "renamed_review.json"
+            canonical.rename(alternate)
+            fixture.mutate_cert(
+                lambda cert: cert["independent_review"].update(
+                    review_source={"path": "workshop/projects/the-myr-singularity/reports/renamed_review.json"}
+                )
+            )
+            self.assert_fails(
+                fixture,
+                "independent review source is not the canonical Sprint 1 certification review artifact",
+            )
 
     def test_09b_reviewed_candidate_full_content_equivalence(self):
         cases = [
