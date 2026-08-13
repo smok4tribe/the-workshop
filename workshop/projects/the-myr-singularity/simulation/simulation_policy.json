@@ -1,8 +1,8 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "artifact_type": "simulation_policy",
   "policy_id": "the-myr-singularity-simulation-policy",
-  "policy_version": "sim-policy-v2",
+  "policy_version": "sim-policy-v3",
   "project_id": "the-myr-singularity",
   "generated_at": "2026-07-13T00:00:00Z",
   "generated_by": "Terra",
@@ -36,7 +36,7 @@
   "references": {
     "card_semantics": {
       "path": "workshop/projects/the-myr-singularity/simulation/card_semantics.json",
-      "content_fingerprint": "artifact-content-sha256-v1:899703e6b2d07243f075505adf3ebbff05b0a784cb787f634464d7da6cb8e4f3"
+      "content_fingerprint": "artifact-content-sha256-v1:f41ca1cc65ff15bc49644c55eb849a94eb30572d858a5422e4283e0722bd64be"
     },
     "canonical_card_facts": {
       "path": "workshop/card-data/cards.json",
@@ -44,23 +44,23 @@
     },
     "failure_pattern_taxonomy": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json",
-      "content_fingerprint": "artifact-content-sha256-v1:c62383f49b255c5c231132629006bfdc4fad634720a1ac44f13e4847bebcbce7"
+      "content_fingerprint": "artifact-content-sha256-v1:08de893818d06e7ac1ab20183340ac8294ca1ec49479004e67cc56f5ed6791e8"
     },
     "simulation_question_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:12ced0927bcaf21056848199cf79bb321acf518578c21e2a4971f251c27d9151"
+      "content_fingerprint": "artifact-content-sha256-v1:fd99b30661272ba1b0bfd1eef42d07e1511030e400ddd3da5adde31f34e77f61"
     },
     "simulation_run_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_run.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:292be06ebba3f57d778f8a0af147e643ee307035a792c49977dc547d5c9e69d2"
+      "content_fingerprint": "artifact-content-sha256-v1:0fddc6685fae22621b51c9a36acc436c5a64d495a39946e7c3c8f7e180c422d2"
     },
     "simulation_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:8b5b2f5b0d53669f6a2421071f6762a1d8c34be44c47e7cb02ed58b26cf46d92"
+      "content_fingerprint": "artifact-content-sha256-v1:45fd1d764a92cc24180425df96b7cc53864759bcc8574f1ceb0eb06c751f25f5"
     },
     "comparison_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/comparison_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:c8883d3e99b23ce5d08990aa9bdc5becde95a11e3c88fb8fa7dd89cb35472374"
+      "content_fingerprint": "artifact-content-sha256-v1:73e08d9fb7ca477cf98d7201cc09c9ad4304da0cc993fa6ab29ac4c233988e2f"
     }
   },
   "commander_scenario": {
@@ -435,42 +435,221 @@
     }
   },
   "metric_catalog": {
-    "description": "The committed Sprint 2 metric families. Each metric records its sequencing level and target turn. These are metric definitions only; no values are recorded here.",
+    "description": "The committed Sprint 2 metric families. Every metric owns a complete, machine-readable measurement_contract: population, denominator, sequencing, observation, unsupported-behavior treatment, result shape, and exact event or value semantics. These are metric definitions only; no values are recorded here.",
     "metrics": [
       {
         "metric_id": "keepable_opening_hand_rate",
         "level": "level_1",
         "target_turn": 0,
         "kind": "primary",
-        "shape": "bernoulli_probability"
+        "shape": "bernoulli_probability",
+        "measurement_contract": {
+          "contract_id": "metric-measurement-v1",
+          "population": {
+            "id": "all_preregistered_run_iterations",
+            "iteration_index_range": {
+              "first": 1,
+              "last": "simulation_run.iteration_count",
+              "inclusive": true
+            },
+            "conditional_exclusion_permitted": false,
+            "observation_failure": "invalidates_run_and_result"
+          },
+          "sample_size_rule": {
+            "id": "equals_run_iteration_count",
+            "source": "simulation_run.iteration_count"
+          },
+          "sequencing_level": "level_1",
+          "target_turn": 0,
+          "target_turn_semantics": "metric.target_turn",
+          "observation_point": {
+            "id": "first_natural_opening_hand",
+            "hand_size": 7,
+            "before_mulligan": true
+          },
+          "unsupported_behavior": {
+            "iteration_remains_in_population": true,
+            "cannot_contribute_to_success": true,
+            "supported_behavior_may_independently_succeed": true
+          },
+          "result_shape": "bernoulli_probability",
+          "event": {
+            "id": "initial_hand_satisfies_registered_keep_rule",
+            "keep_rule_id": "myr-singularity-keep-v1",
+            "one_land_exception_source": "keep_rule.base_rule.one_land_exception"
+          }
+        }
       },
       {
         "metric_id": "zero_land_hand_rate",
         "level": "level_1",
         "target_turn": 0,
         "kind": "primary",
-        "shape": "bernoulli_probability"
+        "shape": "bernoulli_probability",
+        "measurement_contract": {
+          "contract_id": "metric-measurement-v1",
+          "population": {
+            "id": "all_preregistered_run_iterations",
+            "iteration_index_range": {
+              "first": 1,
+              "last": "simulation_run.iteration_count",
+              "inclusive": true
+            },
+            "conditional_exclusion_permitted": false,
+            "observation_failure": "invalidates_run_and_result"
+          },
+          "sample_size_rule": {
+            "id": "equals_run_iteration_count",
+            "source": "simulation_run.iteration_count"
+          },
+          "sequencing_level": "level_1",
+          "target_turn": 0,
+          "target_turn_semantics": "metric.target_turn",
+          "observation_point": {
+            "id": "first_natural_opening_hand",
+            "hand_size": 7,
+            "before_mulligan": true
+          },
+          "unsupported_behavior": {
+            "iteration_remains_in_population": true,
+            "cannot_contribute_to_success": true,
+            "supported_behavior_may_independently_succeed": true
+          },
+          "result_shape": "bernoulli_probability",
+          "event": {
+            "id": "initial_hand_land_count_equals",
+            "land_count": 0
+          }
+        }
       },
       {
         "metric_id": "one_land_hand_rate",
         "level": "level_1",
         "target_turn": 0,
         "kind": "primary",
-        "shape": "bernoulli_probability"
+        "shape": "bernoulli_probability",
+        "measurement_contract": {
+          "contract_id": "metric-measurement-v1",
+          "population": {
+            "id": "all_preregistered_run_iterations",
+            "iteration_index_range": {
+              "first": 1,
+              "last": "simulation_run.iteration_count",
+              "inclusive": true
+            },
+            "conditional_exclusion_permitted": false,
+            "observation_failure": "invalidates_run_and_result"
+          },
+          "sample_size_rule": {
+            "id": "equals_run_iteration_count",
+            "source": "simulation_run.iteration_count"
+          },
+          "sequencing_level": "level_1",
+          "target_turn": 0,
+          "target_turn_semantics": "metric.target_turn",
+          "observation_point": {
+            "id": "first_natural_opening_hand",
+            "hand_size": 7,
+            "before_mulligan": true
+          },
+          "unsupported_behavior": {
+            "iteration_remains_in_population": true,
+            "cannot_contribute_to_success": true,
+            "supported_behavior_may_independently_succeed": true
+          },
+          "result_shape": "bernoulli_probability",
+          "event": {
+            "id": "initial_hand_land_count_equals",
+            "land_count": 1
+          }
+        }
       },
       {
         "metric_id": "excessive_land_hand_rate",
         "level": "level_1",
         "target_turn": 0,
         "kind": "primary",
-        "shape": "bernoulli_probability"
+        "shape": "bernoulli_probability",
+        "measurement_contract": {
+          "contract_id": "metric-measurement-v1",
+          "population": {
+            "id": "all_preregistered_run_iterations",
+            "iteration_index_range": {
+              "first": 1,
+              "last": "simulation_run.iteration_count",
+              "inclusive": true
+            },
+            "conditional_exclusion_permitted": false,
+            "observation_failure": "invalidates_run_and_result"
+          },
+          "sample_size_rule": {
+            "id": "equals_run_iteration_count",
+            "source": "simulation_run.iteration_count"
+          },
+          "sequencing_level": "level_1",
+          "target_turn": 0,
+          "target_turn_semantics": "metric.target_turn",
+          "observation_point": {
+            "id": "first_natural_opening_hand",
+            "hand_size": 7,
+            "before_mulligan": true
+          },
+          "unsupported_behavior": {
+            "iteration_remains_in_population": true,
+            "cannot_contribute_to_success": true,
+            "supported_behavior_may_independently_succeed": true
+          },
+          "result_shape": "bernoulli_probability",
+          "event": {
+            "id": "initial_hand_land_count_inclusive_range",
+            "minimum_land_count": 6,
+            "maximum_land_count": 7
+          }
+        }
       },
       {
         "metric_id": "land_drop_success_by_turn",
         "level": "level_2",
         "target_turn": 6,
         "kind": "primary",
-        "shape": "bernoulli_probability"
+        "shape": "bernoulli_probability",
+        "measurement_contract": {
+          "contract_id": "metric-measurement-v1",
+          "population": {
+            "id": "all_preregistered_run_iterations",
+            "iteration_index_range": {
+              "first": 1,
+              "last": "simulation_run.iteration_count",
+              "inclusive": true
+            },
+            "conditional_exclusion_permitted": false,
+            "observation_failure": "invalidates_run_and_result"
+          },
+          "sample_size_rule": {
+            "id": "equals_run_iteration_count",
+            "source": "simulation_run.iteration_count"
+          },
+          "sequencing_level": "level_2",
+          "target_turn": 6,
+          "target_turn_semantics": "metric.target_turn",
+          "observation_point": {
+            "id": "end_of_target_turn_after_level_2_sequencing",
+            "after_pending_time_dependent_removals": true
+          },
+          "unsupported_behavior": {
+            "iteration_remains_in_population": true,
+            "cannot_contribute_to_success": true,
+            "supported_behavior_may_independently_succeed": true
+          },
+          "result_shape": "bernoulli_probability",
+          "event": {
+            "id": "legal_land_drop_on_every_turn",
+            "first_required_turn": 1,
+            "last_required_turn": "metric.target_turn",
+            "inclusive": true,
+            "later_removal_erases_historical_success": false
+          }
+        }
       },
       {
         "metric_id": "ramp_access_by_turn",
@@ -478,7 +657,46 @@
         "target_turn": 3,
         "kind": "primary",
         "shape": "bernoulli_probability",
-        "definition": "At least one explicitly registered ramp-access identity is seen in the final kept hand plus normal draws through target turn; it does not mean castable, deployed, online, or mana produced."
+        "measurement_contract": {
+          "contract_id": "metric-measurement-v1",
+          "population": {
+            "id": "all_preregistered_run_iterations",
+            "iteration_index_range": {
+              "first": 1,
+              "last": "simulation_run.iteration_count",
+              "inclusive": true
+            },
+            "conditional_exclusion_permitted": false,
+            "observation_failure": "invalidates_run_and_result"
+          },
+          "sample_size_rule": {
+            "id": "equals_run_iteration_count",
+            "source": "simulation_run.iteration_count"
+          },
+          "sequencing_level": "level_1",
+          "target_turn": 3,
+          "target_turn_semantics": "metric.target_turn",
+          "observation_point": {
+            "id": "final_kept_hand_plus_normal_draws_through_target_turn",
+            "hand_state": "final_kept_hand",
+            "draw_window": "normal_draws_through_target_turn"
+          },
+          "unsupported_behavior": {
+            "iteration_remains_in_population": true,
+            "cannot_contribute_to_success": true,
+            "supported_behavior_may_independently_succeed": true
+          },
+          "result_shape": "bernoulli_probability",
+          "event": {
+            "id": "registered_ramp_identity_seen",
+            "registry_ref": "ramp_access_registry.oracle_ids",
+            "access_only": true,
+            "requires_castability": false,
+            "requires_deployment": false,
+            "requires_online": false,
+            "requires_mana_production": false
+          }
+        }
       },
       {
         "metric_id": "distinct_commander_colors_by_turn",
@@ -493,21 +711,172 @@
           3,
           4,
           5
-        ]
+        ],
+        "measurement_contract": {
+          "contract_id": "metric-measurement-v1",
+          "population": {
+            "id": "all_preregistered_run_iterations",
+            "iteration_index_range": {
+              "first": 1,
+              "last": "simulation_run.iteration_count",
+              "inclusive": true
+            },
+            "conditional_exclusion_permitted": false,
+            "observation_failure": "invalidates_run_and_result"
+          },
+          "sample_size_rule": {
+            "id": "equals_run_iteration_count",
+            "source": "simulation_run.iteration_count"
+          },
+          "sequencing_level": "level_2",
+          "target_turn": 6,
+          "target_turn_semantics": "metric.target_turn",
+          "observation_point": {
+            "id": "end_of_target_turn_after_level_2_sequencing",
+            "after_pending_time_dependent_removals": true
+          },
+          "unsupported_behavior": {
+            "iteration_remains_in_population": true,
+            "cannot_contribute_to_success": true,
+            "supported_behavior_may_independently_succeed": true
+          },
+          "result_shape": "categorical_count",
+          "value": {
+            "id": "surviving_online_source_capability_color_cardinality",
+            "projection": "source_capability",
+            "domain": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "colors": [
+              "W",
+              "U",
+              "B",
+              "R",
+              "G"
+            ],
+            "excluded_colors": [
+              "C"
+            ],
+            "source_state": "surviving_and_online",
+            "earlier_tapping_removes_capability": false
+          }
+        }
       },
       {
         "metric_id": "five_color_availability_by_turn",
         "level": "level_2",
         "target_turn": 6,
         "kind": "primary",
-        "shape": "bernoulli_probability"
+        "shape": "bernoulli_probability",
+        "measurement_contract": {
+          "contract_id": "metric-measurement-v1",
+          "population": {
+            "id": "all_preregistered_run_iterations",
+            "iteration_index_range": {
+              "first": 1,
+              "last": "simulation_run.iteration_count",
+              "inclusive": true
+            },
+            "conditional_exclusion_permitted": false,
+            "observation_failure": "invalidates_run_and_result"
+          },
+          "sample_size_rule": {
+            "id": "equals_run_iteration_count",
+            "source": "simulation_run.iteration_count"
+          },
+          "sequencing_level": "level_2",
+          "target_turn": 6,
+          "target_turn_semantics": "metric.target_turn",
+          "observation_point": {
+            "id": "end_of_target_turn_after_level_2_sequencing",
+            "after_pending_time_dependent_removals": true
+          },
+          "unsupported_behavior": {
+            "iteration_remains_in_population": true,
+            "cannot_contribute_to_success": true,
+            "supported_behavior_may_independently_succeed": true
+          },
+          "result_shape": "bernoulli_probability",
+          "event": {
+            "id": "all_required_source_capability_colors_available",
+            "projection": "source_capability",
+            "required_colors": [
+              "W",
+              "U",
+              "B",
+              "R",
+              "G"
+            ],
+            "excluded_colors": [
+              "C"
+            ],
+            "source_state": "surviving_and_online",
+            "earlier_tapping_removes_capability": false,
+            "requires_simultaneous_spendable_mana": false,
+            "requires_commander_castability": false
+          }
+        }
       },
       {
         "metric_id": "commander_castability_by_turn",
         "level": "level_2",
         "target_turn": 3,
         "kind": "optional_sanity",
-        "shape": "bernoulli_probability"
+        "shape": "bernoulli_probability",
+        "measurement_contract": {
+          "contract_id": "metric-measurement-v1",
+          "population": {
+            "id": "all_preregistered_run_iterations",
+            "iteration_index_range": {
+              "first": 1,
+              "last": "simulation_run.iteration_count",
+              "inclusive": true
+            },
+            "conditional_exclusion_permitted": false,
+            "observation_failure": "invalidates_run_and_result"
+          },
+          "sample_size_rule": {
+            "id": "equals_run_iteration_count",
+            "source": "simulation_run.iteration_count"
+          },
+          "sequencing_level": "level_2",
+          "target_turn": 3,
+          "target_turn_semantics": "metric.target_turn",
+          "observation_point": {
+            "id": "end_of_target_turn_after_level_2_sequencing",
+            "after_pending_time_dependent_removals": true
+          },
+          "unsupported_behavior": {
+            "iteration_remains_in_population": true,
+            "cannot_contribute_to_success": true,
+            "supported_behavior_may_independently_succeed": true
+          },
+          "result_shape": "bernoulli_probability",
+          "event": {
+            "id": "legal_commander_payment_exists",
+            "projection": "spendable_mana",
+            "resources": "remaining_untapped_after_development",
+            "cost_source": "current_modeled_command_zone_cost",
+            "commander_card_reference": {
+              "path": "workshop/card-data/cards.json",
+              "oracle_id": "6222fccf-fc08-4190-8d40-a56d6d1423df",
+              "mana_cost": "{3}"
+            },
+            "base_cost": {
+              "generic": 3,
+              "colored": []
+            },
+            "previous_commander_casts": 0,
+            "commander_tax_generic": 0,
+            "alternate_or_unmodeled_resources_allowed": false,
+            "commander_actually_cast": false
+          }
+        }
       }
     ]
   },

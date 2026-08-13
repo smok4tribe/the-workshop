@@ -165,6 +165,21 @@ def render_policy(policy):
             for metric in policy["metric_catalog"]["metrics"]
         ],
         "",
+        "## Metric Measurement Contracts",
+        "",
+        "Each metric below is measured only under its complete Policy-owned contract.",
+        "",
+        *[
+            "\n".join((
+                f"### {metric['metric_id']}",
+                "",
+                "```json",
+                json.dumps(metric["measurement_contract"], ensure_ascii=False, indent=2),
+                "```",
+                "",
+            ))
+            for metric in policy["metric_catalog"]["metrics"]
+        ],
         "## Deterministic Level 2 Trace",
         "",
         *[f"{index}. `{step}`" for index, step in enumerate(level_two["turn_order"], start=1)],
