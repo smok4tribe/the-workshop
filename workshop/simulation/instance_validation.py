@@ -136,6 +136,16 @@ def _required(value, fields, label):
     return [f"{label} is missing required field {field!r}" for field in fields if field not in value]
 
 
+def _unregistered_top_level_field_errors(value, contract, label):
+    if not isinstance(value, dict):
+        return []
+    allowed = set((contract.get("required_fields") or {}).keys())
+    extras = sorted(set(value) - allowed)
+    if extras:
+        return [f"{label} has unregistered top-level fields: {', '.join(extras)}"]
+    return []
+
+
 def _reserved_lifecycle_key_errors(value, path="$"):
     """Return structural lifecycle-key violations at every evidence depth."""
     errors = []
@@ -411,6 +421,7 @@ def validate_simulation_run(run, *, question, policy, run_contract, project_id, 
 def validate_simulation_result(result, *, run, policy, question, result_contract, taxonomy_ids, load_reference):
     errors = _required(result, (result_contract.get("required_fields") or {}).keys(), "result")
     if not isinstance(result, dict): return errors
+    errors.extend(_unregistered_top_level_field_errors(result, result_contract, "result"))
     errors.extend(_reserved_lifecycle_key_errors(result))
     if result.get("artifact_type") != "simulation_result": errors.append("result artifact_type must be 'simulation_result'")
     for field in ("project_id", "run_id", "deck_version_id", "deck_content_fingerprint", "policy_version", "iteration_count"):
@@ -446,6 +457,7 @@ def validate_simulation_result(result, *, run, policy, question, result_contract
 def validate_comparison_result(comparison, *, baseline_run, candidate_run, baseline_result, candidate_result, policy, question, comparison_contract, run_contract, result_contract, project_id, taxonomy_ids, load_reference, fingerprint_for_version):
     errors = _required(comparison, (comparison_contract.get("required_fields") or {}).keys(), "comparison")
     if not isinstance(comparison, dict): return errors
+    errors.extend(_unregistered_top_level_field_errors(comparison, comparison_contract, "comparison"))
     errors.extend(_reserved_lifecycle_key_errors(comparison))
     if comparison.get("artifact_type") != "comparison_result": errors.append("comparison artifact_type must be 'comparison_result'")
     if comparison.get("project_id") != project_id: errors.append("comparison project_id does not match the project")

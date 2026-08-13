@@ -1,5 +1,4 @@
 {
-  "fixture_note": "Test fixture only. Not a production SimulationResult; illustrative metric values are synthetic and carry no evidentiary weight.",
   "result_id": "fixture-result-candidate-v1.1",
   "artifact_type": "simulation_result",
   "project_id": "the-myr-singularity",

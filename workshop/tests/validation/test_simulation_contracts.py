@@ -171,6 +171,42 @@ class SimulationContractV3Tests(unittest.TestCase):
         comparison["metric_deltas"][0]["event"] = {"id": "different"}
         self.assertIn("comparison metric delta must not redefine Policy measurement semantics", self.check_comparison(comparison))
 
+    def test_result_top_level_artifact_boundary_is_exact(self):
+        for field in (
+            "measurement_contract", "event", "value", "observation_point",
+            "denominator_semantics", "sample_size_rule", "metric_definition",
+            "arbitrary_unknown_field",
+        ):
+            with self.subTest(field=field):
+                result = copy.deepcopy(self.result)
+                result[field] = {"synthetic": True}
+                self.assertIn(
+                    f"result has unregistered top-level fields: {field}",
+                    self.check_result(result),
+                )
+
+    def test_comparison_top_level_artifact_boundary_is_exact(self):
+        for field in (
+            "measurement_contract", "event", "value", "observation_point",
+            "denominator_semantics", "sample_size_rule", "metric_definition",
+            "arbitrary_unknown_field",
+        ):
+            with self.subTest(field=field):
+                comparison = copy.deepcopy(self.comparison)
+                comparison[field] = {"synthetic": True}
+                self.assertIn(
+                    f"comparison has unregistered top-level fields: {field}",
+                    self.check_comparison(comparison),
+                )
+
+    def test_result_and_comparison_still_require_registered_fields(self):
+        result = copy.deepcopy(self.result)
+        del result["result_id"]
+        self.assertIn("result is missing required field 'result_id'", self.check_result(result))
+        comparison = copy.deepcopy(self.comparison)
+        del comparison["comparison_id"]
+        self.assertIn("comparison is missing required field 'comparison_id'", self.check_comparison(comparison))
+
     def test_optional_commander_metric_uses_complete_run_population(self):
         for sample_size in (99999, 100001):
             with self.subTest(sample_size=sample_size):
