@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the active Sprint 2 simulation-policy-v2 contract layer."""
+"""Validate the active Sprint 2 simulation-policy-v3 contract layer."""
 
 from __future__ import annotations
 
@@ -16,7 +16,10 @@ from workshop.shared.identity import (  # noqa: E402
     load_strict_json,
 )
 from workshop.shared.simulation_determinism import derive_iteration_seed, derive_run_seed  # noqa: E402
-from workshop.simulation.instance_validation import validate_question_role_bindings  # noqa: E402
+from workshop.simulation.instance_validation import (  # noqa: E402
+    validate_policy_metric_contracts,
+    validate_question_role_bindings,
+)
 
 PROJECT_ID = "the-myr-singularity"
 PROJECT = REPO_ROOT / "workshop" / "projects" / PROJECT_ID
@@ -88,15 +91,15 @@ def main():
             docs[name] = load_json(path)
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             errors.append(f"{name} does not strictly parse: {exc}")
-    checks = [("all v2 artifacts exist and strictly parse", errors)]
+    checks = [("all v3 artifacts exist and strictly parse", errors)]
     if errors:
         return report(checks)
     policy, semantics, question, taxonomy = (docs[k] for k in ("policy", "semantics", "question", "taxonomy"))
 
     errors = _required(policy, ("policy_id", "policy_version", "references", "randomness_policy", "deck_fingerprint_policy", "metric_catalog", "level_2_sequencing"), "policy")
-    if policy.get("policy_version") != "sim-policy-v2": errors.append("policy_version must be sim-policy-v2")
+    if policy.get("policy_version") != "sim-policy-v3": errors.append("policy_version must be sim-policy-v3")
     if policy.get("bottoming_rule", {}).get("rule_id") != "deterministic-bottoming-v2": errors.append("policy must use deterministic-bottoming-v2")
-    checks.append(("policy has versioned v2 ownership", errors))
+    checks.append(("policy has versioned v3 ownership", errors))
 
     errors = []
     expected_refs = {
@@ -130,17 +133,14 @@ def main():
     checks.append(("seed and iteration determinism are versioned", errors))
 
     errors = []
+    errors.extend(validate_policy_metric_contracts(policy))
     by_id = {m.get("metric_id"): m for m in (policy.get("metric_catalog") or {}).get("metrics", [])}
     if set(by_id) != EXPECTED_METRICS: errors.append("metric catalog must contain exactly the nine registered metrics")
-    for metric_id, definition in by_id.items():
-        if metric_id == "distinct_commander_colors_by_turn":
-            if definition.get("shape") != "categorical_count" or definition.get("domain") != [0, 1, 2, 3, 4, 5]: errors.append("distinct commander colors must use categorical_count 0..5")
-        elif definition.get("shape") != "bernoulli_probability": errors.append(f"{metric_id} must use bernoulli_probability")
-    if by_id.get("ramp_access_by_turn", {}).get("level") != "level_1": errors.append("ramp_access_by_turn must be Level 1")
-    checks.append(("metric registry has executable v2 shapes", errors))
+    if by_id.get("distinct_commander_colors_by_turn", {}).get("domain") != [0, 1, 2, 3, 4, 5]: errors.append("distinct commander colors must use categorical_count 0..5")
+    checks.append(("metric registry has complete v3 measurement contracts", errors))
 
     errors = []
-    if semantics.get("policy_version") != "sim-policy-v2": errors.append("card semantics must bind sim-policy-v2")
+    if semantics.get("policy_version") != "sim-policy-v3": errors.append("card semantics must bind sim-policy-v3")
     saga = next((e for e in semantics.get("entries", []) if e.get("card_identity", {}).get("name") == "Urza's Saga"), {})
     if saga.get("source", {}).get("oracle_basis") != "Saga land with a Chapter I {T}: Add {C} ability and a Chapter III ability.": errors.append("Urza's Saga must use the approved narrow oracle basis")
     if "upkeep" in saga.get("source", {}).get("oracle_basis", "").casefold(): errors.append("Urza's Saga source basis must not contain upkeep")
@@ -148,7 +148,7 @@ def main():
     checks.append(("Urza's Saga source prose and bounded removal are consistent", errors))
 
     errors = []
-    if question.get("policy_version") != "sim-policy-v2": errors.append("question must bind sim-policy-v2")
+    if question.get("policy_version") != "sim-policy-v3": errors.append("question must bind sim-policy-v3")
     errors.extend(_check_reference(question.get("policy_reference"), "workshop/projects/the-myr-singularity/simulation/simulation_policy.json", policy, "question.policy_reference"))
     required = {(m.get("metric_id"), m.get("target_turn")) for m in question.get("required_metrics", [])}
     optional = {(m.get("metric_id"), m.get("target_turn")) for m in question.get("optional_metrics", [])}

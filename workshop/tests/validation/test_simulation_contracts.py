@@ -1,4 +1,4 @@
-"""Positive and adversarial coverage for the active simulation-policy-v2 contract."""
+"""Positive and adversarial coverage for the active simulation-policy-v3 contract."""
 
 from __future__ import annotations
 
@@ -22,7 +22,8 @@ from workshop.shared.simulation_determinism import (  # noqa: E402
     select_bottom_tokens, select_land, select_payable_ramp,
 )
 from workshop.simulation.instance_validation import (  # noqa: E402
-    validate_comparison_result, validate_simulation_result, validate_simulation_run,
+    METRIC_MEASUREMENT_CONTRACTS, validate_comparison_result,
+    validate_policy_metric_contracts, validate_simulation_result, validate_simulation_run,
 )
 
 PROJECT = REPO_ROOT / "workshop" / "projects" / "the-myr-singularity"
@@ -65,7 +66,7 @@ class IndependentPCG32:
         return result
 
 
-class SimulationContractV2Tests(unittest.TestCase):
+class SimulationContractV3Tests(unittest.TestCase):
     def setUp(self):
         self.policy = load(SIM / "simulation_policy.json")
         self.question = load(SIM / "questions" / "question-001-mana-color.json")
@@ -116,10 +117,70 @@ class SimulationContractV2Tests(unittest.TestCase):
         result = subprocess.run([sys.executable, "workshop/tests/validation/validate_simulation_contracts.py"], cwd=REPO_ROOT, text=True, capture_output=True, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_valid_v2_fixtures_validate(self):
+    def test_valid_v3_fixtures_validate(self):
         self.assertEqual([], self.check_run())
         self.assertEqual([], self.check_result())
         self.assertEqual([], self.check_comparison())
+
+    def test_all_nine_policy_measurement_contracts_are_complete(self):
+        self.assertEqual([], validate_policy_metric_contracts(self.policy))
+        actual = {metric["metric_id"]: metric["measurement_contract"] for metric in self.policy["metric_catalog"]["metrics"]}
+        self.assertEqual(actual, METRIC_MEASUREMENT_CONTRACTS)
+
+    def test_metric_measurement_contract_rejects_every_b02_drift(self):
+        cases = (
+            ("missing_contract", "keepable_opening_hand_rate", lambda contract: contract.clear()),
+            ("population_identity", "keepable_opening_hand_rate", lambda contract: contract["population"].__setitem__("id", "successful_iterations")),
+            ("conditional_population", "keepable_opening_hand_rate", lambda contract: contract["population"].__setitem__("conditional_exclusion_permitted", True)),
+            ("iteration_range", "keepable_opening_hand_rate", lambda contract: contract["population"]["iteration_index_range"].__setitem__("first", 2)),
+            ("denominator", "keepable_opening_hand_rate", lambda contract: contract["sample_size_rule"].__setitem__("source", "successful_iterations")),
+            ("skippable_observation_failure", "keepable_opening_hand_rate", lambda contract: contract["population"].__setitem__("observation_failure", "exclude_iteration")),
+            ("target_turn", "land_drop_success_by_turn", lambda contract: contract.__setitem__("target_turn", 5)),
+            ("post_mulligan_keepability", "keepable_opening_hand_rate", lambda contract: contract["observation_point"].__setitem__("before_mulligan", False)),
+            ("zero_land_threshold", "zero_land_hand_rate", lambda contract: contract["event"].__setitem__("land_count", 1)),
+            ("one_land_threshold", "one_land_hand_rate", lambda contract: contract["event"].__setitem__("land_count", 2)),
+            ("excessive_land_threshold", "excessive_land_hand_rate", lambda contract: contract["event"].__setitem__("minimum_land_count", 5)),
+            ("keep_rule_redirect", "keepable_opening_hand_rate", lambda contract: contract["event"].__setitem__("keep_rule_id", "other-rule")),
+            ("land_drop_not_cumulative", "land_drop_success_by_turn", lambda contract: contract["event"].__setitem__("id", "legal_land_drop_on_target_turn")),
+            ("ramp_castability", "ramp_access_by_turn", lambda contract: contract["event"].__setitem__("requires_castability", True)),
+            ("ramp_deployment", "ramp_access_by_turn", lambda contract: contract["event"].__setitem__("requires_deployment", True)),
+            ("colorless_included", "distinct_commander_colors_by_turn", lambda contract: contract["value"].__setitem__("excluded_colors", [])),
+            ("color_domain_changed", "distinct_commander_colors_by_turn", lambda contract: contract["value"].__setitem__("colors", ["W", "U", "B", "R"])),
+            ("source_capability_drift", "distinct_commander_colors_by_turn", lambda contract: contract["value"].__setitem__("projection", "spendable_mana")),
+            ("five_color_spendable", "five_color_availability_by_turn", lambda contract: contract["event"].__setitem__("requires_simultaneous_spendable_mana", True)),
+            ("five_color_castability", "five_color_availability_by_turn", lambda contract: contract["event"].__setitem__("requires_commander_castability", True)),
+            ("five_color_projection", "five_color_availability_by_turn", lambda contract: contract["event"].__setitem__("projection", "spendable_mana")),
+            ("five_color_colorless", "five_color_availability_by_turn", lambda contract: contract["event"].__setitem__("excluded_colors", [])),
+            ("commander_unsupported_resource", "commander_castability_by_turn", lambda contract: contract["event"].__setitem__("alternate_or_unmodeled_resources_allowed", True)),
+            ("commander_tax_drift", "commander_castability_by_turn", lambda contract: contract["event"].__setitem__("commander_tax_generic", 1)),
+            ("commander_previous_cast_drift", "commander_castability_by_turn", lambda contract: contract["event"].__setitem__("previous_commander_casts", 1)),
+            ("commander_card_reference_drift", "commander_castability_by_turn", lambda contract: contract["event"]["commander_card_reference"].__setitem__("mana_cost", "{4}")),
+        )
+        for name, metric_id, mutate in cases:
+            with self.subTest(name=name):
+                policy = copy.deepcopy(self.policy)
+                metric = next(item for item in policy["metric_catalog"]["metrics"] if item["metric_id"] == metric_id)
+                mutate(metric["measurement_contract"])
+                self.assertTrue(validate_policy_metric_contracts(policy))
+
+    def test_result_and_comparison_cannot_redefine_policy_metric_semantics(self):
+        result = copy.deepcopy(self.result)
+        result["metrics"][0]["measurement_contract"] = {"population": "conditional"}
+        self.assertIn("result Bernoulli metric must not redefine Policy measurement semantics", self.check_result(result))
+        comparison = copy.deepcopy(self.comparison)
+        comparison["metric_deltas"][0]["event"] = {"id": "different"}
+        self.assertIn("comparison metric delta must not redefine Policy measurement semantics", self.check_comparison(comparison))
+
+    def test_optional_commander_metric_uses_complete_run_population(self):
+        for sample_size in (99999, 100001):
+            with self.subTest(sample_size=sample_size):
+                result = copy.deepcopy(self.result)
+                result["metrics"].append({
+                    "metric_id": "commander_castability_by_turn", "target_turn": 3,
+                    "raw_count": 1, "sample_size": sample_size, "probability": 1 / sample_size,
+                    "confidence_interval": {"method": "wilson_score_interval", "level": 0.95, "lower": 0.0, "upper": 0.000057},
+                })
+                self.assertIn("result Bernoulli metric raw_count/sample_size is invalid", self.check_result(result))
 
     def test_alias_and_canonical_names_have_equal_fingerprint(self):
         alias = copy.deepcopy(self.documents["workshop/projects/the-myr-singularity/versions/v1.1.json"])
@@ -208,11 +269,11 @@ class SimulationContractV2Tests(unittest.TestCase):
                 self.assertTrue(any("content fingerprint" in error or "expected artifact" in error for error in self.check_run()))
                 self.documents[path] = original
 
-    def test_v2_seed_and_iteration_vectors(self):
+    def test_v3_seed_and_iteration_vectors(self):
         seed = derive_run_seed(self.run["semantic_dependencies"]["question"]["content_fingerprint"], self.run["semantic_dependencies"]["policy"]["content_fingerprint"], self.run["deck_content_fingerprint"], self.run["run_role"])
         self.assertEqual(seed, self.run["seed"])
-        self.assertEqual(derive_iteration_seed(seed, 1), 2077295790868176945)
-        self.assertEqual(derive_iteration_seed(seed, 2), 9341791923079031219)
+        self.assertEqual(derive_iteration_seed(seed, 1), 8697573611435551969)
+        self.assertEqual(derive_iteration_seed(seed, 2), 3667411912516177518)
 
     def test_trace_kat_freezes_canonical_expansion_and_opening_shuffle(self):
         kat = load(REPO_ROOT / "workshop" / "tests" / "fixtures" / "simulation" / "simulation_iteration_trace.v1.json")

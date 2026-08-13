@@ -3,7 +3,7 @@
   "artifact_type": "simulation_run_contract",
   "contract_id": "simulation-run-contract-v2",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v2",
+  "policy_version": "sim-policy-v3",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a SimulationRun. A SimulationRun stores exact configuration and identity for one execution against one DeckVersion: the project, the DeckVersion, the deck-content fingerprint, the question, the policy, the seed, the iteration count, the RNG identity, and the run status. It stores no metrics and no interpretation. Task 30 defines this contract but creates no SimulationRun instance.",
   "scope": {

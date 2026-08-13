@@ -25,6 +25,111 @@ ALLOWED_SUBJECTS = {
 RESERVED_LIFECYCLE_KEYS = {"reasoning_interpretation", "product_owner_decision"}
 
 
+def _measurement_contract(*, level, target_turn, shape, observation_point, event=None, value=None):
+    """Build the Policy-owned complete contract for one registered metric."""
+    contract = {
+        "contract_id": "metric-measurement-v1",
+        "population": {
+            "id": "all_preregistered_run_iterations",
+            "iteration_index_range": {
+                "first": 1,
+                "last": "simulation_run.iteration_count",
+                "inclusive": True,
+            },
+            "conditional_exclusion_permitted": False,
+            "observation_failure": "invalidates_run_and_result",
+        },
+        "sample_size_rule": {
+            "id": "equals_run_iteration_count",
+            "source": "simulation_run.iteration_count",
+        },
+        "sequencing_level": level,
+        "target_turn": target_turn,
+        "target_turn_semantics": "metric.target_turn",
+        "observation_point": observation_point,
+        "unsupported_behavior": {
+            "iteration_remains_in_population": True,
+            "cannot_contribute_to_success": True,
+            "supported_behavior_may_independently_succeed": True,
+        },
+        "result_shape": shape,
+    }
+    if event is not None:
+        contract["event"] = event
+    if value is not None:
+        contract["value"] = value
+    return contract
+
+
+METRIC_MEASUREMENT_CONTRACTS = {
+    "keepable_opening_hand_rate": _measurement_contract(
+        level="level_1", target_turn=0, shape="bernoulli_probability",
+        observation_point={"id": "first_natural_opening_hand", "hand_size": 7, "before_mulligan": True},
+        event={"id": "initial_hand_satisfies_registered_keep_rule", "keep_rule_id": "myr-singularity-keep-v1", "one_land_exception_source": "keep_rule.base_rule.one_land_exception"},
+    ),
+    "zero_land_hand_rate": _measurement_contract(
+        level="level_1", target_turn=0, shape="bernoulli_probability",
+        observation_point={"id": "first_natural_opening_hand", "hand_size": 7, "before_mulligan": True},
+        event={"id": "initial_hand_land_count_equals", "land_count": 0},
+    ),
+    "one_land_hand_rate": _measurement_contract(
+        level="level_1", target_turn=0, shape="bernoulli_probability",
+        observation_point={"id": "first_natural_opening_hand", "hand_size": 7, "before_mulligan": True},
+        event={"id": "initial_hand_land_count_equals", "land_count": 1},
+    ),
+    "excessive_land_hand_rate": _measurement_contract(
+        level="level_1", target_turn=0, shape="bernoulli_probability",
+        observation_point={"id": "first_natural_opening_hand", "hand_size": 7, "before_mulligan": True},
+        event={"id": "initial_hand_land_count_inclusive_range", "minimum_land_count": 6, "maximum_land_count": 7},
+    ),
+    "land_drop_success_by_turn": _measurement_contract(
+        level="level_2", target_turn=6, shape="bernoulli_probability",
+        observation_point={"id": "end_of_target_turn_after_level_2_sequencing", "after_pending_time_dependent_removals": True},
+        event={"id": "legal_land_drop_on_every_turn", "first_required_turn": 1, "last_required_turn": "metric.target_turn", "inclusive": True, "later_removal_erases_historical_success": False},
+    ),
+    "ramp_access_by_turn": _measurement_contract(
+        level="level_1", target_turn=3, shape="bernoulli_probability",
+        observation_point={"id": "final_kept_hand_plus_normal_draws_through_target_turn", "hand_state": "final_kept_hand", "draw_window": "normal_draws_through_target_turn"},
+        event={"id": "registered_ramp_identity_seen", "registry_ref": "ramp_access_registry.oracle_ids", "access_only": True, "requires_castability": False, "requires_deployment": False, "requires_online": False, "requires_mana_production": False},
+    ),
+    "distinct_commander_colors_by_turn": _measurement_contract(
+        level="level_2", target_turn=6, shape="categorical_count",
+        observation_point={"id": "end_of_target_turn_after_level_2_sequencing", "after_pending_time_dependent_removals": True},
+        value={"id": "surviving_online_source_capability_color_cardinality", "projection": "source_capability", "domain": [0, 1, 2, 3, 4, 5], "colors": ["W", "U", "B", "R", "G"], "excluded_colors": ["C"], "source_state": "surviving_and_online", "earlier_tapping_removes_capability": False},
+    ),
+    "five_color_availability_by_turn": _measurement_contract(
+        level="level_2", target_turn=6, shape="bernoulli_probability",
+        observation_point={"id": "end_of_target_turn_after_level_2_sequencing", "after_pending_time_dependent_removals": True},
+        event={"id": "all_required_source_capability_colors_available", "projection": "source_capability", "required_colors": ["W", "U", "B", "R", "G"], "excluded_colors": ["C"], "source_state": "surviving_and_online", "earlier_tapping_removes_capability": False, "requires_simultaneous_spendable_mana": False, "requires_commander_castability": False},
+    ),
+    "commander_castability_by_turn": _measurement_contract(
+        level="level_2", target_turn=3, shape="bernoulli_probability",
+        observation_point={"id": "end_of_target_turn_after_level_2_sequencing", "after_pending_time_dependent_removals": True},
+        event={"id": "legal_commander_payment_exists", "projection": "spendable_mana", "resources": "remaining_untapped_after_development", "cost_source": "current_modeled_command_zone_cost", "commander_card_reference": {"path": "workshop/card-data/cards.json", "oracle_id": "6222fccf-fc08-4190-8d40-a56d6d1423df", "mana_cost": "{3}"}, "base_cost": {"generic": 3, "colored": []}, "previous_commander_casts": 0, "commander_tax_generic": 0, "alternate_or_unmodeled_resources_allowed": False, "commander_actually_cast": False},
+    ),
+}
+
+
+def validate_policy_metric_contracts(policy):
+    """Validate that the resolved Policy completely owns all metric semantics."""
+    metrics = (policy.get("metric_catalog") or {}).get("metrics")
+    if not isinstance(metrics, list):
+        return ["policy metric_catalog.metrics must be an array"]
+    by_id = {metric.get("metric_id"): metric for metric in metrics if isinstance(metric, dict)}
+    errors = []
+    if len(by_id) != len(metrics) or set(by_id) != set(METRIC_MEASUREMENT_CONTRACTS):
+        errors.append("policy metric catalog must contain each registered metric exactly once")
+        return errors
+    for metric_id, expected in METRIC_MEASUREMENT_CONTRACTS.items():
+        metric = by_id[metric_id]
+        for field in ("level", "target_turn", "shape"):
+            if metric.get(field) != expected["%s" % {"level": "sequencing_level", "target_turn": "target_turn", "shape": "result_shape"}[field]]:
+                errors.append(f"policy metric {metric_id} {field} does not match its measurement_contract")
+        if metric.get("measurement_contract") != expected:
+            errors.append(f"policy metric {metric_id} measurement_contract is incomplete or does not match the preregistered semantics")
+    return errors
+
+
 def _required(value, fields, label):
     if not isinstance(value, dict):
         return [f"{label} must be an object"]
@@ -188,6 +293,9 @@ def _metric_catalog(policy):
 
 
 def _validate_bernoulli(metric, iteration_count, errors):
+    allowed = {"metric_id", "target_turn", "raw_count", "sample_size", "probability", "confidence_interval"}
+    if set(metric) != allowed:
+        errors.append("result Bernoulli metric must not redefine Policy measurement semantics")
     for field in ("raw_count", "sample_size", "probability", "confidence_interval"):
         if field not in metric: errors.append(f"result Bernoulli metric is missing {field}")
     raw, size, probability = metric.get("raw_count"), metric.get("sample_size"), metric.get("probability")
@@ -204,6 +312,9 @@ def _validate_bernoulli(metric, iteration_count, errors):
 
 
 def _validate_categorical(metric, iteration_count, errors):
+    allowed = {"metric_id", "target_turn", "sample_size", "bins", "mean"}
+    if set(metric) != allowed:
+        errors.append("result categorical metric must not redefine Policy measurement semantics")
     if "confidence_interval" in metric: errors.append("categorical metric must not define a Wilson interval")
     if metric.get("sample_size") != iteration_count: errors.append("categorical metric sample_size does not match run iteration_count")
     bins = metric.get("bins")
@@ -384,6 +495,10 @@ def validate_comparison_result(comparison, *, baseline_run, candidate_run, basel
     for delta in deltas:
         key=_metric_key(delta); bm,cm=bmetrics.get(key),cmetrics.get(key)
         if not bm or not cm: continue
+        allowed = ({"metric_id", "target_turn", "baseline_estimate", "candidate_estimate", "mean_absolute_delta", "bin_proportion_deltas"}
+                   if "bins" in bm else {"metric_id", "target_turn", "baseline_estimate", "candidate_estimate", "absolute_delta", "relative_delta", "relative_delta_applicable"})
+        if not set(delta) <= allowed:
+            errors.append("comparison metric delta must not redefine Policy measurement semantics")
         if delta.get("baseline_estimate")!=bm or delta.get("candidate_estimate")!=cm: errors.append("comparison estimate does not match resolved result metric"); continue
         if "bins" in bm:
             if not math.isclose(delta.get("mean_absolute_delta", float("nan")), cm["mean"]-bm["mean"], abs_tol=1e-12): errors.append("comparison categorical mean delta is invalid")

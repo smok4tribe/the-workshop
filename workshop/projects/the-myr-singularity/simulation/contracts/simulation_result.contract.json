@@ -3,7 +3,7 @@
   "artifact_type": "simulation_result_contract",
   "contract_id": "simulation-result-contract-v2",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v2",
+  "policy_version": "sim-policy-v3",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a SimulationResult. A SimulationResult stores registered metrics, standalone uncertainty where applicable, quantitatively auditable failure patterns, typed evidence claims, and limitations produced by exactly one SimulationRun. It stores no free-form observations, reasoning interpretation, or Product Owner decision, and it never claims gameplay performance, win rate, or generic deck quality. Task 30 defines this contract but creates no SimulationResult instance.",
   "scope": {

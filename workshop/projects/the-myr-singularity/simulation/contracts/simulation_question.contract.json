@@ -3,7 +3,7 @@
   "artifact_type": "simulation_question_contract",
   "contract_id": "simulation-question-contract-v2",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v2",
+  "policy_version": "sim-policy-v3",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a SimulationQuestion. A SimulationQuestion binds a hypothesis to the compared DeckVersions, the policy, the target metrics, and the success interpretation. It carries no metrics, results, or interpretation, and it does not itself execute a run.",
   "scope": {
