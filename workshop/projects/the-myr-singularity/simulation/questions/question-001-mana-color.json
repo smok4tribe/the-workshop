@@ -4,11 +4,11 @@
   "question_id": "question-001-mana-color",
   "project_id": "the-myr-singularity",
   "policy_id": "the-myr-singularity-simulation-policy",
-  "policy_version": "sim-policy-v3",
+  "policy_version": "sim-policy-v4",
   "generated_at": "2026-07-13T00:00:00Z",
   "generated_by": "Terra",
   "hypothesis": "The v1.1 mana-base changes (adding City of Brass and Mana Confluence as any-color sources and Urza's Saga, removing three colorless Urza's Tron lands) increase the specified early mana-development and five-color-availability metrics relative to v1.0 under the simulated model only.",
-  "question_text": "Under the sim-policy-v3 model, how do The Myr Singularity DeckVersion v1.1 and v1.0 compare on the preregistered early mana-development, five-color-availability, keepable-hand, and land-drop metrics through turn 6 under the one-free-mulligan-then-London policy?",
+  "question_text": "Under the sim-policy-v4 model, how do The Myr Singularity DeckVersion v1.1 and v1.0 compare on the preregistered early mana-development, five-color-availability, keepable-hand, and land-drop metrics through turn 6 under the one-free-mulligan-then-London policy?",
   "compared_versions": [
     {
       "deck_version_id": "v1.0",
@@ -30,9 +30,9 @@
   "execution_status": "not_executed",
   "execution_note": "Documented in Task 30 per RFC-015. This question is NOT executed in Task 30: no SimulationRun, no SimulationResult, and no v1.0-versus-v1.1 comparison are produced.",
   "limitations": [
-    "Measures the explicit sim-policy-v3 model only: draw/access (Level 1) and simplified mana development (Level 2).",
+    "Measures the explicit sim-policy-v4 model only: draw/access (Level 1) and simplified mana development (Level 2).",
     "No opponent, combat, stack, politics, or Level 3 sequencing.",
-    "City of Brass and Mana Confluence any-color production and Urza's Saga colorless production are modeled via card_semantics.json because canonical produced_mana is null for those cards; Urza's Saga bounded deterministic final-chapter removal is modeled; tokens, tutor, exact stack interaction, and exact intra-turn Saga rules are not modeled.",
+    "mana_source_semantics.json owns executable Level 2 mana-source behavior. card_semantics.json supplies only the approved project-scoped special semantics/parity for City of Brass, Mana Confluence, and Urza's Saga where canonical produced_mana is null. Urza's Saga bounded deterministic final-chapter removal is modeled; tokens, tutor, exact stack interaction, and unsupported intra-turn Saga behavior are not modeled.",
     "Does not prove superior multiplayer gameplay performance."
   ],
   "explicit_boundary": {
@@ -43,7 +43,7 @@
   },
   "policy_reference": {
     "path": "workshop/projects/the-myr-singularity/simulation/simulation_policy.json",
-    "content_fingerprint": "artifact-content-sha256-v1:f496f7ae0c7186ca91100938ed3cad7a90e8be3a52d88a1a8d7fd129d8f58d8f"
+    "content_fingerprint": "artifact-content-sha256-v1:0ffdada358ab8288a031b55d6e6d8b14db736b2f4f7a11debddd213e96f71caf"
   },
   "required_metrics": [
     {

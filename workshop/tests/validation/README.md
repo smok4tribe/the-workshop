@@ -16,7 +16,7 @@ checks. Every validator is read-only and uses only the Python standard library.
 | `validate_project_reports.py` | Structured project reports, source traceability, exact DeckVersion deltas, evidence status, and deterministic Markdown |
 | `validate_structural_analysis.py` | Post-v1.1 current-state structural analysis, DeckVersion fingerprint and count recomputation, and evidence-language boundaries |
 | `validate_sprint_1_certification.py` | Sprint closure, exit criteria, backlog/checklist closure, evidence honesty, and independent-review state |
-| `validate_simulation_contracts.py` | Sprint 2 v2 simulation policy, immutable semantic provenance, canonical Oracle-ID deck fingerprints, deterministic trace contracts, metric completeness, and no-production-result boundary |
+| `validate_simulation_contracts.py` | Sprint 2 v4 simulation policy, normalized executable mana-source semantics, immutable semantic provenance, canonical Oracle-ID deck fingerprints, deterministic trace contracts, metric completeness, and no-production-result boundary |
 
 `validate_recommendation_review.py` intentionally does not validate decisions,
 designs, approval, implementation, DeckVersions, or `deck/current.txt`.
@@ -283,7 +283,15 @@ contract before any engine or run exists. It checks:
   for cards whose canonical `produced_mana` is null (City of Brass and Mana
   Confluence as any-color five-color sources; Urza's Saga as a colorless-only,
   non-five-color land), each flagged as compensating for the missing canonical
-  data and never editing canonical Card Facts.
+  data and never editing canonical Card Facts. `mana_source_semantics.json`
+  is the complete executable Level 2 source registry for both DeckVersions;
+  it uses canonical Oracle IDs, closed structured conditions, explicit life
+  treatment, priority-ordered replacement profiles, exact full-registry
+  semantics, and deterministic land/ramp selector projections. Level 1 ramp
+  access remains access-only and never makes an unsupported profile executable.
+  Unsupported-only lands remain legal land drops with zero modeled output;
+  conditional end-step removal is evaluated after same-turn development rather
+  than from the land-selection projection alone.
 - The active deck-content fingerprint (`deck-content-sha256-canonical-v2`)
   resolves DeckVersion aliases to canonical Card Facts `oracle_id` values and
   recomputes from immutable DeckVersions. Historical v1 remains unchanged.
@@ -291,6 +299,17 @@ contract before any engine or run exists. It checks:
   Question, Card Semantics, Card Facts, taxonomy, and contract dependencies.
   Results require exact metric coverage; typed evidence claims are rendered
   deterministically and cannot represent generic deck-quality conclusions.
+  Results contain all and only the nine emitting failure patterns, each with
+  a full-run denominator and mathematically consistent frequency. Natural
+  opening-hand aggregates are constrained by the frozen keep rule; taxonomy
+  metadata is resolved as the complete v3 artifact rather than a bare ID set.
+- Policy, Question, and instance contracts preserve caller-owned recording
+  identity and timestamps. The engine must not read wall time or generate
+  UUID/random recording IDs; artifact identity still covers the complete
+  persisted caller metadata. Run top-level/config/boundary fields are
+  exact-closed, Result and Comparison recording IDs/timestamps are validated,
+  and unsupported executable profiles in a tested DeckVersion must appear as
+  deterministic limitation IDs on both Run and Result.
 - The documented first evidence question is bound but `not_executed`, uses
   honest evidence language, and carries no results.
 - No production SimulationRun, SimulationResult, or comparison instance exists

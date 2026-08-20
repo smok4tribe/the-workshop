@@ -9,13 +9,14 @@ exists here, and no deck artifact is changed.
 
 | Artifact | Owns |
 | --- | --- |
-| `simulation_policy.json` | Universal, versioned simulation semantics and resolution rules: commander scenario, turn/draw semantics, observation horizon, mulligan/keep/bottoming rules, Level 1 and Level 2 sequencing, mana/color/ramp resolution, seed/RNG identity, iteration and uncertainty policy, deck-content fingerprint definition, card-behavior boundary, and evidence-language boundary. |
+| `simulation_policy.json` | Universal, versioned simulation semantics and resolution rules: commander scenario, turn/draw semantics, observation horizon, executable mulligan/keep/bottoming transitions, Level 1 and Level 2 sequencing, seed/RNG identity, iteration and uncertainty policy, deck-content fingerprint definition, card-behavior boundary, and evidence-language boundary. |
+| `mana_source_semantics.json` | Project-scoped normalized executable source registry for every Level 2 mana source in DeckVersions v1.0 and v1.1, including structured profiles, conditions, priority selection, payments, online timing, untap behavior, and unsupported-mode boundaries. |
 | `card_semantics.json` | Project-scoped, source-aware modeled card behavior for cards whose canonical `produced_mana` is null (City of Brass, Mana Confluence, Urza's Saga). The policy references this artifact; fixture-specific card behavior is never encoded in the policy. |
 | `contracts/simulation_question.contract.json` | The SimulationQuestion data contract. |
 | `contracts/simulation_run.contract.json` | The SimulationRun data contract. |
 | `contracts/simulation_result.contract.json` | The SimulationResult data contract. |
 | `contracts/comparison_result.contract.json` | The ComparisonResult data contract. |
-| `contracts/failure_pattern_taxonomy.json` | The closed set of failure-pattern category identities. |
+| `contracts/failure_pattern_taxonomy.json` | The closed failure-pattern vocabulary and the exact emitting/non-emitting Result inclusion contract. |
 | `questions/question-001-mana-color.json` | The first evidence question, documented and `not_executed`. |
 | `*.md` companions | Deterministic rendered Markdown for the policy and the question. |
 
@@ -29,16 +30,27 @@ content.
 Every result-changing assumption has one authoritative home:
 
 - Deck content and identity: `../versions/v1.0.json`, `../versions/v1.1.json`.
-- Fixture-specific modeled card behavior: `card_semantics.json`.
+- Project-scoped card overrides: `card_semantics.json`.
+- Executable Level 2 mana source behavior: `mana_source_semantics.json`.
 - Everything else (mulligan, keep, bottoming, draw/turn semantics, horizon,
   sequencing levels, mana/color/ramp resolution, seed/RNG, iterations,
   uncertainty, fingerprint definition, evidence language): `simulation_policy.json`.
-- Failure-pattern category identities: `contracts/failure_pattern_taxonomy.json`.
+- Failure-pattern category identities and Result emission boundary: `contracts/failure_pattern_taxonomy.json`.
+
+Level 2 projects every registered land separately from its modeled mana output:
+an unsupported-only canonical land remains a legal land drop but contributes
+zero colors and zero mana. Conditional profiles contribute only when their
+registered pre-selection conditions are satisfied. Conditional end-step removal
+uses a separate post-development state transition.
+
+Unsupported executable profiles present in a tested DeckVersion are recorded
+on both Run and Result as deterministic
+`unsupported_mana_profile:<oracle_id>:<unsupported_reason_id>` limitation IDs.
 
 ## Lifecycle boundary
 
 `SimulationPolicy` and `SimulationQuestion` do not carry results.
-`SimulationRun` carries configuration and identity, not metrics.
+`SimulationRun` carries exact-closed configuration and identity, not metrics.
 `SimulationResult` carries metrics, not interpretation. Reasoning
 interpretation and Product Owner decisions are separate later artifacts. No
 simulation artifact creates or edits a DeckVersion.

@@ -1,9 +1,9 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "artifact_type": "comparison_result_contract",
-  "contract_id": "comparison-result-contract-v2",
+  "contract_id": "comparison-result-contract-v3",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v3",
+  "policy_version": "sim-policy-v4",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a ComparisonResult. A ComparisonResult compares two resolved SimulationResults under computed semantic parity: policy, question, iteration count, configuration, metric definitions, scenario, and RNG strategy. Identity consequences of distinct DeckVersions may differ. It records full side estimates and absolute and optional relative deltas, but no delta confidence interval. It carries no reasoning interpretation and no Product Owner decision. Task 30 defines this contract but creates no ComparisonResult instance.",
   "scope": {
@@ -101,7 +101,7 @@
     },
     "created_at": {
       "type": "string",
-      "description": "ISO 8601 creation timestamp."
+      "description": "Non-empty caller-supplied ISO-8601 UTC recording timestamp in YYYY-MM-DDTHH:MM:SSZ form."
     },
     "source_references": {
       "type": "object",
@@ -139,6 +139,7 @@
         "policy",
         "question",
         "card_semantics",
+        "mana_source_semantics",
         "canonical_card_facts",
         "failure_pattern_taxonomy",
         "simulation_question_contract",
@@ -156,7 +157,8 @@
     "A ComparisonResult carries no reasoning_interpretation and no product_owner_decision field.",
     "No summary may express win rate, gameplay performance, or generic deck quality.",
     "A ComparisonResult never creates or edits a DeckVersion.",
-    "metric_deltas are non-empty, unique, and exactly cover the shared reported metric set."
+    "metric_deltas are non-empty, unique, and exactly cover the shared reported metric set.",
+    "Recording identity and metadata are caller-supplied. The engine must not read a wall clock or generate UUID/random recording IDs; artifact-content identity includes the complete persisted caller recording metadata, while replay equivalence remains semantic/execution-based."
   ],
   "validation_expectations": [
     "The comparison JSON parses and has every required field.",
@@ -166,10 +168,30 @@
     "relative_delta is present only when baseline_estimate.probability is non-zero.",
     "No forbidden evidence-language claim appears in any label or summary.",
     "No reasoning_interpretation or product_owner_decision field is present.",
-    "explicit_boundary.carries_interpretation, carries_product_owner_decision, is_gameplay_claim, and creates_deck_version are all false."
+    "explicit_boundary.carries_interpretation, carries_product_owner_decision, is_gameplay_claim, and creates_deck_version are all false.",
+    "The persisted contract records the caller-owned RecordingContext boundary; instance validation never treats generated clock or random recording values as engine output."
   ],
   "task_30_state": {
     "instances_created": 0,
     "note": "Task 30 defines this contract only. No ComparisonResult instance is created, and the v1.0-versus-v1.1 comparison is not executed."
+  },
+  "recording_context": {
+    "contract_id": "simulation-recording-context-v1",
+    "engine_boundary": {
+      "wall_clock_read_permitted": false,
+      "random_or_uuid_recording_id_permitted": false,
+      "recording_metadata_owner": "caller"
+    },
+    "artifact_identity": {
+      "algorithm_id": "artifact-content-sha256-v1",
+      "coverage": "The complete persisted artifact, including caller-supplied recording metadata.",
+      "replay_equivalence": "Deterministic semantic/execution equivalence; it does not require identical artifact-content identity when recording metadata differs."
+    },
+    "record_fields": {
+      "id_field": "comparison_id",
+      "id_owner": "caller",
+      "created_at_field": "created_at",
+      "created_at_owner": "caller"
+    }
   }
 }

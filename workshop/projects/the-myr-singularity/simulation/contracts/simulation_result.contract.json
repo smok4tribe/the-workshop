@@ -1,9 +1,9 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "artifact_type": "simulation_result_contract",
-  "contract_id": "simulation-result-contract-v2",
+  "contract_id": "simulation-result-contract-v3",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v3",
+  "policy_version": "sim-policy-v4",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a SimulationResult. A SimulationResult stores registered metrics, standalone uncertainty where applicable, quantitatively auditable failure patterns, typed evidence claims, and limitations produced by exactly one SimulationRun. It stores no free-form observations, reasoning interpretation, or Product Owner decision, and it never claims gameplay performance, win rate, or generic deck quality. Task 30 defines this contract but creates no SimulationResult instance.",
   "scope": {
@@ -98,11 +98,11 @@
     },
     "limitations": {
       "type": "array",
-      "description": "Model limitations, including any unsupported-card-behavior limitations surfaced during the run."
+      "description": "Model limitations, including the complete deterministic unsupported_mana_profile:<oracle_id>:<unsupported_reason_id> set carried by the referenced run."
     },
     "created_at": {
       "type": "string",
-      "description": "ISO 8601 creation timestamp."
+      "description": "Non-empty caller-supplied ISO-8601 UTC recording timestamp in YYYY-MM-DDTHH:MM:SSZ form."
     },
     "source_references": {
       "type": "object",
@@ -136,6 +136,7 @@
         "policy",
         "question",
         "card_semantics",
+        "mana_source_semantics",
         "canonical_card_facts",
         "failure_pattern_taxonomy",
         "simulation_question_contract",
@@ -161,13 +162,15 @@
   },
   "boundary_rules": [
     "A SimulationResult references exactly one SimulationRun.",
+    "failure_patterns contains every emitting taxonomy category exactly once, including zero counts, and contains no non-emitting category.",
     "Every failure_patterns entry references a category_id defined in the failure-pattern taxonomy.",
     "Every failure_patterns entry reports category_id, raw_count, sample_size, and frequency; sample_size equals the source SimulationRun iteration_count, raw_count is within 0..sample_size, and frequency equals raw_count/sample_size.",
     "A SimulationResult carries no reasoning_interpretation and no product_owner_decision field.",
     "No metric or typed claim may express win rate, win probability, average win turn, gameplay or matchup performance, or generic deck quality.",
     "Unsupported card behavior may only appear as a limitation and must never contribute to a metric success count.",
     "A SimulationResult never creates or edits a DeckVersion.",
-    "metrics are non-empty, unique, and exactly Question.required_metrics plus any explicitly selected optional_metrics."
+    "metrics are non-empty, unique, and exactly Question.required_metrics plus any explicitly selected optional_metrics.",
+    "Recording identity and metadata are caller-supplied. The engine must not read a wall clock or generate UUID/random recording IDs; artifact-content identity includes the complete persisted caller recording metadata, while replay equivalence remains semantic/execution-based."
   ],
   "validation_expectations": [
     "The result JSON parses and has every required field.",
@@ -176,10 +179,30 @@
     "Every failure pattern references a valid taxonomy category_id and is mathematically consistent with the source SimulationRun iteration_count.",
     "Evidence claims resolve only to registered metrics or limitations; readable_summary is reproduced deterministically from those typed claims.",
     "No reasoning_interpretation or product_owner_decision field is present.",
-    "explicit_boundary.carries_interpretation, carries_product_owner_decision, is_gameplay_claim, and creates_deck_version are all false."
+    "explicit_boundary.carries_interpretation, carries_product_owner_decision, is_gameplay_claim, and creates_deck_version are all false.",
+    "The persisted contract records the caller-owned RecordingContext boundary; instance validation never treats generated clock or random recording values as engine output."
   ],
   "task_30_state": {
     "instances_created": 0,
     "note": "Task 30 defines this contract only. No SimulationResult instance is created, so no production result exists."
+  },
+  "recording_context": {
+    "contract_id": "simulation-recording-context-v1",
+    "engine_boundary": {
+      "wall_clock_read_permitted": false,
+      "random_or_uuid_recording_id_permitted": false,
+      "recording_metadata_owner": "caller"
+    },
+    "artifact_identity": {
+      "algorithm_id": "artifact-content-sha256-v1",
+      "coverage": "The complete persisted artifact, including caller-supplied recording metadata.",
+      "replay_equivalence": "Deterministic semantic/execution equivalence; it does not require identical artifact-content identity when recording metadata differs."
+    },
+    "record_fields": {
+      "id_field": "result_id",
+      "id_owner": "caller",
+      "created_at_field": "created_at",
+      "created_at_owner": "caller"
+    }
   }
 }

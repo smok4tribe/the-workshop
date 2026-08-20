@@ -5,7 +5,7 @@
   "run_id": "fixture-run-candidate-v1.1",
   "deck_version_id": "v1.1",
   "deck_content_fingerprint": "deck-content-sha256-canonical-v2:510ba8e90025aec8d289edbf895405b7ddde6614161502a3ec47d4beaa56b120",
-  "policy_version": "sim-policy-v3",
+  "policy_version": "sim-policy-v4",
   "iteration_count": 100000,
   "readable_summary": "metric_estimate:keepable_opening_hand_rate@0 | metric_estimate:zero_land_hand_rate@0 | metric_estimate:one_land_hand_rate@0 | metric_estimate:excessive_land_hand_rate@0 | metric_estimate:land_drop_success_by_turn@6 | metric_estimate:ramp_access_by_turn@3 | metric_estimate:distinct_commander_colors_by_turn@6 | metric_estimate:five_color_availability_by_turn@6",
   "metrics": [
@@ -128,34 +128,86 @@
     {
       "metric_id": "five_color_availability_by_turn",
       "target_turn": 6,
-      "raw_count": 61000,
+      "raw_count": 15000,
       "sample_size": 100000,
-      "probability": 0.61,
+      "probability": 0.15,
       "confidence_interval": {
         "method": "wilson_score_interval",
         "level": 0.95,
-        "lower": 0.606973,
-        "upper": 0.613019
+        "lower": 0.1478,
+        "upper": 0.152227
       }
     }
   ],
   "failure_patterns": [
     {
-      "category_id": "five_color_not_complete_by_turn",
-      "raw_count": 39000,
+      "category_id": "zero_land_hand",
+      "raw_count": 8000,
       "sample_size": 100000,
-      "frequency": 0.39
+      "frequency": 0.08
+    },
+    {
+      "category_id": "one_land_hand_unkept",
+      "raw_count": 17000,
+      "sample_size": 100000,
+      "frequency": 0.17
+    },
+    {
+      "category_id": "excessive_land_hand",
+      "raw_count": 5000,
+      "sample_size": 100000,
+      "frequency": 0.05
+    },
+    {
+      "category_id": "mulligan_to_low_hand",
+      "raw_count": 0,
+      "sample_size": 100000,
+      "frequency": 0.0
+    },
+    {
+      "category_id": "missed_land_drop",
+      "raw_count": 38000,
+      "sample_size": 100000,
+      "frequency": 0.38
+    },
+    {
+      "category_id": "ramp_not_available_by_turn",
+      "raw_count": 35000,
+      "sample_size": 100000,
+      "frequency": 0.35
+    },
+    {
+      "category_id": "single_color_missing_by_turn",
+      "raw_count": 19000,
+      "sample_size": 100000,
+      "frequency": 0.19
+    },
+    {
+      "category_id": "multiple_colors_missing_by_turn",
+      "raw_count": 66000,
+      "sample_size": 100000,
+      "frequency": 0.66
+    },
+    {
+      "category_id": "five_color_not_complete_by_turn",
+      "raw_count": 85000,
+      "sample_size": 100000,
+      "frequency": 0.85
     }
   ],
   "confidence": "medium",
   "limitations": [
-    "Synthetic fixture values; not measured evidence."
+    "Synthetic fixture values; not measured evidence.",
+    "unsupported_mana_profile:27b047e3-0d41-45e2-98e9-9391d7923a1e:opponent_mana_capability_not_modeled",
+    "unsupported_mana_profile:7346c266-19d8-4432-acf5-f00aff074ad5:secondary_artifact_or_creature_tap_target_not_registered",
+    "unsupported_mana_profile:bdeb440d-a714-40e8-9038-f651e6ae45fb:secondary_creature_tap_target_not_registered",
+    "unsupported_mana_profile:da3b17a2-e1e1-44e9-b9b1-ae54a92037db:creature_type_choice_and_count_not_registered"
   ],
   "created_at": "2026-07-13T00:00:00Z",
   "source_references": {
     "run": {
       "path": "workshop/tests/fixtures/simulation/valid/simulation_run.valid.json",
-      "content_fingerprint": "artifact-content-sha256-v1:fda8240b0bccba9feb4cad0414507567d7b16e946f9d82f2cae112a61f2d9524"
+      "content_fingerprint": "artifact-content-sha256-v1:2f28b91d1148a7e282065dd54080a3ae4d0f58a92572fbc5563ea2b2fe25aaa7"
     }
   },
   "explicit_boundary": {
@@ -331,14 +383,14 @@
       "estimate": {
         "metric_id": "five_color_availability_by_turn",
         "target_turn": 6,
-        "raw_count": 61000,
+        "raw_count": 15000,
         "sample_size": 100000,
-        "probability": 0.61,
+        "probability": 0.15,
         "confidence_interval": {
           "method": "wilson_score_interval",
           "level": 0.95,
-          "lower": 0.606973,
-          "upper": 0.613019
+          "lower": 0.1478,
+          "upper": 0.152227
         }
       }
     }
@@ -346,15 +398,19 @@
   "semantic_dependencies": {
     "policy": {
       "path": "workshop/projects/the-myr-singularity/simulation/simulation_policy.json",
-      "content_fingerprint": "artifact-content-sha256-v1:f496f7ae0c7186ca91100938ed3cad7a90e8be3a52d88a1a8d7fd129d8f58d8f"
+      "content_fingerprint": "artifact-content-sha256-v1:0ffdada358ab8288a031b55d6e6d8b14db736b2f4f7a11debddd213e96f71caf"
     },
     "question": {
       "path": "workshop/projects/the-myr-singularity/simulation/questions/question-001-mana-color.json",
-      "content_fingerprint": "artifact-content-sha256-v1:9e4d94c512c7c0c4184c4c4995c1018f8ca98ced3dace4a594df09850eb158bd"
+      "content_fingerprint": "artifact-content-sha256-v1:e159a55557ad9ac49a077ffd579da0eb3da52eab5c3fd2eb2493f58af875b004"
     },
     "card_semantics": {
       "path": "workshop/projects/the-myr-singularity/simulation/card_semantics.json",
-      "content_fingerprint": "artifact-content-sha256-v1:f41ca1cc65ff15bc49644c55eb849a94eb30572d858a5422e4283e0722bd64be"
+      "content_fingerprint": "artifact-content-sha256-v1:bf3afba27eadd3cf5a429bb3585606b90b2eeac095b57f9bb66b4c4da3bebae2"
+    },
+    "mana_source_semantics": {
+      "path": "workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json",
+      "content_fingerprint": "artifact-content-sha256-v1:86626c278b667c7c83ddc036e2dd7e1ed96fa403052e22a901e9ce2aea55eea3"
     },
     "canonical_card_facts": {
       "path": "workshop/card-data/cards.json",
@@ -362,23 +418,23 @@
     },
     "failure_pattern_taxonomy": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json",
-      "content_fingerprint": "artifact-content-sha256-v1:08de893818d06e7ac1ab20183340ac8294ca1ec49479004e67cc56f5ed6791e8"
+      "content_fingerprint": "artifact-content-sha256-v1:295f7122deb6caa941a89df7f35904001e0bd9449b745f2734e920011339a38e"
     },
     "simulation_question_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:fd99b30661272ba1b0bfd1eef42d07e1511030e400ddd3da5adde31f34e77f61"
+      "content_fingerprint": "artifact-content-sha256-v1:0495fe3b6eb9a639eee70a3797caf1be39037c75348246c35204a99489da8b57"
     },
     "simulation_run_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_run.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:0fddc6685fae22621b51c9a36acc436c5a64d495a39946e7c3c8f7e180c422d2"
+      "content_fingerprint": "artifact-content-sha256-v1:2ddf349aea0f1a86d940f49a4d082e4d82fb6be5ba6d9a2f38a9457705fd417e"
     },
     "simulation_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:45fd1d764a92cc24180425df96b7cc53864759bcc8574f1ceb0eb06c751f25f5"
+      "content_fingerprint": "artifact-content-sha256-v1:188587ce2afc88b8524efff8ed64e0d35a04fb1a9a5ca25f2fbc486308073087"
     },
     "comparison_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/comparison_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:73e08d9fb7ca477cf98d7201cc09c9ad4304da0cc993fa6ab29ac4c233988e2f"
+      "content_fingerprint": "artifact-content-sha256-v1:c25802a7f62fdc19ecf00fce7ae68cfe89fd199d5b1a97a95a57058a65a2fc1b"
     },
     "deck_version": {
       "path": "workshop/projects/the-myr-singularity/versions/v1.1.json",

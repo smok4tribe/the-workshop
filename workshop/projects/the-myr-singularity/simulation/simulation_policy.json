@@ -2,7 +2,7 @@
   "schema_version": "3.0",
   "artifact_type": "simulation_policy",
   "policy_id": "the-myr-singularity-simulation-policy",
-  "policy_version": "sim-policy-v3",
+  "policy_version": "sim-policy-v4",
   "project_id": "the-myr-singularity",
   "generated_at": "2026-07-13T00:00:00Z",
   "generated_by": "Terra",
@@ -36,7 +36,11 @@
   "references": {
     "card_semantics": {
       "path": "workshop/projects/the-myr-singularity/simulation/card_semantics.json",
-      "content_fingerprint": "artifact-content-sha256-v1:f41ca1cc65ff15bc49644c55eb849a94eb30572d858a5422e4283e0722bd64be"
+      "content_fingerprint": "artifact-content-sha256-v1:bf3afba27eadd3cf5a429bb3585606b90b2eeac095b57f9bb66b4c4da3bebae2"
+    },
+    "mana_source_semantics": {
+      "path": "workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json",
+      "content_fingerprint": "artifact-content-sha256-v1:86626c278b667c7c83ddc036e2dd7e1ed96fa403052e22a901e9ce2aea55eea3"
     },
     "canonical_card_facts": {
       "path": "workshop/card-data/cards.json",
@@ -44,23 +48,23 @@
     },
     "failure_pattern_taxonomy": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json",
-      "content_fingerprint": "artifact-content-sha256-v1:08de893818d06e7ac1ab20183340ac8294ca1ec49479004e67cc56f5ed6791e8"
+      "content_fingerprint": "artifact-content-sha256-v1:295f7122deb6caa941a89df7f35904001e0bd9449b745f2734e920011339a38e"
     },
     "simulation_question_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:fd99b30661272ba1b0bfd1eef42d07e1511030e400ddd3da5adde31f34e77f61"
+      "content_fingerprint": "artifact-content-sha256-v1:0495fe3b6eb9a639eee70a3797caf1be39037c75348246c35204a99489da8b57"
     },
     "simulation_run_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_run.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:0fddc6685fae22621b51c9a36acc436c5a64d495a39946e7c3c8f7e180c422d2"
+      "content_fingerprint": "artifact-content-sha256-v1:2ddf349aea0f1a86d940f49a4d082e4d82fb6be5ba6d9a2f38a9457705fd417e"
     },
     "simulation_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:45fd1d764a92cc24180425df96b7cc53864759bcc8574f1ceb0eb06c751f25f5"
+      "content_fingerprint": "artifact-content-sha256-v1:188587ce2afc88b8524efff8ed64e0d35a04fb1a9a5ca25f2fbc486308073087"
     },
     "comparison_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/comparison_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:73e08d9fb7ca477cf98d7201cc09c9ad4304da0cc993fa6ab29ac4c233988e2f"
+      "content_fingerprint": "artifact-content-sha256-v1:c25802a7f62fdc19ecf00fce7ae68cfe89fd199d5b1a97a95a57058a65a2fc1b"
     }
   },
   "commander_scenario": {
@@ -93,7 +97,24 @@
       "If keepable, keep; apply bottoming_rule to bottom (mulligans_taken - free_mulligans) cards when positive.",
       "If not keepable and mulligans_taken < max_mulligans, mulligan again.",
       "If the maximum is reached, keep the final hand and apply bottoming for the required count."
-    ]
+    ],
+    "executable_state_transition": {
+      "canonical_library": "99 physical card-instance tokens in canonical token order",
+      "initial_shuffle": "fisher_yates_full_library_with_iteration_pcg32",
+      "rejected_hand_transition": [
+        "return_all_physical_tokens_to_eligibility",
+        "reconstruct_full_library_in_canonical_instance_token_order",
+        "increment_mulligans_taken_before_recording_next_attempt",
+        "fisher_yates_full_library_with_same_continuous_iteration_pcg32",
+        "draw_opening_hand_size"
+      ],
+      "rng_reset_permitted": false,
+      "rng_consumption": "fisher_yates_and_registered_bounded_rejection_sampling_only",
+      "force_keep_when_mulligans_taken_equals": 6,
+      "bottom_count": "max(0, mulligans_taken - free_mulligans)",
+      "bottoming_consumes_rng": false,
+      "bottom_placement": "append_selected_cards_to_current_post_draw_library_in_selection_order"
+    }
   },
   "keep_rule": {
     "rule_id": "myr-singularity-keep-v1",
@@ -180,20 +201,20 @@
         "no_extra_land_effects_modeled": true
       },
       "mana_availability_semantics": {
-        "definition": "Mana available by turn t is the sum of mana produced by lands in play and by modeled unconditional nonland mana sources that are online by turn t.",
-        "nonland_mana_sources": "Only mana rocks and mana creatures whose production is resolvable from canonical produced_mana, or explicitly modeled in card_semantics.json, are counted. A nonland source is online only when it can be cast and would be untapped for use by turn t under these simplified assumptions.",
-        "no_rituals_or_conditional_mana": "Conditional, activated-cost-dependent, or one-shot ritual mana is not modeled in Sprint 2 and is treated as unsupported."
+        "definition": "Mana available by turn t is derived only from currently legal supported activation profiles in mana_source_semantics.json under the frozen Level 2 selector projection.",
+        "nonland_mana_sources": "A registered mana rock or mana creature is counted only when its registered deployment is payable and a supported profile is online under the frozen Level 2 conditions. Canonical Card Facts and card_semantics.json provide identity/raw facts and required parity only; neither independently defines executable mana.",
+        "conditional_and_activated_mana": "Conditional or activation-cost-dependent mana is supported exactly when mana_source_semantics.json contains an approved supported profile whose controlled conditions are satisfied. Unregistered conditional, ritual, or one-shot behavior remains unsupported."
       },
       "individual_color_availability_semantics": {
         "definition": "A color C is available by turn t when at least one in-play source that can produce C is online by turn t.",
-        "source_of_color": "A source produces C when C is in its canonical produced_mana list or in a card_semantics produces_colors entry."
+        "source_of_color": "A source produces C only when a currently legal supported mana_source_semantics.json profile contributes C under the Level 2 selector projection; card_semantics.json supplies required parity for City of Brass, Mana Confluence, and Urza's Saga."
       },
       "five_color_availability_semantics": {
         "definition": "All five colors W, U, B, R, G are available by turn t when, for each color, at least one online source can produce it by turn t.",
-        "five_color_source": "A single source counts as a five-color source only when its canonical produced_mana equals the five colors or its card_semantics entry sets counts_as_five_color_source true. Colorless-only sources never contribute to color availability."
+        "five_color_source": "A single source counts as a five-color source only when its currently legal supported mana_source_semantics.json profiles provide W, U, B, R, and G under the selector projection. Colorless-only or unsupported-only profiles never contribute."
       },
       "ramp_access_semantics": {
-        "definition": "Ramp is accessible by turn t when a modeled ramp source (a nonland permanent that adds net mana, resolvable from canonical facts or card_semantics) has been seen by turn t under Level 1 and is castable/online under Level 2 for the availability variant of the metric.",
+        "definition": "Ramp is accessible by turn t when a registered nonland source has been seen by turn t under Level 1; the Level 2 availability variant additionally requires its registered deployment and supported profile to be payable/online under mana_source_semantics.json.",
         "note": "The metric records whether the ramp question is access-only (Level 1) or availability (Level 2); the two are never conflated."
       }
     },
@@ -208,8 +229,9 @@
   },
   "card_behavior_boundary": {
     "supported_behavior_sources": [
-      "Canonical Card Facts land types and produced_mana in workshop/card-data/cards.json.",
-      "Explicit project-scoped overrides in card_semantics.json for cards whose canonical produced_mana is null or absent."
+      "Canonical Card Facts provide immutable card identity, type, and raw canonical facts only.",
+      "card_semantics.json provides approved project-scoped parity behavior only for City of Brass, Mana Confluence, and Urza's Saga.",
+      "mana_source_semantics.json is the authoritative executable Level 2 mana-source registry for the v1.0/v1.1 modeled source union."
     ],
     "override_usage_rules": {
       "when_overrides_may_be_used": "An override may be used only when the canonical Card Fact does not resolve the required land-drop or mana/color semantics for a card that is in the modeled deck. Overrides may only grant the specific fields they declare.",
@@ -217,9 +239,15 @@
       "override_never_global": true
     },
     "unsupported_behavior_handling": {
-      "rule": "Any card behavior that is neither resolvable from canonical Card Facts nor declared in card_semantics.json is unsupported.",
-      "surfacing": "Unsupported behavior must be recorded as a visible limitation on any SimulationRun and SimulationResult that touches the card, and the card contributes nothing to any success metric on account of the unsupported behavior.",
-      "hard_invariant": "Unsupported card behavior must never silently contribute to a success metric."
+      "rule": "Behavior is unsupported unless an approved supported executable profile or state rule in mana_source_semantics.json represents it after any required card_semantics.json parity rule is applied.",
+      "surfacing": "Unsupported behavior must be recorded as a visible limitation on any SimulationRun and SimulationResult that touches the card, and it contributes nothing to any success metric on account of that unsupported behavior.",
+      "hard_invariant": "No supported executable registry profile may be classified as unsupported by the general boundary, and unsupported behavior must never silently contribute to a success metric.",
+      "limitation_representation": {
+        "format": "unsupported_mana_profile:<oracle_id>:<unsupported_reason_id>",
+        "derivation": "For every unsupported executable profile on a source present in the run DeckVersion, derive exactly one limitation ID. The SimulationRun and its SimulationResult must both carry the complete applicable set.",
+        "metric_boundary": "Unsupported behavior contributes zero modeled mana/colors and cannot improve a success metric."
+      },
+      "level_1_ramp_access_boundary": "ramp_access_registry is Level 1 access-only. Its inclusion never implies that a source has executable Level 2 mana production or is deployable by the repeated development loop."
     }
   },
   "randomness_policy": {
@@ -967,301 +995,69 @@
       "source_capability": "surviving online source color capabilities, irrespective of earlier tapping",
       "spendable_mana": "actual remaining untapped payable sources after deterministic development"
     },
+    "mana_source_resolution": {
+      "authority": "workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json",
+      "oracle_text_runtime_parsing": false,
+      "activation_profile_support_boundary": "unsupported profiles cannot contribute to success; supported profiles on a partially unsupported card remain usable",
+      "replacement_profile_selection": "highest_priority_matching_profile",
+      "independent_mode_selection": "legal profiles are alternatives and cannot combine outputs from one source activation",
+      "life_payment_boundary": "a nonzero life payment is usable only when its profile explicitly records treatment ignored",
+      "payment_from_other_sources": "a profile requiring generic payment from other sources excludes its own source from that payment",
+      "source_untap_model": "each profile declares normal or does_not_naturally_untap",
+      "state_transition_timing": "registered end-step removal conditions execute after deterministic same-turn development actions and before the applicable end-of-turn observation",
+      "condition_vocabulary": [
+        "artifact_controlled",
+        "complete_tron_set_controlled",
+        "generic_payment_available_from_other_sources",
+        "commander_color_identity",
+        "bounded_controller_turn_window"
+      ]
+    },
     "urzas_saga_final_chapter_timing": "At controller-turn offset 2, Urza's Saga remains usable during the approved development window, then its final-chapter removal occurs before end-of-turn observation; once removed it contributes to no end-of-turn metric.",
-    "unsupported_actions": "Actions without explicit complete policy registration cannot be selected or improve a metric."
-  },
-  "level_2_mana_source_registry": {
-    "authority": "explicit policy registration only",
-    "entries": [
-      {
-        "oracle_id": "0bc7f093-bef0-4f1a-852c-4b75ebf54838",
-        "card_name": "Arcane Signet",
-        "casting_cost": {
-          "generic": 2,
-          "colored": []
+    "unsupported_actions": "Actions without explicit complete policy registration cannot be selected or improve a metric.",
+    "mana_source_projection": {
+      "contract_id": "mana-source-projection-v1",
+      "authority": "workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json",
+      "condition_state_boundary": "Each registered condition is evaluated at its contract-defined phase. Generic payments from other sources exclude the candidate source; land selection and actual end-step removal use distinct pre-selection and post-development states.",
+      "condition_evaluation_phases": {
+        "land_candidate": {
+          "generic_payment_available_from_other_sources": "pre_play_resources_excluding_candidate",
+          "complete_tron_set_controlled": "hypothetical_post_play_controlled_lands_including_candidate",
+          "bounded_controller_turn_window": "candidate_controller_turn_offset_default_zero",
+          "commander_color_identity": "static_scenario_state",
+          "artifact_controlled": "pre_selection_state_for_selector_persistence",
+          "end_step_remove_unless_condition": "post_development_state"
         },
-        "mana_output": {
-          "units": 1,
-          "colors": [
-            "B",
-            "G",
-            "R",
-            "U",
-            "W"
-          ]
-        },
-        "source_kind": "mana_rock",
-        "same_turn_online_noncreature": true,
-        "online_timing": "same_turn_after_resolution",
-        "activation_conditions": "self_tap_only",
-        "eligible_for_deployment": true
+        "ramp_candidate": {
+          "deployment_payment": "pre_deployment_resources",
+          "activation_profiles": "post_deployment_residual_resources_after_reserved_payment",
+          "self_funding": "forbidden"
+        }
       },
-      {
-        "oracle_id": "2f328e05-5edf-4b21-9c2a-50dcf1e7b3ec",
-        "card_name": "Plague Myr",
-        "casting_cost": {
-          "generic": 2,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 1,
-          "colors": [
-            "C"
-          ]
-        },
-        "source_kind": "mana_creature",
-        "same_turn_online_noncreature": false,
-        "online_timing": "next_controller_turn",
-        "activation_conditions": "self_tap_only",
-        "eligible_for_deployment": true
+      "land_selector_fields": {
+        "colors": "union of W, U, B, R, and G output_capabilities of currently legal supported profiles for the land; C never contributes to this commander-color selector field.",
+        "five_color_source": "true exactly when currently legal supported profiles provide source-capability W, U, B, R, and G.",
+        "permanent": "false for a legal bounded/removing profile; otherwise true unless the pre-selection state predicts a registered removal transition. A later same-turn development action is evaluated separately at end step.",
+        "remaining_availability": "for a bounded profile, inclusive remaining controller-turn offsets through its registered end_offset; for a conditional-removal source, only the current turn when pre-selection predicts removal, otherwise inclusive turns from current_turn through horizon_turn.",
+        "mana_units": "maximum gross registered mana_units among currently legal supported profiles whose contract-phase conditions and payments from other sources are already satisfiable. It is a selector heuristic output quantity, not net mana gain.",
+        "identity": [
+          "oracle_id",
+          "ordinal"
+        ]
       },
-      {
-        "oracle_id": "4d9554de-c005-41ab-a941-39328ebff9de",
-        "card_name": "Relic of Legends",
-        "casting_cost": {
-          "generic": 3,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 1,
-          "colors": [
-            "B",
-            "G",
-            "R",
-            "U",
-            "W"
-          ]
-        },
-        "source_kind": "mana_rock",
-        "same_turn_online_noncreature": true,
-        "online_timing": "same_turn_after_resolution",
-        "activation_conditions": "self_tap_only",
-        "eligible_for_deployment": true
+      "ramp_selector_fields": {
+        "payable": "true only when the deployment casting cost is payable from pre-deployment modeled resources and at least one supported profile remains legal after that payment is reserved.",
+        "same_turn_online_noncreature": "true only for a mana_rock with a supported immediate profile legal after deployment payment reservation.",
+        "output_units": "maximum mana_units among supported profiles legal after deployment payment reservation.",
+        "color_flexibility": "maximum output_capabilities cardinality among supported profiles legal after deployment payment reservation.",
+        "mana_value": "deployment.casting_cost.generic plus the number of deployment.casting_cost.colored symbols.",
+        "identity": [
+          "oracle_id",
+          "ordinal"
+        ]
       },
-      {
-        "oracle_id": "66e8f7f8-3a6d-46ba-837c-b9713ddf7f40",
-        "card_name": "Silver Myr",
-        "casting_cost": {
-          "generic": 2,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 1,
-          "colors": [
-            "U"
-          ]
-        },
-        "source_kind": "mana_creature",
-        "same_turn_online_noncreature": false,
-        "online_timing": "next_controller_turn",
-        "activation_conditions": "self_tap_only",
-        "eligible_for_deployment": true
-      },
-      {
-        "oracle_id": "6abf433e-27da-4abb-b262-3af792a1db23",
-        "card_name": "Myr Convert",
-        "casting_cost": {
-          "generic": 2,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 1,
-          "colors": [
-            "B",
-            "G",
-            "R",
-            "U",
-            "W"
-          ]
-        },
-        "source_kind": "mana_creature",
-        "same_turn_online_noncreature": false,
-        "online_timing": "next_controller_turn",
-        "activation_conditions": "requires_unmodeled_life_payment",
-        "eligible_for_deployment": false
-      },
-      {
-        "oracle_id": "6ad8011d-3471-4369-9d68-b264cc027487",
-        "card_name": "Sol Ring",
-        "casting_cost": {
-          "generic": 1,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 2,
-          "colors": [
-            "C"
-          ]
-        },
-        "source_kind": "mana_rock",
-        "same_turn_online_noncreature": true,
-        "online_timing": "same_turn_after_resolution",
-        "activation_conditions": "self_tap_only",
-        "eligible_for_deployment": true
-      },
-      {
-        "oracle_id": "6b8cf2a0-b045-4d91-9d91-c602d40c6237",
-        "card_name": "Basalt Monolith",
-        "casting_cost": {
-          "generic": 3,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 3,
-          "colors": [
-            "C"
-          ]
-        },
-        "source_kind": "mana_rock",
-        "same_turn_online_noncreature": false,
-        "online_timing": "same_turn_after_resolution",
-        "activation_conditions": "does_not_untap_without_unmodeled_untap_cost",
-        "eligible_for_deployment": false
-      },
-      {
-        "oracle_id": "6c5cbab6-ee27-46f5-97a7-df85698d1e9f",
-        "card_name": "Iron Myr",
-        "casting_cost": {
-          "generic": 2,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 1,
-          "colors": [
-            "R"
-          ]
-        },
-        "source_kind": "mana_creature",
-        "same_turn_online_noncreature": false,
-        "online_timing": "next_controller_turn",
-        "activation_conditions": "self_tap_only",
-        "eligible_for_deployment": true
-      },
-      {
-        "oracle_id": "7346c266-19d8-4432-acf5-f00aff074ad5",
-        "card_name": "Moonsnare Prototype",
-        "casting_cost": {
-          "generic": 1,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 1,
-          "colors": [
-            "C"
-          ]
-        },
-        "source_kind": "mana_rock",
-        "same_turn_online_noncreature": false,
-        "online_timing": "same_turn_after_resolution",
-        "activation_conditions": "requires_unmodeled_artifact_or_creature_tap",
-        "eligible_for_deployment": false
-      },
-      {
-        "oracle_id": "7b0767b8-b504-456e-93bd-218502f73b3d",
-        "card_name": "Palladium Myr",
-        "casting_cost": {
-          "generic": 3,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 2,
-          "colors": [
-            "C"
-          ]
-        },
-        "source_kind": "mana_creature",
-        "same_turn_online_noncreature": false,
-        "online_timing": "next_controller_turn",
-        "activation_conditions": "self_tap_only",
-        "eligible_for_deployment": true
-      },
-      {
-        "oracle_id": "8b52f30c-5e38-4333-88ab-901b37105b36",
-        "card_name": "Copper Myr",
-        "casting_cost": {
-          "generic": 2,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 1,
-          "colors": [
-            "G"
-          ]
-        },
-        "source_kind": "mana_creature",
-        "same_turn_online_noncreature": false,
-        "online_timing": "next_controller_turn",
-        "activation_conditions": "self_tap_only",
-        "eligible_for_deployment": true
-      },
-      {
-        "oracle_id": "bd6af7b3-b30f-4a65-a18f-8655f778e76a",
-        "card_name": "Gold Myr",
-        "casting_cost": {
-          "generic": 2,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 1,
-          "colors": [
-            "W"
-          ]
-        },
-        "source_kind": "mana_creature",
-        "same_turn_online_noncreature": false,
-        "online_timing": "next_controller_turn",
-        "activation_conditions": "self_tap_only",
-        "eligible_for_deployment": true
-      },
-      {
-        "oracle_id": "bdeb440d-a714-40e8-9038-f651e6ae45fb",
-        "card_name": "Springleaf Drum",
-        "casting_cost": {
-          "generic": 1,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 1,
-          "colors": [
-            "B",
-            "G",
-            "R",
-            "U",
-            "W"
-          ]
-        },
-        "source_kind": "mana_rock",
-        "same_turn_online_noncreature": false,
-        "online_timing": "same_turn_after_resolution",
-        "activation_conditions": "requires_unmodeled_creature_tap",
-        "eligible_for_deployment": false
-      },
-      {
-        "oracle_id": "e3056f28-868b-401a-a528-7528d639bdeb",
-        "card_name": "Prismatic Lens",
-        "casting_cost": {
-          "generic": 2,
-          "colored": []
-        },
-        "mana_output": {
-          "units": 1,
-          "colors": [
-            "B",
-            "C",
-            "G",
-            "R",
-            "U",
-            "W"
-          ]
-        },
-        "source_kind": "mana_rock",
-        "same_turn_online_noncreature": false,
-        "online_timing": "same_turn_after_resolution",
-        "activation_conditions": "colored_filter_activation_requires_unmodeled_extra_payment",
-        "eligible_for_deployment": false
-      }
-    ],
-    "rule": "Only entries with eligible_for_deployment true may be selected. Every excluded entry is surfaced as unsupported and contributes nothing to a success metric."
+      "unsupported_profile_boundary": "Unsupported-only profiles and sources produce zero Level 2 output and are not payable registered ramp. Level 1 access registration remains independent."
+    }
   },
   "ramp_access_semantics": [
     "ramp_access_by_turn is Level 1 access-only: an explicitly registered ramp-access identity is seen in the final kept hand plus normal draws through target turn.",

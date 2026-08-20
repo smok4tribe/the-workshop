@@ -1,4 +1,4 @@
-"""Positive and adversarial coverage for the active simulation-policy-v3 contract."""
+"""Positive and adversarial coverage for the active simulation-policy-v4 contract."""
 
 from __future__ import annotations
 
@@ -23,7 +23,12 @@ from workshop.shared.simulation_determinism import (  # noqa: E402
 )
 from workshop.simulation.instance_validation import (  # noqa: E402
     METRIC_MEASUREMENT_CONTRACTS, validate_comparison_result,
-    validate_policy_metric_contracts, validate_simulation_result, validate_simulation_run,
+    evaluate_end_step_state_transitions, project_level_two_land, project_level_two_ramp,
+    resolve_activation_profiles, resolve_question_metric_target,
+    validate_card_semantics_registry_parity, validate_failure_pattern_taxonomy,
+    validate_mana_source_semantics,
+    validate_policy_metric_contracts, validate_recording_context,
+    validate_result_failure_patterns, validate_simulation_result, validate_simulation_run,
 )
 
 PROJECT = REPO_ROOT / "workshop" / "projects" / "the-myr-singularity"
@@ -66,7 +71,7 @@ class IndependentPCG32:
         return result
 
 
-class SimulationContractV3Tests(unittest.TestCase):
+class SimulationContractV4Tests(unittest.TestCase):
     def setUp(self):
         self.policy = load(SIM / "simulation_policy.json")
         self.question = load(SIM / "questions" / "question-001-mana-color.json")
@@ -83,6 +88,7 @@ class SimulationContractV3Tests(unittest.TestCase):
             "workshop/projects/the-myr-singularity/simulation/simulation_policy.json": self.policy,
             "workshop/projects/the-myr-singularity/simulation/questions/question-001-mana-color.json": self.question,
             "workshop/projects/the-myr-singularity/simulation/card_semantics.json": load(SIM / "card_semantics.json"),
+            "workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json": load(SIM / "mana_source_semantics.json"),
             "workshop/card-data/cards.json": self.cards,
             "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json": load(CONTRACTS / "failure_pattern_taxonomy.json"),
             "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json": load(CONTRACTS / "simulation_question.contract.json"),
@@ -96,7 +102,8 @@ class SimulationContractV3Tests(unittest.TestCase):
             "workshop/tests/fixtures/simulation/valid/simulation_result.valid.json": self.result,
             "workshop/tests/fixtures/simulation/valid/simulation_result.baseline.valid.json": self.baseline_result,
         }
-        self.taxonomy_ids = {x["category_id"] for x in self.documents["workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json"]["categories"]}
+        self.taxonomy = self.documents["workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json"]
+        self.taxonomy_ids = {x["category_id"] for x in self.taxonomy["categories"]}
 
     def loader(self, path):
         return self.documents[path]
@@ -108,16 +115,23 @@ class SimulationContractV3Tests(unittest.TestCase):
         return validate_simulation_run(run or self.run, question=self.question, policy=self.policy, run_contract=self.contracts["simulation_run.contract.json"], project_id="the-myr-singularity", load_reference=self.loader, fingerprint_for_version=self.fingerprint)
 
     def check_result(self, result=None, run=None):
-        return validate_simulation_result(result or self.result, run=run or self.run, policy=self.policy, question=self.question, result_contract=self.contracts["simulation_result.contract.json"], taxonomy_ids=self.taxonomy_ids, load_reference=self.loader)
+        return validate_simulation_result(result or self.result, run=run or self.run, policy=self.policy, question=self.question, result_contract=self.contracts["simulation_result.contract.json"], taxonomy_ids=self.taxonomy, load_reference=self.loader)
 
     def check_comparison(self, comparison=None, baseline_result=None, candidate_result=None):
-        return validate_comparison_result(comparison or self.comparison, baseline_run=self.baseline_run, candidate_run=self.run, baseline_result=baseline_result or self.baseline_result, candidate_result=candidate_result or self.result, policy=self.policy, question=self.question, comparison_contract=self.contracts["comparison_result.contract.json"], run_contract=self.contracts["simulation_run.contract.json"], result_contract=self.contracts["simulation_result.contract.json"], project_id="the-myr-singularity", taxonomy_ids=self.taxonomy_ids, load_reference=self.loader, fingerprint_for_version=self.fingerprint)
+        return validate_comparison_result(comparison or self.comparison, baseline_run=self.baseline_run, candidate_run=self.run, baseline_result=baseline_result or self.baseline_result, candidate_result=candidate_result or self.result, policy=self.policy, question=self.question, comparison_contract=self.contracts["comparison_result.contract.json"], run_contract=self.contracts["simulation_run.contract.json"], result_contract=self.contracts["simulation_result.contract.json"], project_id="the-myr-singularity", taxonomy_ids=self.taxonomy, load_reference=self.loader, fingerprint_for_version=self.fingerprint)
+
+    def check_registry(self, registry):
+        versions = [
+            self.documents["workshop/projects/the-myr-singularity/versions/v1.0.json"],
+            self.documents["workshop/projects/the-myr-singularity/versions/v1.1.json"],
+        ]
+        return validate_mana_source_semantics(registry, policy=self.policy, cards=self.cards["cards"], versions=versions)
 
     def test_committed_validator_passes(self):
         result = subprocess.run([sys.executable, "workshop/tests/validation/validate_simulation_contracts.py"], cwd=REPO_ROOT, text=True, capture_output=True, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_valid_v3_fixtures_validate(self):
+    def test_valid_v4_fixtures_validate(self):
         self.assertEqual([], self.check_run())
         self.assertEqual([], self.check_result())
         self.assertEqual([], self.check_comparison())
@@ -289,6 +303,7 @@ class SimulationContractV3Tests(unittest.TestCase):
             "workshop/projects/the-myr-singularity/simulation/simulation_policy.json",
             "workshop/projects/the-myr-singularity/simulation/questions/question-001-mana-color.json",
             "workshop/projects/the-myr-singularity/simulation/card_semantics.json",
+            "workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json",
             "workshop/card-data/cards.json",
             "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json",
             "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json",
@@ -305,11 +320,11 @@ class SimulationContractV3Tests(unittest.TestCase):
                 self.assertTrue(any("content fingerprint" in error or "expected artifact" in error for error in self.check_run()))
                 self.documents[path] = original
 
-    def test_v3_seed_and_iteration_vectors(self):
+    def test_v4_seed_and_iteration_vectors(self):
         seed = derive_run_seed(self.run["semantic_dependencies"]["question"]["content_fingerprint"], self.run["semantic_dependencies"]["policy"]["content_fingerprint"], self.run["deck_content_fingerprint"], self.run["run_role"])
         self.assertEqual(seed, self.run["seed"])
-        self.assertEqual(derive_iteration_seed(seed, 1), 8697573611435551969)
-        self.assertEqual(derive_iteration_seed(seed, 2), 3667411912516177518)
+        self.assertEqual(derive_iteration_seed(seed, 1), 4177967256059703105)
+        self.assertEqual(derive_iteration_seed(seed, 2), 4787023080303716387)
 
     def test_trace_kat_freezes_canonical_expansion_and_opening_shuffle(self):
         kat = load(REPO_ROOT / "workshop" / "tests" / "fixtures" / "simulation" / "simulation_iteration_trace.v1.json")
@@ -337,6 +352,42 @@ class SimulationContractV3Tests(unittest.TestCase):
         reset_second = PCG32(derive_iteration_seed(self.run["seed"], 1)).shuffle(range(10))
         self.assertNotEqual(second, reset_second)
         self.assertNotEqual(first, second)
+
+    def test_full_library_second_shuffle_literal_kat(self):
+        from workshop.shared.identity import canonical_deck_tokens
+        version = self.documents["workshop/projects/the-myr-singularity/versions/v1.1.json"]
+        tokens = canonical_deck_tokens(version, self.cards["cards"])
+        rng = IndependentPCG32(3124231310674535409)
+        first = rng.shuffle(tokens)[:7]
+        second = rng.shuffle(tokens)[:7]
+        self.assertEqual(first, [
+            "02f16726-f2f6-4943-b71a-93f8e26251d3#1", "d98b4250-3492-4864-9c4c-42db09b3ccd4#1",
+            "8dc067bf-f78f-4ac4-b6e7-b305c42cf0bc#1", "e5e8e116-10fe-48b0-b3d8-6edb39bd5f90#1",
+            "d5ad26cc-2bdb-46b7-b8bf-dd099d5fa09b#1", "4b515bb0-f275-4400-8032-3173b799ab40#1",
+            "8b52f30c-5e38-4333-88ab-901b37105b36#1",
+        ])
+        self.assertEqual(second, [
+            "65986c1b-8e51-4604-b685-d82fa7d1263a#1", "4c6a0c30-b547-4eff-8ff4-0ca25803c076#1",
+            "42a3855d-25ab-45b3-9e5d-9a0f3da35a05#1", "2a838818-d590-4374-9a63-d9e6381a0f0d#1",
+            "1787ac2f-762d-4f3a-b7e5-12db6d3d470d#1", "da3b17a2-e1e1-44e9-b9b1-ae54a92037db#1",
+            "e87906d2-db1a-4e19-b910-adb4eb339945#1",
+        ])
+
+    def test_mulligan_transition_freezes_free_london_and_force_keep_boundaries(self):
+        transition = self.policy["mulligan_policy"]["executable_state_transition"]
+        self.assertEqual(transition["canonical_library"], "99 physical card-instance tokens in canonical token order")
+        self.assertEqual(transition["initial_shuffle"], "fisher_yates_full_library_with_iteration_pcg32")
+        self.assertEqual(transition["rejected_hand_transition"][:4], [
+            "return_all_physical_tokens_to_eligibility",
+            "reconstruct_full_library_in_canonical_instance_token_order",
+            "increment_mulligans_taken_before_recording_next_attempt",
+            "fisher_yates_full_library_with_same_continuous_iteration_pcg32",
+        ])
+        self.assertIn("fisher_yates_full_library_with_same_continuous_iteration_pcg32", transition["rejected_hand_transition"])
+        self.assertFalse(transition["rng_reset_permitted"])
+        self.assertEqual(transition["force_keep_when_mulligans_taken_equals"], 6)
+        self.assertEqual(transition["bottom_count"], "max(0, mulligans_taken - free_mulligans)")
+        self.assertFalse(transition["bottoming_consumes_rng"])
 
     def test_deep_london_bottoming_and_canonical_ties(self):
         hand = {"bottom_count": 5, "cards": ["b#1", "a#1", "land-c#1", "land-a#1", "land-b#1", "land-d#1", "land-e#1"]}
@@ -487,6 +538,449 @@ class SimulationContractV3Tests(unittest.TestCase):
             REPO_ROOT / "workshop/analysis/structural_analysis.py",
         ):
             self.assertNotIn("workshop.tests.validation", path.read_text(encoding="utf-8"))
+
+    def test_mana_source_registry_covers_both_versions(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        self.assertEqual([], self.check_registry(registry))
+
+    def test_registry_rejects_unknown_condition_and_missing_life_treatment(self):
+        registry = copy.deepcopy(self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"])
+        profile = next(record for record in registry["records"] if record["card_name"] == "Myr Convert")["activation_groups"][0]["profiles"][0]
+        profile["conditions"] = [{"condition_id": "free_text", "params": {}}]
+        errors = self.check_registry(registry)
+        self.assertTrue(any("invalid structured condition" in error for error in errors))
+        registry = copy.deepcopy(self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"])
+        profile = next(record for record in registry["records"] if record["card_name"] == "Myr Convert")["activation_groups"][0]["profiles"][0]
+        profile["payment"]["life"]["treatment"] = "not_applicable"
+        errors = self.check_registry(registry)
+        self.assertTrue(any("life-cost profile" in error for error in errors))
+
+    def test_registry_rejects_free_text_or_unknown_output_selection(self):
+        registry = copy.deepcopy(self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"])
+        profile = next(record for record in registry["records"] if record["card_name"] == "Myr Convert")["activation_groups"][0]["profiles"][0]
+        profile["conditions"] = ["a prose condition"]
+        errors = self.check_registry(registry)
+        self.assertTrue(any("must be an object" in error for error in errors))
+        registry = copy.deepcopy(self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"])
+        profile = next(record for record in registry["records"] if record["card_name"] == "Myr Convert")["activation_groups"][0]["profiles"][0]
+        profile["output_selection"] = "arbitrary_runtime_choice"
+        errors = self.check_registry(registry)
+        self.assertTrue(any("unregistered execution value" in error for error in errors))
+
+    def test_registry_preserves_supported_and_unsupported_profile_boundaries(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        records = {record["card_name"]: record for record in registry["records"]}
+        self.assertTrue(records["Myr Convert"]["activation_groups"][0]["profiles"][0]["supported"])
+        self.assertEqual(records["Myr Convert"]["activation_groups"][0]["profiles"][0]["payment"]["life"], {"amount": 2, "treatment": "ignored"})
+        self.assertEqual(records["Basalt Monolith"]["activation_groups"][0]["profiles"][0]["natural_untap_model"], "does_not_naturally_untap")
+        self.assertFalse(records["Moonsnare Prototype"]["activation_groups"][0]["profiles"][0]["supported"])
+        self.assertFalse(records["Springleaf Drum"]["activation_groups"][0]["profiles"][0]["supported"])
+        self.assertEqual(records["Three Tree City"]["activation_groups"][0]["profiles"][0]["supported"], True)
+        self.assertEqual(records["Three Tree City"]["activation_groups"][0]["profiles"][1]["supported"], False)
+
+    def test_glimmervoid_state_transition_is_closed_and_required(self):
+        self.assertEqual(
+            self.policy["level_2_sequencing"]["mana_source_resolution"]["state_transition_timing"],
+            "registered end-step removal conditions execute after deterministic same-turn development actions and before the applicable end-of-turn observation",
+        )
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        glimmervoid = next(record for record in registry["records"] if record["card_name"] == "Glimmervoid")
+        self.assertEqual(glimmervoid["state_transitions"], [{
+            "event_id": "end_step_remove_unless_condition",
+            "condition": {"condition_id": "artifact_controlled", "params": {"minimum_count": 1}},
+        }])
+        missing = copy.deepcopy(registry)
+        next(record for record in missing["records"] if record["card_name"] == "Glimmervoid").pop("state_transitions")
+        self.assertIn("Glimmervoid must have exactly the approved end-step artifact-control transition", self.check_registry(missing))
+        invalid = copy.deepcopy(registry)
+        invalid_transition = next(record for record in invalid["records"] if record["card_name"] == "Glimmervoid")["state_transitions"][0]
+        invalid_transition["event_id"] = "arbitrary_event"
+        self.assertTrue(any("event_id is not registered" in error for error in self.check_registry(invalid)))
+
+    def test_registry_condition_parameter_values_are_closed(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        cases = (
+            ("artifact_zero", "Spire of Industry", "colored", lambda condition: condition["params"].__setitem__("minimum_count", 0)),
+            ("generic_negative", "The Mycosynth Gardens", "filter", lambda condition: condition["params"].__setitem__("required_units", -1)),
+            ("generic_text", "The Mycosynth Gardens", "filter", lambda condition: condition["params"].__setitem__("required_units", "5")),
+            ("tron_wrong", "Urza's Tower", "enhanced", lambda condition: condition["params"]["oracle_ids"].__setitem__(0, "00000000-0000-0000-0000-000000000000")),
+            ("tron_duplicate", "Urza's Tower", "enhanced", lambda condition: condition["params"]["oracle_ids"].__setitem__(1, condition["params"]["oracle_ids"][0])),
+            ("commander_missing", "Command Tower", "commander-choice", lambda condition: condition["params"].__setitem__("colors", ["W", "U", "B", "R"])),
+            ("commander_unknown", "Command Tower", "commander-choice", lambda condition: condition["params"].__setitem__("colors", ["W", "U", "B", "R", "G", "X"])),
+            ("saga_end", "Urza's Saga", "bounded-c", lambda condition: condition["params"].__setitem__("end_offset", 3)),
+            ("saga_event", "Urza's Saga", "bounded-c", lambda condition: condition["params"].__setitem__("removal_event", "arbitrary_event")),
+        )
+        for name, card_name, profile_id, mutate in cases:
+            with self.subTest(name=name):
+                changed = copy.deepcopy(registry)
+                profile = next(profile for record in changed["records"] if record["card_name"] == card_name for group in record["activation_groups"] for profile in group["profiles"] if profile["profile_id"] == profile_id)
+                mutate(profile["conditions"][0])
+                self.assertTrue(self.check_registry(changed))
+
+    def test_registry_rejects_unregistered_fields_at_every_executable_boundary(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        cases = (
+            ("top", lambda value: value.__setitem__("engine_hint", "forbidden")),
+            ("record_runtime", lambda value: value["records"][0].__setitem__("runtime_override", True)),
+            ("record_arbitrary", lambda value: value["records"][0].__setitem__("arbitrary_unknown_field", True)),
+            ("deployment", lambda value: value["records"][0]["deployment"].__setitem__("extra", True)),
+            ("casting_cost", lambda value: value["records"][0]["deployment"]["casting_cost"].__setitem__("extra", True)),
+            ("activation_group", lambda value: value["records"][0]["activation_groups"][0].__setitem__("extra", True)),
+            ("profile_oracle", lambda value: value["records"][0]["activation_groups"][0]["profiles"][0].__setitem__("oracle_text_rule", "forbidden")),
+            ("profile_runtime", lambda value: value["records"][0]["activation_groups"][0]["profiles"][0].__setitem__("runtime_script", "forbidden")),
+            ("payment", lambda value: value["records"][0]["activation_groups"][0]["profiles"][0]["payment"].__setitem__("custom_cost", 1)),
+            ("life", lambda value: value["records"][0]["activation_groups"][0]["profiles"][0]["payment"]["life"].__setitem__("extra", True)),
+            ("condition", lambda value: next(record for record in value["records"] if record["card_name"] == "Spire of Industry")["activation_groups"][0]["profiles"][1]["conditions"][0].__setitem__("description", "forbidden")),
+            ("condition_params", lambda value: next(record for record in value["records"] if record["card_name"] == "Spire of Industry")["activation_groups"][0]["profiles"][1]["conditions"][0]["params"].__setitem__("extra", True)),
+            ("transition", lambda value: next(record for record in value["records"] if record["card_name"] == "Glimmervoid")["state_transitions"][0].__setitem__("extra", True)),
+            ("transition_condition", lambda value: next(record for record in value["records"] if record["card_name"] == "Glimmervoid")["state_transitions"][0]["condition"].__setitem__("description", "forbidden")),
+        )
+        for name, mutate in cases:
+            with self.subTest(name=name):
+                changed = copy.deepcopy(registry)
+                mutate(changed)
+                self.assertTrue(any("unregistered fields" in error for error in self.check_registry(changed)))
+
+    def test_registry_rejects_primitive_domains_and_cross_field_drift(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+
+        def record(value, card_name):
+            return next(item for item in value["records"] if item["card_name"] == card_name)
+
+        def profile(value, card_name, profile_id):
+            return next(
+                item for group in record(value, card_name)["activation_groups"] for item in group["profiles"]
+                if item["profile_id"] == profile_id
+            )
+
+        cases = (
+            ("negative_casting_generic", lambda value: record(value, "Island")["deployment"]["casting_cost"].__setitem__("generic", -1)),
+            ("negative_payment_generic", lambda value: profile(value, "Prismatic Lens", "filter")["payment"].__setitem__("generic", -1)),
+            ("negative_life_amount", lambda value: profile(value, "Myr Convert", "any")["payment"]["life"].__setitem__("amount", -2)),
+            ("boolean_numeric", lambda value: profile(value, "Prismatic Lens", "filter").__setitem__("priority", True)),
+            ("unknown_cost_color", lambda value: record(value, "Island")["deployment"]["casting_cost"].__setitem__("colored", ["X"])),
+            ("unknown_payment_color", lambda value: profile(value, "Prismatic Lens", "filter")["payment"].__setitem__("colored", ["X"])),
+            ("output_string", lambda value: profile(value, "Cascading Cataracts", "c").__setitem__("output_capabilities", "C")),
+            ("unknown_capability", lambda value: profile(value, "Cascading Cataracts", "c").__setitem__("output_capabilities", ["X"])),
+            ("duplicate_capability", lambda value: profile(value, "Cascading Cataracts", "c").__setitem__("output_capabilities", ["C", "C"])),
+            ("fixed_multiple_capabilities", lambda value: profile(value, "Cascading Cataracts", "c").__setitem__("output_capabilities", ["C", "W"])),
+            ("land_not_land_drop", lambda value: record(value, "Cascading Cataracts")["deployment"].__setitem__("counts_as_land_drop", False)),
+            ("nonland_is_land_drop", lambda value: record(value, "Sol Ring")["deployment"].__setitem__("counts_as_land_drop", True)),
+            ("mana_creature_noncreature", lambda value: record(value, "Sol Ring").__setitem__("source_kind", "mana_creature")),
+            ("filter_payment_mismatch", lambda value: profile(value, "Cascading Cataracts", "filter-five")["conditions"][0]["params"].__setitem__("required_units", 1)),
+            ("filter_payment_condition_missing", lambda value: profile(value, "Prismatic Lens", "filter").__setitem__("conditions", [])),
+            ("bounded_window_condition_missing", lambda value: profile(value, "Urza's Saga", "bounded-c").__setitem__("conditions", [])),
+            ("bounded_condition_immediate", lambda value: profile(value, "Urza's Saga", "bounded-c").__setitem__("online_model", "immediate")),
+            ("invalid_schema_version", lambda value: value.__setitem__("schema_version", "2.0")),
+            ("invalid_unsupported_reasons", lambda value: value.__setitem__("unsupported_reason_ids", ["duplicate", "duplicate"])),
+            ("empty_card_name", lambda value: record(value, "Island").__setitem__("card_name", "")),
+            ("empty_profile_id", lambda value: profile(value, "Prismatic Lens", "filter").__setitem__("profile_id", "")),
+            ("invalid_group_id", lambda value: record(value, "Island")["activation_groups"][0].__setitem__("group_id", "not-mana")),
+        )
+        for name, mutate in cases:
+            with self.subTest(name=name):
+                changed = copy.deepcopy(registry)
+                mutate(changed)
+                self.assertTrue(self.check_registry(changed))
+
+    def test_tron_profile_resolution_is_priority_ordered(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        group = next(record for record in registry["records"] if record["card_name"] == "Urza's Tower")["activation_groups"][0]
+        selected, errors = resolve_activation_profiles(group, {"complete_tron_set_controlled": True})
+        self.assertEqual([], errors); self.assertEqual("enhanced", selected[0]["profile_id"])
+        selected, errors = resolve_activation_profiles(group, {"complete_tron_set_controlled": False})
+        self.assertEqual([], errors); self.assertEqual("base", selected[0]["profile_id"])
+        reversed_group = copy.deepcopy(group); reversed_group["profiles"].reverse()
+        selected, errors = resolve_activation_profiles(reversed_group, {"complete_tron_set_controlled": True})
+        self.assertEqual([], errors); self.assertEqual("enhanced", selected[0]["profile_id"])
+        tied = copy.deepcopy(group); tied["profiles"][1]["priority"] = 100
+        _, errors = resolve_activation_profiles(tied, {"complete_tron_set_controlled": True})
+        self.assertIn("highest-priority activation group has tied matching profiles", errors)
+
+    def test_failure_patterns_require_exact_emitting_set_and_question_target(self):
+        result = copy.deepcopy(self.result); result["failure_patterns"] = []
+        self.assertIn("failure_patterns must contain every emitting category exactly once and no non-emitting category", self.check_result(result))
+        result = copy.deepcopy(self.result)
+        result["failure_patterns"].append({"category_id": "insufficient_mana_by_turn", "raw_count": 0, "sample_size": 100000, "frequency": 0.0})
+        self.assertIn("failure_patterns must contain every emitting category exactly once and no non-emitting category", self.check_result(result))
+
+    def test_failure_patterns_enforce_quantities_and_exact_question_metric_resolution(self):
+        result = copy.deepcopy(self.result)
+        result["failure_patterns"][0]["raw_count"] = 100001
+        self.assertIn("failure pattern raw_count must be within 0..sample_size", self.check_result(result))
+        result = copy.deepcopy(self.result)
+        result["failure_patterns"][0]["sample_size"] = 99999
+        self.assertIn("failure pattern sample_size does not match run iteration_count", self.check_result(result))
+        result = copy.deepcopy(self.result)
+        result["failure_patterns"][0]["frequency"] = 0.5
+        self.assertIn("failure pattern frequency does not equal raw_count/sample_size", self.check_result(result))
+        reference = {"source": "simulation_question.required_metrics", "metric_id": "ramp_access_by_turn", "field": "target_turn"}
+        missing = copy.deepcopy(self.question); missing["required_metrics"] = [item for item in missing["required_metrics"] if item["metric_id"] != "ramp_access_by_turn"]
+        _, errors = resolve_question_metric_target(missing, reference)
+        self.assertIn("question required_metrics must contain exactly one 'ramp_access_by_turn' target", errors)
+        duplicate = copy.deepcopy(self.question); duplicate["required_metrics"].append(copy.deepcopy(next(item for item in duplicate["required_metrics"] if item["metric_id"] == "ramp_access_by_turn")))
+        _, errors = resolve_question_metric_target(duplicate, reference)
+        self.assertIn("question required_metrics must contain exactly one 'ramp_access_by_turn' target", errors)
+
+    def test_failure_patterns_match_derivable_metric_events(self):
+        def pattern(result, category_id):
+            return next(item for item in result["failure_patterns"] if item["category_id"] == category_id)
+
+        def set_pattern_count(result, category_id, raw_count):
+            item = pattern(result, category_id)
+            item["raw_count"] = raw_count
+            item["frequency"] = raw_count / item["sample_size"]
+
+        def metric(result, metric_id):
+            return next(item for item in result["metrics"] if item["metric_id"] == metric_id)
+
+        def refresh_metric_claim(result, changed_metric):
+            claim = next(item for item in result["evidence_claims"] if item.get("metric_id") == changed_metric["metric_id"])
+            claim["estimate"] = copy.deepcopy(changed_metric)
+
+        self.assertEqual([], self.check_result())
+        self.assertEqual(pattern(self.result, "one_land_hand_unkept")["raw_count"], 17000)
+        self.assertEqual(pattern(self.result, "mulligan_to_low_hand")["raw_count"], 0)
+
+        cases = (
+            ("missed_land_drop", "failure pattern missed_land_drop raw_count must equal the complement of land_drop_success_by_turn", lambda result: set_pattern_count(result, "missed_land_drop", pattern(result, "missed_land_drop")["raw_count"] + 1)),
+            ("ramp_not_available", "failure pattern ramp_not_available_by_turn raw_count must equal the complement of ramp_access_by_turn", lambda result: set_pattern_count(result, "ramp_not_available_by_turn", pattern(result, "ramp_not_available_by_turn")["raw_count"] + 1)),
+            ("single_color_missing", "failure pattern single_color_missing_by_turn raw_count must equal distinct_commander_colors_by_turn bin 4", lambda result: set_pattern_count(result, "single_color_missing_by_turn", pattern(result, "single_color_missing_by_turn")["raw_count"] + 1)),
+            ("multiple_colors_missing", "failure pattern multiple_colors_missing_by_turn raw_count must equal distinct_commander_colors_by_turn bins 0 through 3", lambda result: set_pattern_count(result, "multiple_colors_missing_by_turn", pattern(result, "multiple_colors_missing_by_turn")["raw_count"] + 1)),
+            ("five_color_not_complete", "failure pattern five_color_not_complete_by_turn raw_count must equal the complement of five_color_availability_by_turn", lambda result: set_pattern_count(result, "five_color_not_complete_by_turn", pattern(result, "five_color_not_complete_by_turn")["raw_count"] + 1)),
+            ("zero_land_lower_bound", "failure pattern zero_land_hand raw_count must be at least zero_land_hand_rate raw_count", lambda result: set_pattern_count(result, "zero_land_hand", metric(result, "zero_land_hand_rate")["raw_count"] - 1)),
+            ("excessive_land_lower_bound", "failure pattern excessive_land_hand raw_count must be at least excessive_land_hand_rate raw_count", lambda result: set_pattern_count(result, "excessive_land_hand", metric(result, "excessive_land_hand_rate")["raw_count"] - 1)),
+        )
+        for name, diagnostic, mutate in cases:
+            with self.subTest(name=name):
+                result = copy.deepcopy(self.result)
+                mutate(result)
+                self.assertIn(diagnostic, self.check_result(result))
+
+        result = copy.deepcopy(self.result)
+        colors = metric(result, "distinct_commander_colors_by_turn")
+        bin_four, bin_five = colors["bins"][4], colors["bins"][5]
+        bin_four["raw_count"] -= 1
+        bin_five["raw_count"] += 1
+        for item in colors["bins"]:
+            item["proportion"] = item["raw_count"] / colors["sample_size"]
+        colors["mean"] = sum(item["value"] * item["raw_count"] for item in colors["bins"]) / colors["sample_size"]
+        refresh_metric_claim(result, colors)
+        set_pattern_count(result, "single_color_missing_by_turn", bin_four["raw_count"])
+        self.assertIn(
+            "five_color_availability_by_turn raw_count must equal distinct_commander_colors_by_turn bin 5",
+            self.check_result(result),
+        )
+
+    def test_opening_hand_keep_aggregates_are_coherent(self):
+        def metric(result, metric_id):
+            return next(item for item in result["metrics"] if item["metric_id"] == metric_id)
+
+        result = copy.deepcopy(self.result)
+        n = self.run["iteration_count"]
+        z = metric(result, "zero_land_hand_rate")["raw_count"]
+        o = metric(result, "one_land_hand_rate")["raw_count"]
+        e = metric(result, "excessive_land_hand_rate")["raw_count"]
+        natural_two_to_five = n - z - o - e
+        metric(result, "keepable_opening_hand_rate")["raw_count"] = natural_two_to_five - 1
+        self.assertIn("keepable_opening_hand_rate raw_count is incompatible with the frozen natural-opening keep rule", self.check_result(result))
+
+        result = copy.deepcopy(self.result)
+        metric(result, "keepable_opening_hand_rate")["raw_count"] = natural_two_to_five + o + 1
+        self.assertIn("keepable_opening_hand_rate raw_count is incompatible with the frozen natural-opening keep rule", self.check_result(result))
+
+        result = copy.deepcopy(self.result)
+        natural_one_land_rejected = o - (metric(result, "keepable_opening_hand_rate")["raw_count"] - natural_two_to_five)
+        one_land_pattern = next(item for item in result["failure_patterns"] if item["category_id"] == "one_land_hand_unkept")
+        one_land_pattern["raw_count"] = natural_one_land_rejected - 1
+        one_land_pattern["frequency"] = one_land_pattern["raw_count"] / one_land_pattern["sample_size"]
+        self.assertIn("failure pattern one_land_hand_unkept raw_count is below derived natural one-land rejections", self.check_result(result))
+
+    def test_level_two_projection_is_registry_derived_and_support_bounded(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        records = {record["card_name"]: record for record in registry["records"]}
+        state = {"generic_payment_available_from_other_sources": 0, "controller_turn_offset": 0}
+        cataracts, errors = project_level_two_land(records["Cascading Cataracts"], condition_state=state, current_turn=1, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual([], cataracts["colors"]); self.assertEqual(1, cataracts["mana_units"])
+        gardens, errors = project_level_two_land(records["The Mycosynth Gardens"], condition_state=state, current_turn=1, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual([], gardens["colors"])
+        lens, errors = project_level_two_ramp(records["Prismatic Lens"], condition_state=state, available_generic_mana=2, available_colors=[])
+        self.assertEqual([], errors); self.assertTrue(lens["payable"]); self.assertEqual(1, lens["output_units"])
+        state["generic_payment_available_from_other_sources"] = 5
+        cataracts, errors = project_level_two_land(records["Cascading Cataracts"], condition_state=state, current_turn=1, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual(set("WUBRG"), set(cataracts["colors"])); self.assertEqual(5, cataracts["mana_units"])
+        unsupported, errors = project_level_two_ramp(records["Moonsnare Prototype"], condition_state=state, available_generic_mana=9, available_colors=[])
+        self.assertEqual([], errors); self.assertFalse(unsupported["payable"]); self.assertEqual(0, unsupported["output_units"])
+        saga, errors = project_level_two_land(records["Urza's Saga"], condition_state={"controller_turn_offset": 2}, current_turn=3, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual([], saga["colors"]); self.assertFalse(saga["permanent"]); self.assertEqual(1, saga["remaining_availability"])
+
+    def test_support_boundary_parity_and_recording_context_are_closed(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        semantics = self.documents["workshop/projects/the-myr-singularity/simulation/card_semantics.json"]
+        self.assertEqual([], validate_card_semantics_registry_parity(semantics, registry))
+        changed = copy.deepcopy(semantics)
+        next(item for item in changed["entries"] if item["card_identity"]["name"] == "City of Brass")["modeled_behavior"]["produces_colors"].pop()
+        self.assertTrue(validate_card_semantics_registry_parity(changed, registry))
+        for name, identifier, timestamp in (
+            ("simulation_run.contract.json", "run_id", False),
+            ("simulation_result.contract.json", "result_id", "created_at"),
+            ("comparison_result.contract.json", "comparison_id", "created_at"),
+        ):
+            with self.subTest(contract=name):
+                context = self.contracts[name]["recording_context"]
+                self.assertEqual(identifier, context["record_fields"]["id_field"])
+                self.assertFalse(context["engine_boundary"]["wall_clock_read_permitted"])
+                self.assertFalse(context["engine_boundary"]["random_or_uuid_recording_id_permitted"])
+                if timestamp is False:
+                    self.assertFalse(context["record_fields"]["created_at_required"])
+                else:
+                    self.assertEqual(timestamp, context["record_fields"]["created_at_field"])
+
+    def test_registry_and_taxonomy_are_complete_approved_semantics(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        self.assertEqual([], self.check_registry(registry))
+        mutations = (
+            ("Sol Ring", "cc", lambda profile: profile.__setitem__("mana_units", 1)),
+            ("Island", "u", lambda profile: profile.__setitem__("natural_untap_model", "does_not_naturally_untap")),
+            ("Command Tower", "commander-choice", lambda profile: profile["output_capabilities"].pop()),
+            ("Basalt Monolith", "ccc", lambda profile: profile.__setitem__("natural_untap_model", "normal")),
+            ("Urza's Tower", "enhanced", lambda profile: profile.__setitem__("mana_units", 2)),
+            ("Myr Convert", "any", lambda profile: profile["payment"]["life"].__setitem__("amount", 1)),
+            ("Moonsnare Prototype", "secondary-tap", lambda profile: profile.__setitem__("supported", True)),
+            ("Sol Ring", "cc", lambda profile: profile.__setitem__("supported", False)),
+        )
+        for card_name, profile_id, mutate in mutations:
+            with self.subTest(card=card_name, profile=profile_id):
+                changed = copy.deepcopy(registry)
+                profile = next(profile for record in changed["records"] if record["card_name"] == card_name for group in record["activation_groups"] for profile in group["profiles"] if profile["profile_id"] == profile_id)
+                mutate(profile)
+                self.assertIn("mana source semantics does not match the approved v1 executable-semantics fingerprint", self.check_registry(changed))
+        changed = copy.deepcopy(registry)
+        next(record for record in changed["records"] if record["card_name"] == "Island")["state_transitions"] = [{
+            "event_id": "end_step_remove_unless_condition",
+            "condition": {"condition_id": "artifact_controlled", "params": {"minimum_count": 1}},
+        }]
+        self.assertIn("mana source semantics does not match the approved v1 executable-semantics fingerprint", self.check_registry(changed))
+        taxonomy = copy.deepcopy(self.taxonomy)
+        taxonomy["emission_contract"]["categories"]["zero_land_hand"]["predicate"] = "arbitrary"
+        self.assertIn("failure taxonomy does not match the approved v3 emission-semantics fingerprint", validate_failure_pattern_taxonomy(taxonomy, policy=self.policy, question=self.question))
+        self.assertIn("result validation requires the resolved failure taxonomy artifact", validate_simulation_result(self.result, run=self.run, policy=self.policy, question=self.question, result_contract=self.contracts["simulation_result.contract.json"], taxonomy_ids=self.taxonomy_ids, load_reference=self.loader))
+
+    def test_final_closure_has_no_legacy_level_two_authority(self):
+        legacy = self.policy["sequencing_semantics"]["level_2_mana_development"]
+        serialized = json.dumps(legacy, sort_keys=True)
+        self.assertIn("mana_source_semantics.json", serialized)
+        self.assertNotIn("canonical produced_mana, or explicitly modeled", serialized)
+        self.assertNotIn("Conditional, activated-cost-dependent", serialized)
+
+    def test_unsupported_only_exotic_orchard_is_a_legal_zero_output_land(self):
+        records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
+        projected, errors = project_level_two_land(records["Exotic Orchard"], condition_state={}, current_turn=2, horizon_turn=6, ordinal=4)
+        self.assertEqual([], errors)
+        self.assertEqual({"colors": [], "five_color_source": False, "permanent": True, "remaining_availability": 5, "mana_units": 0, "oracle_id": records["Exotic Orchard"]["oracle_id"], "ordinal": 4}, projected)
+
+    def test_cataracts_selector_uses_gross_legal_output_only_when_prepaid(self):
+        records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
+        base, errors = project_level_two_land(records["Cascading Cataracts"], condition_state={"generic_payment_available_from_other_sources": 0}, current_turn=1, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual([], base["colors"]); self.assertEqual(1, base["mana_units"])
+        prepaid, errors = project_level_two_land(records["Cascading Cataracts"], condition_state={"generic_payment_available_from_other_sources": 5}, current_turn=1, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual(set("WUBRG"), set(prepaid["colors"])); self.assertEqual(5, prepaid["mana_units"])
+
+    def test_land_selector_colors_are_wubrg_only_and_drive_selection(self):
+        records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
+        island, errors = project_level_two_land(records["Island"], condition_state={"commander_colors": ["U"]}, current_turn=2, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual(["U"], island["colors"])
+        colorless, errors = project_level_two_land(records["Cascading Cataracts"], condition_state={"generic_payment_available_from_other_sources": 0}, current_turn=2, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual([], colorless["colors"])
+        self.assertEqual(0, len(set(colorless["colors"]) - {"U"}))
+        self.assertEqual(island["oracle_id"], select_land([island, colorless], {"U"}, 6, 2)["oracle_id"])
+        plains, errors = project_level_two_land(records["Plains"], condition_state={"commander_colors": ["U"]}, current_turn=2, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual(["W"], plains["colors"])
+        self.assertEqual(plains["oracle_id"], select_land([colorless, plains], {"U"}, 6, 2)["oracle_id"])
+
+    def test_projection_condition_phases_cover_tron_and_ramp_payment_reservation(self):
+        records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
+        mine = records["Urza's Mine"]["oracle_id"]
+        plant = records["Urza's Power Plant"]["oracle_id"]
+        first, errors = project_level_two_land(records["Urza's Tower"], condition_state={"controlled_land_oracle_ids": []}, current_turn=3, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual(1, first["mana_units"])
+        tower, errors = project_level_two_land(records["Urza's Tower"], condition_state={"controlled_land_oracle_ids": [mine, plant]}, current_turn=3, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual(3, tower["mana_units"])
+        incomplete, errors = project_level_two_land(records["Urza's Tower"], condition_state={"controlled_land_oracle_ids": [mine]}, current_turn=3, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual(1, incomplete["mana_units"])
+        reversed_profiles = copy.deepcopy(records["Urza's Tower"])
+        reversed_profiles["activation_groups"][0]["profiles"].reverse()
+        unchanged, errors = project_level_two_land(reversed_profiles, condition_state={"controlled_land_oracle_ids": [mine, plant]}, current_turn=3, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual(3, unchanged["mana_units"])
+        lens_two, errors = project_level_two_ramp(records["Prismatic Lens"], condition_state={"generic_payment_available_from_other_sources": 99}, available_generic_mana=2, available_colors=[])
+        self.assertEqual([], errors); self.assertTrue(lens_two["payable"]); self.assertEqual(1, lens_two["color_flexibility"])
+        lens_three, errors = project_level_two_ramp(records["Prismatic Lens"], condition_state={"generic_payment_available_from_other_sources": 0}, available_generic_mana=3, available_colors=[])
+        self.assertEqual([], errors); self.assertTrue(lens_three["payable"]); self.assertEqual(5, lens_three["color_flexibility"])
+        new_saga, errors = project_level_two_land(records["Urza's Saga"], condition_state={}, current_turn=2, horizon_turn=6)
+        self.assertEqual([], errors); self.assertEqual(3, new_saga["remaining_availability"])
+
+    def test_glimmervoid_selection_and_end_step_transition_are_distinct(self):
+        records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
+        glimmervoid = records["Glimmervoid"]
+        absent, errors = project_level_two_land(glimmervoid, condition_state={"artifact_controlled_count": 0}, current_turn=2, horizon_turn=6)
+        self.assertEqual([], errors); self.assertFalse(absent["permanent"]); self.assertEqual(1, absent["remaining_availability"])
+        present, errors = project_level_two_land(glimmervoid, condition_state={"artifact_controlled_count": 1}, current_turn=2, horizon_turn=6)
+        self.assertEqual([], errors); self.assertTrue(present["permanent"]); self.assertEqual(5, present["remaining_availability"])
+        end_step, errors = evaluate_end_step_state_transitions(glimmervoid, post_development_state={"artifact_controlled_count": 1})
+        self.assertEqual([], errors); self.assertTrue(end_step["remains_available"])
+        removed, errors = evaluate_end_step_state_transitions(glimmervoid, post_development_state={"artifact_controlled_count": 0})
+        self.assertEqual([], errors); self.assertTrue(removed["removed"])
+
+    def test_run_recording_and_nested_boundaries_are_exact_closed(self):
+        for field in ("execution_digest", "engine_generated_at", "wall_clock_timestamp", "created_at", "runtime_override", "arbitrary_unknown_field"):
+            with self.subTest(top_level=field):
+                run = copy.deepcopy(self.run); run[field] = "forbidden"
+                self.assertTrue(any("run has unregistered top-level fields" in error for error in self.check_run(run)))
+        for label, mutate, diagnostic in (
+            ("config", lambda run: run["config"].__setitem__("runtime_override", True), "run configuration does not match"),
+            ("config-unknown", lambda run: run["config"].__setitem__("arbitrary_unknown_field", True), "run configuration does not match"),
+            ("boundary", lambda run: run["explicit_boundary"].__setitem__("arbitrary_unknown_field", False), "run explicit_boundary flags"),
+            ("id", lambda run: run.__setitem__("run_id", ""), "run run_id must be a non-empty string"),
+        ):
+            with self.subTest(label=label):
+                run = copy.deepcopy(self.run); mutate(run)
+                self.assertTrue(any(diagnostic in error for error in self.check_run(run)))
+        result = copy.deepcopy(self.result); result["created_at"] = "not-a-recording-time"
+        self.assertTrue(any("result created_at" in error for error in self.check_result(result)))
+        result = copy.deepcopy(self.result); result["result_id"] = ""
+        self.assertTrue(any("result result_id" in error for error in self.check_result(result)))
+        comparison = copy.deepcopy(self.comparison); comparison["comparison_id"] = ""
+        self.assertTrue(any("comparison comparison_id" in error for error in self.check_comparison(comparison)))
+        comparison = copy.deepcopy(self.comparison); comparison["created_at"] = "not-a-recording-time"
+        self.assertTrue(any("comparison created_at" in error for error in self.check_comparison(comparison)))
+
+    def test_unsupported_limitations_city_and_recording_taxonomy_boundaries(self):
+        required = {item for item in self.run["limitations"] if item.startswith("unsupported_mana_profile:")}
+        self.assertEqual(4, len(required))
+        run = copy.deepcopy(self.run); run["limitations"].remove(next(iter(required)))
+        self.assertTrue(any("omit required unsupported behavior IDs" in error for error in self.check_run(run)))
+        result = copy.deepcopy(self.result); result["limitations"].remove(next(iter(required)))
+        self.assertTrue(any("omit required unsupported behavior IDs" in error for error in self.check_result(result)))
+        registry = copy.deepcopy(self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"])
+        city = next(record for record in registry["records"] if record["card_name"] == "City of Brass")
+        city["activation_groups"][0]["profiles"][0]["payment"]["life"] = {"amount": 1, "treatment": "ignored"}
+        self.assertIn("City of Brass card semantics/registry must not model a life-payment activation cost", validate_card_semantics_registry_parity(self.documents["workshop/projects/the-myr-singularity/simulation/card_semantics.json"], registry))
+        for label, mutate in (
+            ("contract-id", lambda context: context.__setitem__("contract_id", "other")),
+            ("metadata-owner", lambda context: context["engine_boundary"].__setitem__("recording_metadata_owner", "engine")),
+            ("wall-clock", lambda context: context["engine_boundary"].__setitem__("wall_clock_read_permitted", True)),
+            ("random-id", lambda context: context["engine_boundary"].__setitem__("random_or_uuid_recording_id_permitted", True)),
+            ("artifact-algorithm", lambda context: context["artifact_identity"].__setitem__("algorithm_id", "other")),
+            ("replay-boundary", lambda context: context["artifact_identity"].__setitem__("replay_equivalence", "artifact identity")),
+            ("id-owner", lambda context: context["record_fields"].__setitem__("id_owner", "engine")),
+            ("timestamp-owner", lambda context: context["record_fields"].__setitem__("created_at_owner", "engine")),
+        ):
+            with self.subTest(recording_context=label):
+                context = copy.deepcopy(self.contracts["simulation_result.contract.json"]["recording_context"]); mutate(context)
+                self.assertTrue(validate_recording_context(context, id_field="result_id", created_at_required=True))
+        self.assertEqual(["failure patterns require the resolved failure taxonomy artifact"], validate_result_failure_patterns([], 100000, {"bare-category"}, self.question))
+        self.assertIn("result validation requires the resolved failure taxonomy artifact", validate_simulation_result(self.result, run=self.run, policy=self.policy, question=self.question, result_contract=self.contracts["simulation_result.contract.json"], taxonomy_ids={"bare-category"}, load_reference=self.loader))
+        self.assertTrue(any("resolved failure taxonomy artifact" in error for error in validate_comparison_result(self.comparison, baseline_run=self.baseline_run, candidate_run=self.run, baseline_result=self.baseline_result, candidate_result=self.result, policy=self.policy, question=self.question, comparison_contract=self.contracts["comparison_result.contract.json"], run_contract=self.contracts["simulation_run.contract.json"], result_contract=self.contracts["simulation_result.contract.json"], project_id="the-myr-singularity", taxonomy_ids={"bare-category"}, load_reference=self.loader, fingerprint_for_version=self.fingerprint)))
 
 
 if __name__ == "__main__":
