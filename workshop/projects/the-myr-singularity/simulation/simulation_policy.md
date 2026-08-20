@@ -1,4 +1,4 @@
-# Simulation Policy sim-policy-v3
+# Simulation Policy sim-policy-v4
 
 Policy id: `the-myr-singularity-simulation-policy` — project `the-myr-singularity`
 
@@ -43,6 +43,17 @@ Resolution order:
 4. If not keepable and mulligans_taken < max_mulligans, mulligan again.
 5. If the maximum is reached, keep the final hand and apply bottoming for the required count.
 
+Executable transition:
+
+- return_all_physical_tokens_to_eligibility
+- reconstruct_full_library_in_canonical_instance_token_order
+- increment_mulligans_taken_before_recording_next_attempt
+- fisher_yates_full_library_with_same_continuous_iteration_pcg32
+- draw_opening_hand_size
+
+RNG reset permitted: false
+Bottoming consumes RNG: false
+
 ## Keep Rule
 
 Rule id: `myr-singularity-keep-v1`
@@ -84,14 +95,22 @@ Rule id: `deterministic-bottoming-v2`
 
 Supported behavior sources:
 
-- Canonical Card Facts land types and produced_mana in workshop/card-data/cards.json.
-- Explicit project-scoped overrides in card_semantics.json for cards whose canonical produced_mana is null or absent.
+- Canonical Card Facts provide immutable card identity, type, and raw canonical facts only.
+- card_semantics.json provides approved project-scoped parity behavior only for City of Brass, Mana Confluence, and Urza's Saga.
+- mana_source_semantics.json is the authoritative executable Level 2 mana-source registry for the v1.0/v1.1 modeled source union.
 
-Unsupported behavior handling: Any card behavior that is neither resolvable from canonical Card Facts nor declared in card_semantics.json is unsupported. Unsupported behavior must be recorded as a visible limitation on any SimulationRun and SimulationResult that touches the card, and the card contributes nothing to any success metric on account of the unsupported behavior.
+Unsupported behavior handling: Behavior is unsupported unless an approved supported executable profile or state rule in mana_source_semantics.json represents it after any required card_semantics.json parity rule is applied. Unsupported behavior must be recorded as a visible limitation on any SimulationRun and SimulationResult that touches the card, and it contributes nothing to any success metric on account of that unsupported behavior.
 
-Hard invariant: Unsupported card behavior must never silently contribute to a success metric.
+Hard invariant: No supported executable registry profile may be classified as unsupported by the general boundary, and unsupported behavior must never silently contribute to a success metric.
+
+Unsupported limitation representation:
+
+- Format: `unsupported_mana_profile:<oracle_id>:<unsupported_reason_id>`
+- Derivation: For every unsupported executable profile on a source present in the run DeckVersion, derive exactly one limitation ID. The SimulationRun and its SimulationResult must both carry the complete applicable set.
+- Metric boundary: Unsupported behavior contributes zero modeled mana/colors and cannot improve a success metric.
 
 Fixture-specific modeled card behavior lives in `workshop/projects/the-myr-singularity/simulation/card_semantics.json`.
+Executable mana-source profiles live in `workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json`.
 
 ## Randomness Policy
 
@@ -567,6 +586,45 @@ Source-capability projection: surviving online source color capabilities, irresp
 Spendable-mana projection: actual remaining untapped payable sources after deterministic development
 
 Unsupported actions: Actions without explicit complete policy registration cannot be selected or improve a metric.
+
+## Executable Mana Source Boundary
+
+Authority: `workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json`
+Oracle-text runtime parsing: false
+Replacement selection: `highest_priority_matching_profile`
+Independent modes: legal profiles are alternatives and cannot combine outputs from one source activation
+State-transition timing: registered end-step removal conditions execute after deterministic same-turn development actions and before the applicable end-of-turn observation
+
+## Level 2 Selector Projection
+
+Contract id: `mana-source-projection-v1`
+
+Each registered condition is evaluated at its contract-defined phase. Generic payments from other sources exclude the candidate source; land selection and actual end-step removal use distinct pre-selection and post-development states.
+
+Condition evaluation phases:
+
+- `land_candidate`: `generic_payment_available_from_other_sources` = pre_play_resources_excluding_candidate; `complete_tron_set_controlled` = hypothetical_post_play_controlled_lands_including_candidate; `bounded_controller_turn_window` = candidate_controller_turn_offset_default_zero; `commander_color_identity` = static_scenario_state; `artifact_controlled` = pre_selection_state_for_selector_persistence; `end_step_remove_unless_condition` = post_development_state
+- `ramp_candidate`: `deployment_payment` = pre_deployment_resources; `activation_profiles` = post_deployment_residual_resources_after_reserved_payment; `self_funding` = forbidden
+
+Land selector fields:
+
+- `colors`: union of W, U, B, R, and G output_capabilities of currently legal supported profiles for the land; C never contributes to this commander-color selector field.
+- `five_color_source`: true exactly when currently legal supported profiles provide source-capability W, U, B, R, and G.
+- `permanent`: false for a legal bounded/removing profile; otherwise true unless the pre-selection state predicts a registered removal transition. A later same-turn development action is evaluated separately at end step.
+- `remaining_availability`: for a bounded profile, inclusive remaining controller-turn offsets through its registered end_offset; for a conditional-removal source, only the current turn when pre-selection predicts removal, otherwise inclusive turns from current_turn through horizon_turn.
+- `mana_units`: maximum gross registered mana_units among currently legal supported profiles whose contract-phase conditions and payments from other sources are already satisfiable. It is a selector heuristic output quantity, not net mana gain.
+- `identity`: ['oracle_id', 'ordinal']
+
+Ramp selector fields:
+
+- `payable`: true only when the deployment casting cost is payable from pre-deployment modeled resources and at least one supported profile remains legal after that payment is reserved.
+- `same_turn_online_noncreature`: true only for a mana_rock with a supported immediate profile legal after deployment payment reservation.
+- `output_units`: maximum mana_units among supported profiles legal after deployment payment reservation.
+- `color_flexibility`: maximum output_capabilities cardinality among supported profiles legal after deployment payment reservation.
+- `mana_value`: deployment.casting_cost.generic plus the number of deployment.casting_cost.colored symbols.
+- `identity`: ['oracle_id', 'ordinal']
+
+Unsupported-only profiles and sources produce zero Level 2 output and are not payable registered ramp. Level 1 access registration remains independent.
 
 ## Evidence-Language Boundary
 

@@ -7,22 +7,60 @@ does not discover or create evidence artifacts itself.
 from __future__ import annotations
 
 import math
+from datetime import datetime
 
 from workshop.shared.identity import artifact_content_fingerprint
 from workshop.shared.simulation_determinism import derive_run_seed
 
 
 DEPENDENCY_KEYS = (
-    "policy", "question", "card_semantics", "canonical_card_facts",
+    "policy", "question", "card_semantics", "mana_source_semantics", "canonical_card_facts",
     "failure_pattern_taxonomy", "simulation_question_contract",
     "simulation_run_contract", "simulation_result_contract",
     "comparison_result_contract",
 )
+SOURCE_KINDS = {"land", "mana_rock", "mana_creature"}
+MANA_SYMBOLS = {"W", "U", "B", "R", "G", "C"}
+GROUP_SELECTIONS = {"highest_priority_matching_profile", "independent_modes"}
+OUTPUT_SELECTIONS = {"fixed", "one_choice", "any_combination"}
+ONLINE_MODELS = {"immediate", "next_controller_turn", "bounded_window"}
+UNTAP_MODELS = {"normal", "does_not_naturally_untap"}
+CONDITION_PARAMS = {
+    "artifact_controlled": {"minimum_count"},
+    "complete_tron_set_controlled": {"oracle_ids"},
+    "generic_payment_available_from_other_sources": {"required_units"},
+    "commander_color_identity": {"colors"},
+    "bounded_controller_turn_window": {"start_offset", "end_offset", "removal_event"},
+}
+STATE_TRANSITION_EVENTS = {"end_step_remove_unless_condition"}
+REGISTRY_FIELDS = {
+    "schema_version", "artifact_type", "artifact_id", "project_id", "policy_version",
+    "condition_vocabulary", "unsupported_reason_ids", "records",
+}
+RECORD_FIELDS = {"card_name", "oracle_id", "source_kind", "deployment", "activation_groups", "state_transitions"}
+DEPLOYMENT_FIELDS = {"casting_cost", "counts_as_land_drop"}
+CASTING_COST_FIELDS = {"generic", "colored"}
+ACTIVATION_GROUP_FIELDS = {"group_id", "selection", "profiles"}
+PROFILE_FIELDS = {
+    "profile_id", "priority", "mana_units", "output_capabilities", "output_selection",
+    "tap_model", "payment", "conditions", "online_model", "natural_untap_model",
+    "supported", "unsupported_reason_id",
+}
+PAYMENT_FIELDS = {"generic", "colored", "life"}
+LIFE_FIELDS = {"amount", "treatment"}
+CONDITION_FIELDS = {"condition_id", "params"}
+STATE_TRANSITION_FIELDS = {"event_id", "condition"}
 ALLOWED_SUBJECTS = {
     "hand_composition", "land_development", "ramp_access", "mana_development",
     "color_availability", "limitations",
 }
 RESERVED_LIFECYCLE_KEYS = {"reasoning_interpretation", "product_owner_decision"}
+APPROVED_MANA_SOURCE_SEMANTICS_FINGERPRINT = "artifact-content-sha256-v1:86626c278b667c7c83ddc036e2dd7e1ed96fa403052e22a901e9ce2aea55eea3"
+APPROVED_FAILURE_PATTERN_TAXONOMY_FINGERPRINT = "artifact-content-sha256-v1:295f7122deb6caa941a89df7f35904001e0bd9449b745f2734e920011339a38e"
+RECORDING_CONTEXT_ID = "simulation-recording-context-v1"
+RECORDING_ARTIFACT_ALGORITHM = "artifact-content-sha256-v1"
+RECORDING_ARTIFACT_COVERAGE = "The complete persisted artifact, including caller-supplied recording metadata."
+RECORDING_REPLAY_EQUIVALENCE = "Deterministic semantic/execution equivalence; it does not require identical artifact-content identity when recording metadata differs."
 
 
 def _measurement_contract(*, level, target_turn, shape, observation_point, event=None, value=None):
@@ -239,6 +277,484 @@ def validate_question_role_bindings(compared_versions):
     return errors
 
 
+def resolve_question_metric_target(question, reference):
+    """Resolve a taxonomy target reference without positional array semantics."""
+    if not isinstance(reference, dict):
+        return None, ["failure emission question metric reference must be an object"]
+    if reference.get("source") != "simulation_question.required_metrics" or reference.get("field") != "target_turn":
+        return None, ["failure emission question metric reference is structurally invalid"]
+    metric_id = reference.get("metric_id")
+    matches = [item for item in question.get("required_metrics", []) if isinstance(item, dict) and item.get("metric_id") == metric_id]
+    if len(matches) != 1:
+        return None, [f"question required_metrics must contain exactly one {metric_id!r} target"]
+    target = matches[0].get("target_turn")
+    if not _integer(target):
+        return None, [f"question metric {metric_id!r} target_turn must be an integer"]
+    return target, []
+
+
+def resolve_activation_profiles(group, condition_truth):
+    """Resolve registry profiles using only registered structured predicates."""
+    profiles = group.get("profiles") if isinstance(group, dict) else None
+    if not isinstance(profiles, list):
+        return [], ["activation group profiles must be an array"]
+    legal = []
+    for profile in profiles:
+        if not isinstance(profile, dict) or not profile.get("supported"):
+            continue
+        if all(_condition_is_satisfied(condition, condition_truth) for condition in profile.get("conditions", [])):
+            legal.append(profile)
+    if group.get("selection") == "independent_modes":
+        return legal, []
+    if not legal:
+        return [], ["highest-priority activation group has no matching supported profile"]
+    highest = max(profile.get("priority") for profile in legal)
+    selected = [profile for profile in legal if profile.get("priority") == highest]
+    if len(selected) != 1:
+        return [], ["highest-priority activation group has tied matching profiles"]
+    return selected, []
+
+
+def _condition_is_satisfied(condition, state):
+    """Resolve one registered condition from the contract-defined evaluation state."""
+    if not isinstance(condition, dict) or not isinstance(state, dict):
+        return False
+    condition_id, params = condition.get("condition_id"), condition.get("params") or {}
+    if condition_id == "generic_payment_available_from_other_sources":
+        available = state.get("generic_payment_available_from_other_sources", 0)
+        return _integer(available) and available >= params.get("required_units")
+    if condition_id == "bounded_controller_turn_window":
+        offset = state.get("controller_turn_offset")
+        return _integer(offset) and params.get("start_offset") <= offset <= params.get("end_offset")
+    if condition_id == "artifact_controlled":
+        count = state.get("artifact_controlled_count", 0)
+        return _integer(count) and count >= params.get("minimum_count")
+    if condition_id == "complete_tron_set_controlled":
+        controlled = state.get("controlled_land_oracle_ids")
+        candidate = state.get("candidate_land_oracle_id")
+        if isinstance(controlled, list) and isinstance(candidate, str):
+            return set(params.get("oracle_ids", [])) <= set(controlled) | {candidate}
+        return state.get("complete_tron_set_controlled") is True
+    if condition_id == "commander_color_identity":
+        colors = state.get("commander_colors")
+        return isinstance(colors, list) and set(colors) == set(params.get("colors", []))
+    return False
+
+
+def project_level_two_land(record, *, condition_state, current_turn, horizon_turn, ordinal=1):
+    """Project one registered land into the frozen Level 2 selector inputs.
+
+    No Oracle text is parsed here. Generic external payments and artifact state
+    remain pre-play, while Tron evaluates the hypothetical controlled-land set
+    after this land enters and bounded sources start at controller-turn offset 0.
+    """
+    if not isinstance(record, dict) or record.get("source_kind") != "land":
+        return None, ["Level 2 land projection requires a registered land source"]
+    if (record.get("deployment") or {}).get("counts_as_land_drop") is not True:
+        return None, ["Level 2 land projection requires a legal registered land drop"]
+    groups = record.get("activation_groups") or []
+    if len(groups) != 1:
+        return None, ["Level 2 land projection requires exactly one activation group"]
+    selection_state = dict(condition_state) if isinstance(condition_state, dict) else {}
+    selection_state["candidate_land_oracle_id"] = record["oracle_id"]
+    selection_state.setdefault("controller_turn_offset", 0)
+    profiles, errors = resolve_activation_profiles(groups[0], selection_state)
+    if errors:
+        return None, errors
+    supported = [profile for profile in profiles if profile.get("supported")]
+    colors = sorted({
+        color
+        for profile in supported
+        for color in profile.get("output_capabilities", [])
+        if color in set("WUBRG")
+    })
+    bounded = [
+        condition for profile in supported for condition in profile.get("conditions", [])
+        if isinstance(condition, dict) and condition.get("condition_id") == "bounded_controller_turn_window"
+    ]
+    transitions = record.get("state_transitions") or []
+    transition_persists = all(
+        _condition_is_satisfied(transition.get("condition"), selection_state)
+        for transition in transitions if isinstance(transition, dict)
+    )
+    if bounded:
+        end = bounded[0]["params"]["end_offset"]
+        offset = selection_state.get("controller_turn_offset")
+        remaining = max(0, end - offset + 1) if _integer(offset) else 0
+    else:
+        # Selection records only what the pre-selection state can guarantee. A
+        # later same-turn deployment may alter the separate end-step outcome.
+        remaining = max(0, horizon_turn - current_turn + 1) if transition_persists else 1
+    return {
+        "colors": colors,
+        "five_color_source": set("WUBRG") <= set(colors),
+        "permanent": not bounded and transition_persists,
+        "remaining_availability": remaining,
+        "mana_units": max((profile["mana_units"] for profile in supported), default=0),
+        "oracle_id": record["oracle_id"],
+        "ordinal": ordinal,
+    }, []
+
+
+def evaluate_end_step_state_transitions(record, *, post_development_state):
+    """Resolve registered removal conditions after the turn's development actions.
+
+    This is a state-transition contract utility, not a simulation engine. It
+    deliberately accepts post-development state so selection and actual EOT
+    persistence cannot be conflated.
+    """
+    if not isinstance(record, dict):
+        return None, ["end-step transition evaluation requires a registered source"]
+    transitions = record.get("state_transitions") or []
+    removal_transitions = [
+        transition for transition in transitions
+        if isinstance(transition, dict) and transition.get("event_id") == "end_step_remove_unless_condition"
+    ]
+    remains = all(_condition_is_satisfied(transition.get("condition"), post_development_state) for transition in removal_transitions)
+    return {"remains_available": remains, "removed": not remains}, []
+
+
+def project_level_two_ramp(record, *, condition_state, available_generic_mana, available_colors, ordinal=1):
+    """Project one registered nonland source into frozen ramp-selector inputs."""
+    if not isinstance(record, dict) or record.get("source_kind") not in {"mana_rock", "mana_creature"}:
+        return None, ["Level 2 ramp projection requires a registered nonland mana source"]
+    groups = record.get("activation_groups") or []
+    if len(groups) != 1:
+        return None, ["Level 2 ramp projection requires exactly one activation group"]
+    cost = (record.get("deployment") or {}).get("casting_cost") or {}
+    colored_cost = cost.get("colored") or []
+    supplied_colors = list(available_colors) if isinstance(available_colors, list) else []
+    can_pay_colored = all(supplied_colors.count(color) >= colored_cost.count(color) for color in set(colored_cost))
+    can_deploy = _integer(available_generic_mana) and available_generic_mana >= cost.get("generic", 0) and can_pay_colored
+    supported = []
+    if can_deploy:
+        post_deployment_state = dict(condition_state) if isinstance(condition_state, dict) else {}
+        post_deployment_state["generic_payment_available_from_other_sources"] = available_generic_mana - cost.get("generic", 0)
+        profiles, errors = resolve_activation_profiles(groups[0], post_deployment_state)
+        if errors:
+            return None, errors
+        supported = [profile for profile in profiles if profile.get("supported")]
+    payable = bool(supported) and bool(can_deploy)
+    return {
+        "payable": payable,
+        "same_turn_online_noncreature": record.get("source_kind") == "mana_rock" and any(profile.get("online_model") == "immediate" for profile in supported),
+        "output_units": max((profile["mana_units"] for profile in supported), default=0),
+        "color_flexibility": max((len(profile["output_capabilities"]) for profile in supported), default=0),
+        "mana_value": cost.get("generic", 0) + len(colored_cost),
+        "oracle_id": record["oracle_id"],
+        "ordinal": ordinal,
+    }, []
+
+
+def _unregistered_field_errors(value, allowed, label):
+    if not isinstance(value, dict):
+        return [f"{label} must be an object"]
+    extras = sorted(set(value) - allowed)
+    return [f"{label} has unregistered fields: {', '.join(extras)}"] if extras else []
+
+
+def _controlled_mana_symbols(value):
+    return isinstance(value, list) and all(isinstance(symbol, str) and symbol in MANA_SYMBOLS for symbol in value)
+
+
+def _validate_registry_condition(condition, *, expected_commander_colors, expected_tron_ids, label):
+    errors = _unregistered_field_errors(condition, CONDITION_FIELDS, label)
+    if not isinstance(condition, dict):
+        return errors
+    errors.extend(_required(condition, CONDITION_FIELDS, label))
+    condition_id = condition.get("condition_id")
+    params = condition.get("params")
+    if condition_id not in CONDITION_PARAMS:
+        return errors + [f"{label} has invalid structured condition"]
+    if isinstance(params, dict):
+        extras = sorted(set(params) - CONDITION_PARAMS[condition_id])
+        if extras:
+            errors.append(f"{label} params has unregistered fields: {', '.join(extras)}")
+    if not isinstance(params, dict) or set(params) != CONDITION_PARAMS[condition_id]:
+        return errors + [f"{label} has invalid structured condition"]
+    if condition_id == "artifact_controlled":
+        if not _integer(params["minimum_count"]) or params["minimum_count"] < 1:
+            errors.append(f"{label} artifact_controlled.minimum_count must be an integer at least 1")
+    elif condition_id == "complete_tron_set_controlled":
+        oracle_ids = params["oracle_ids"]
+        if not isinstance(oracle_ids, list) or len(oracle_ids) != 3 or len(set(oracle_ids)) != 3 or set(oracle_ids) != expected_tron_ids:
+            errors.append(f"{label} complete_tron_set_controlled.oracle_ids must be the three canonical Tron Oracle IDs")
+    elif condition_id == "generic_payment_available_from_other_sources":
+        if not _integer(params["required_units"]) or params["required_units"] not in {1, 5}:
+            errors.append(f"{label} generic_payment_available_from_other_sources.required_units must be approved positive integer 1 or 5")
+    elif condition_id == "commander_color_identity":
+        colors = params["colors"]
+        if not isinstance(colors, list) or len(colors) != len(set(colors)) or set(colors) != expected_commander_colors:
+            errors.append(f"{label} commander_color_identity.colors must exactly match the canonical Commander color identity")
+    elif condition_id == "bounded_controller_turn_window":
+        start, end, removal = params["start_offset"], params["end_offset"], params["removal_event"]
+        if not _integer(start) or not _integer(end) or start < 0 or end < 0 or start > end:
+            errors.append(f"{label} bounded_controller_turn_window offsets are invalid")
+        if start != 0 or end != 2 or removal != "final_chapter_ability_leaves_stack":
+            errors.append(f"{label} bounded_controller_turn_window must use the approved Urza's Saga bounds and removal event")
+    return errors
+
+
+def validate_mana_source_semantics(registry, *, policy, cards, versions):
+    """Validate the complete, machine-executable project source registry."""
+    errors = _required(registry, ("schema_version", "artifact_type", "artifact_id", "project_id", "policy_version", "condition_vocabulary", "unsupported_reason_ids", "records"), "mana source semantics")
+    if not isinstance(registry, dict):
+        return errors
+    errors.extend(_unregistered_field_errors(registry, REGISTRY_FIELDS, "mana source semantics"))
+    if registry.get("schema_version") != "1.0": errors.append("mana source semantics schema_version must be 1.0")
+    if registry.get("artifact_type") != "project_scoped_mana_source_semantics": errors.append("mana source semantics artifact_type is invalid")
+    if registry.get("artifact_id") != "the-myr-singularity-mana-source-semantics-v1": errors.append("mana source semantics artifact_id is invalid")
+    if registry.get("project_id") != policy.get("project_id") or registry.get("policy_version") != policy.get("policy_version"):
+        errors.append("mana source semantics does not bind the active policy/project")
+    if artifact_content_fingerprint(registry) != APPROVED_MANA_SOURCE_SEMANTICS_FINGERPRINT:
+        errors.append("mana source semantics does not match the approved v1 executable-semantics fingerprint")
+    vocabulary = registry.get("condition_vocabulary")
+    if not isinstance(vocabulary, dict) or set(vocabulary) != set(CONDITION_PARAMS):
+        errors.append("mana source semantics condition vocabulary is not the closed required set")
+    elif any(
+        _unregistered_field_errors(vocabulary[key], {"required_params"}, f"condition vocabulary {key}")
+        or set((vocabulary[key] or {}).get("required_params", [])) != params
+        for key, params in CONDITION_PARAMS.items()
+    ):
+        errors.append("mana source semantics condition vocabulary parameters are invalid")
+    unsupported_reason_ids = registry.get("unsupported_reason_ids")
+    if not isinstance(unsupported_reason_ids, list) or any(not isinstance(reason, str) or not reason for reason in unsupported_reason_ids) or len(unsupported_reason_ids) != len(set(unsupported_reason_ids or [])):
+        errors.append("mana source semantics unsupported_reason_ids must be unique non-empty strings")
+    records = registry.get("records")
+    if not isinstance(records, list) or not records:
+        return errors + ["mana source semantics records must be a non-empty array"]
+    card_by_name = {card.get("name"): card for card in cards if isinstance(card, dict)}
+    expected_tron_ids = {
+        card_by_name[name]["oracle_id"] for name in ("Urza's Mine", "Urza's Power Plant", "Urza's Tower")
+        if name in card_by_name
+    }
+    commander_names = {version.get("commander", {}).get("name") for version in versions if isinstance(version, dict)}
+    commander_records = [card_by_name.get(name) for name in commander_names]
+    expected_commander_colors = set(commander_records[0].get("color_identity", [])) if len(commander_records) == 1 and commander_records[0] else set()
+    if len(expected_tron_ids) != 3:
+        errors.append("canonical Card Facts do not resolve the three Tron identities")
+    if expected_commander_colors != {"W", "U", "B", "R", "G"}:
+        errors.append("canonical Card Facts do not resolve the required Commander color identity")
+    expected = set()
+    for version in versions:
+        for item in version.get("main_deck", []):
+            card = card_by_name.get(item.get("name"))
+            if card and "Land" in card.get("type_line", ""):
+                expected.add(card.get("oracle_id"))
+    expected.update((policy.get("ramp_access_registry") or {}).get("oracle_ids", []))
+    seen = set()
+    reasons = set(unsupported_reason_ids) if isinstance(unsupported_reason_ids, list) else set()
+    for record in records:
+        if not isinstance(record, dict):
+            errors.append("mana source record must be an object"); continue
+        errors.extend(_unregistered_field_errors(record, RECORD_FIELDS, "mana source record"))
+        oracle_id = record.get("oracle_id")
+        if not isinstance(oracle_id, str) or not oracle_id: errors.append("mana source record is missing oracle_id"); continue
+        if oracle_id in seen: errors.append("mana source semantics has duplicate oracle_id record")
+        seen.add(oracle_id)
+        if not isinstance(record.get("card_name"), str) or not record["card_name"]:
+            errors.append(f"mana source record {oracle_id} card_name must be a non-empty string")
+        card = next((item for item in cards if item.get("oracle_id") == oracle_id), None)
+        if card is None or record.get("card_name") != card.get("name"): errors.append(f"mana source record {oracle_id} does not resolve to canonical Card Facts")
+        if record.get("source_kind") not in SOURCE_KINDS: errors.append(f"mana source record {oracle_id} has invalid source_kind")
+        deployment = record.get("deployment")
+        if not isinstance(deployment, dict):
+            errors.append(f"mana source record {oracle_id} deployment must be an object")
+            deployment = {}
+        cost = deployment.get("casting_cost")
+        if not isinstance(cost, dict):
+            errors.append(f"mana source record {oracle_id} casting_cost must be an object")
+            cost = {}
+        errors.extend(_unregistered_field_errors(deployment, DEPLOYMENT_FIELDS, f"mana source record {oracle_id} deployment"))
+        errors.extend(_unregistered_field_errors(cost, CASTING_COST_FIELDS, f"mana source record {oracle_id} casting_cost"))
+        if not _integer(cost.get("generic")) or cost.get("generic") < 0 or not _controlled_mana_symbols(cost.get("colored")) or not isinstance(deployment.get("counts_as_land_drop"), bool): errors.append(f"mana source record {oracle_id} has invalid deployment")
+        if card is not None:
+            is_land = "Land" in card.get("type_line", "")
+            is_creature = "Creature" in card.get("type_line", "")
+            if record.get("source_kind") == "land" and (not is_land or deployment.get("counts_as_land_drop") is not True):
+                errors.append(f"mana source record {oracle_id} land source_kind must match a canonical Land and count as a land drop")
+            if record.get("source_kind") in {"mana_rock", "mana_creature"} and deployment.get("counts_as_land_drop") is not False:
+                errors.append(f"mana source record {oracle_id} nonland source_kind must not count as a land drop")
+            if record.get("source_kind") == "mana_creature" and not is_creature:
+                errors.append(f"mana source record {oracle_id} mana_creature source_kind must match a canonical Creature")
+            if record.get("source_kind") == "mana_rock" and is_land:
+                errors.append(f"mana source record {oracle_id} mana_rock source_kind must not treat a canonical Land as a rock")
+        groups = record.get("activation_groups")
+        if not isinstance(groups, list) or len(groups) != 1: errors.append(f"mana source record {oracle_id} must have exactly one activation group"); continue
+        group = groups[0]
+        errors.extend(_unregistered_field_errors(group, ACTIVATION_GROUP_FIELDS, f"mana source record {oracle_id} activation group"))
+        if group.get("group_id") != "mana" or group.get("selection") not in GROUP_SELECTIONS: errors.append(f"mana source record {oracle_id} has invalid activation-group selection")
+        profiles = group.get("profiles")
+        if not isinstance(profiles, list) or not profiles: errors.append(f"mana source record {oracle_id} has no profiles"); continue
+        ids, priorities = set(), set()
+        for profile in profiles:
+            required = ("profile_id", "priority", "mana_units", "output_capabilities", "output_selection", "tap_model", "payment", "conditions", "online_model", "natural_untap_model", "supported", "unsupported_reason_id")
+            if not isinstance(profile, dict) or _required(profile, required, "activation profile"):
+                errors.append(f"mana source record {oracle_id} has incomplete profile"); continue
+            errors.extend(_unregistered_field_errors(profile, PROFILE_FIELDS, f"mana source record {oracle_id} profile"))
+            profile_id = profile["profile_id"]
+            if not isinstance(profile_id, str) or not profile_id:
+                errors.append(f"mana source record {oracle_id} profile_id must be a non-empty string")
+            elif profile_id in ids: errors.append(f"mana source record {oracle_id} has duplicate profile_id")
+            else: ids.add(profile_id)
+            if not _integer(profile["priority"]) or not _integer(profile["mana_units"]) or profile["mana_units"] < 0: errors.append(f"mana source record {oracle_id} profile has invalid numeric fields")
+            if profile["output_selection"] not in OUTPUT_SELECTIONS or profile["tap_model"] != "tap_self_once" or profile["online_model"] not in ONLINE_MODELS or profile["natural_untap_model"] not in UNTAP_MODELS: errors.append(f"mana source record {oracle_id} profile uses an unregistered execution value")
+            payment = profile["payment"]
+            life = payment.get("life") if isinstance(payment, dict) else None
+            errors.extend(_unregistered_field_errors(payment, PAYMENT_FIELDS, f"mana source record {oracle_id} payment"))
+            errors.extend(_unregistered_field_errors(life, LIFE_FIELDS, f"mana source record {oracle_id} payment.life"))
+            if not isinstance(payment, dict) or not _integer(payment.get("generic")) or payment.get("generic") < 0 or not _controlled_mana_symbols(payment.get("colored")) or not isinstance(life, dict) or not _integer(life.get("amount")) or life.get("amount") < 0 or life.get("treatment") not in {"not_applicable", "ignored"}: errors.append(f"mana source record {oracle_id} profile has invalid payment")
+            elif life["amount"] > 0 and life["treatment"] != "ignored": errors.append(f"mana source record {oracle_id} life-cost profile must explicitly ignore life")
+            outputs = profile["output_capabilities"]
+            if not isinstance(outputs, list) or not _controlled_mana_symbols(outputs) or len(outputs) != len(set(outputs)):
+                errors.append(f"mana source record {oracle_id} profile output_capabilities must be unique controlled mana symbols")
+            elif profile["supported"] is True:
+                if profile["output_selection"] == "fixed" and len(outputs) != 1:
+                    errors.append(f"mana source record {oracle_id} fixed profile must have exactly one output capability")
+                if profile["output_selection"] in {"one_choice", "any_combination"} and not outputs:
+                    errors.append(f"mana source record {oracle_id} selectable profile must have output capabilities")
+            conditions = profile["conditions"]
+            if not isinstance(conditions, list): errors.append(f"mana source record {oracle_id} profile conditions must be an array")
+            else:
+                for index, condition in enumerate(conditions):
+                    errors.extend(_validate_registry_condition(condition, expected_commander_colors=expected_commander_colors, expected_tron_ids=expected_tron_ids, label=f"mana source record {oracle_id} profile condition[{index}]"))
+                generic_payment_conditions = [condition for condition in conditions if isinstance(condition, dict) and condition.get("condition_id") == "generic_payment_available_from_other_sources"]
+                if generic_payment_conditions:
+                    if len(generic_payment_conditions) != 1 or not _integer(payment.get("generic") if isinstance(payment, dict) else None) or payment.get("generic") <= 0 or generic_payment_conditions[0].get("params", {}).get("required_units") != payment.get("generic"):
+                        errors.append(f"mana source record {oracle_id} generic external-payment condition must exactly match positive payment.generic")
+                elif profile["supported"] is True and isinstance(payment, dict) and payment.get("generic", 0) > 0:
+                    errors.append(f"mana source record {oracle_id} positive generic external payment requires exactly one matching condition")
+                bounded_conditions = [condition for condition in conditions if isinstance(condition, dict) and condition.get("condition_id") == "bounded_controller_turn_window"]
+                if profile["online_model"] == "bounded_window" and len(bounded_conditions) != 1:
+                    errors.append(f"mana source record {oracle_id} bounded_window profile requires exactly one bounded_controller_turn_window condition")
+                if profile["online_model"] != "bounded_window" and bounded_conditions:
+                    errors.append(f"mana source record {oracle_id} bounded_controller_turn_window condition requires online_model bounded_window")
+            if profile["supported"] is True:
+                if profile["mana_units"] <= 0 or not profile["output_capabilities"] or profile["unsupported_reason_id"] is not None: errors.append(f"mana source record {oracle_id} supported profile is malformed")
+            elif profile["supported"] is False:
+                if profile["mana_units"] != 0 or profile["output_capabilities"] or profile["unsupported_reason_id"] not in reasons: errors.append(f"mana source record {oracle_id} unsupported profile is malformed")
+            else: errors.append(f"mana source record {oracle_id} profile supported must be boolean")
+            if group.get("selection") == "highest_priority_matching_profile":
+                if profile.get("priority") in priorities: errors.append(f"mana source record {oracle_id} has tied replacement profile priority")
+                priorities.add(profile.get("priority"))
+        transitions = record.get("state_transitions")
+        if transitions is not None and not isinstance(transitions, list):
+            errors.append(f"mana source record {oracle_id} state_transitions must be an array")
+        elif isinstance(transitions, list):
+            for index, transition in enumerate(transitions):
+                label = f"mana source record {oracle_id} state_transition[{index}]"
+                errors.extend(_unregistered_field_errors(transition, STATE_TRANSITION_FIELDS, label))
+                errors.extend(_required(transition, STATE_TRANSITION_FIELDS, label))
+                if isinstance(transition, dict):
+                    if transition.get("event_id") not in STATE_TRANSITION_EVENTS:
+                        errors.append(f"{label} event_id is not registered")
+                    errors.extend(_validate_registry_condition(transition.get("condition"), expected_commander_colors=expected_commander_colors, expected_tron_ids=expected_tron_ids, label=f"{label} condition"))
+        if record.get("card_name") == "Glimmervoid":
+            expected_transition = [{
+                "event_id": "end_step_remove_unless_condition",
+                "condition": {"condition_id": "artifact_controlled", "params": {"minimum_count": 1}},
+            }]
+            if transitions != expected_transition:
+                errors.append("Glimmervoid must have exactly the approved end-step artifact-control transition")
+    if seen != expected:
+        errors.append("mana source semantics does not cover exactly the v1.0/v1.1 executable-source union")
+    return errors
+
+
+def validate_card_semantics_registry_parity(card_semantics, registry):
+    """Require one result-changing interpretation for shared special mana sources."""
+    entries = {
+        item.get("card_identity", {}).get("name"): item
+        for item in (card_semantics.get("entries") or []) if isinstance(item, dict)
+    } if isinstance(card_semantics, dict) else {}
+    records = {
+        item.get("card_name"): item
+        for item in (registry.get("records") or []) if isinstance(item, dict)
+    } if isinstance(registry, dict) else {}
+    errors = []
+    for name in ("City of Brass", "Mana Confluence", "Urza's Saga"):
+        if name not in entries or name not in records:
+            errors.append(f"card semantics/registry parity is missing {name}")
+    if errors:
+        return errors
+
+    def profiles(name):
+        return [
+            profile for group in records[name].get("activation_groups", [])
+            for profile in group.get("profiles", []) if isinstance(profile, dict) and profile.get("supported")
+        ]
+
+    for name in ("City of Brass", "Mana Confluence"):
+        behavior = entries[name].get("modeled_behavior") or {}
+        record = records[name]
+        capabilities = set().union(*(set(profile.get("output_capabilities", [])) for profile in profiles(name)))
+        if record.get("deployment", {}).get("counts_as_land_drop") is not True or behavior.get("counts_as_land_drop") is not True:
+            errors.append(f"{name} card semantics/registry land-drop parity fails")
+        if capabilities != set("WUBRG") or set(behavior.get("produces_colors", [])) != set("WUBRG"):
+            errors.append(f"{name} card semantics/registry WUBRG capability parity fails")
+        if "C" in capabilities or behavior.get("produces_colorless") is not False or behavior.get("counts_as_five_color_source") is not True:
+            errors.append(f"{name} card semantics/registry five-color parity fails")
+    mana_confluence_life = [profile.get("payment", {}).get("life") for profile in profiles("Mana Confluence")]
+    if mana_confluence_life != [{"amount": 1, "treatment": "ignored"}]:
+        errors.append("Mana Confluence card semantics/registry life-payment parity fails")
+    city_life = [profile.get("payment", {}).get("life") for profile in profiles("City of Brass")]
+    if city_life != [{"amount": 0, "treatment": "not_applicable"}]:
+        errors.append("City of Brass card semantics/registry must not model a life-payment activation cost")
+
+    saga_behavior = entries["Urza's Saga"].get("modeled_behavior") or {}
+    saga_time = entries["Urza's Saga"].get("time_dependent_availability") or {}
+    saga_profiles = profiles("Urza's Saga")
+    saga_conditions = [
+        condition for profile in saga_profiles for condition in profile.get("conditions", [])
+        if isinstance(condition, dict) and condition.get("condition_id") == "bounded_controller_turn_window"
+    ]
+    if records["Urza's Saga"].get("deployment", {}).get("counts_as_land_drop") is not True or saga_behavior.get("counts_as_land_drop") is not True:
+        errors.append("Urza's Saga card semantics/registry land-drop parity fails")
+    if len(saga_profiles) != 1 or saga_profiles[0].get("output_capabilities") != ["C"] or saga_behavior.get("produces_colors") != [] or saga_behavior.get("produces_colorless") is not True or saga_behavior.get("counts_as_five_color_source") is not False:
+        errors.append("Urza's Saga card semantics/registry color capability parity fails")
+    expected_window = {"start_offset": 0, "end_offset": 2, "removal_event": "final_chapter_ability_leaves_stack"}
+    if len(saga_conditions) != 1 or saga_conditions[0].get("params") != expected_window:
+        errors.append("Urza's Saga card semantics/registry bounded window parity fails")
+    removal = saga_time.get("removal_event") or {}
+    availability = saga_time.get("availability_window") or {}
+    if availability.get("start_offset") != 0 or availability.get("end_offset") != 2 or removal.get("trigger") != "final_chapter_ability_leaves_stack" or saga_time.get("persists_as_permanent_land") is not False:
+        errors.append("Urza's Saga card semantics/registry nonpermanent removal parity fails")
+    return errors
+
+
+def validate_failure_pattern_taxonomy(taxonomy, *, policy, question):
+    """Fail closed on the complete approved v3 taxonomy, not merely its IDs."""
+    if not isinstance(taxonomy, dict):
+        return ["failure taxonomy must be the resolved taxonomy artifact"]
+    errors = []
+    if taxonomy.get("taxonomy_id") != "sim-failure-taxonomy-v3" or taxonomy.get("taxonomy_version") != "v3" or taxonomy.get("policy_version") != policy.get("policy_version"):
+        errors.append("failure taxonomy identity does not match the active policy")
+    if artifact_content_fingerprint(taxonomy) != APPROVED_FAILURE_PATTERN_TAXONOMY_FINGERPRINT:
+        errors.append("failure taxonomy does not match the approved v3 emission-semantics fingerprint")
+    categories = taxonomy.get("categories")
+    emission = taxonomy.get("emission_contract") or {}
+    category_contracts = emission.get("categories") or {}
+    category_ids = [item.get("category_id") for item in categories if isinstance(item, dict)] if isinstance(categories, list) else []
+    if len(category_ids) != 12 or len(category_ids) != len(set(category_ids)) or set(category_ids) != set(category_contracts):
+        errors.append("failure taxonomy categories and emission metadata must be an exact one-to-one set")
+    if emission.get("boolean_once_per_iteration") is not True or emission.get("overlap") != "permitted" or emission.get("result_inclusion") != "all_emitting_categories_exactly_once_including_zero_counts":
+        errors.append("failure taxonomy emission behavior is incomplete")
+    for category_id, metadata in category_contracts.items():
+        if not isinstance(metadata, dict) or metadata.get("emitting") not in {True, False}:
+            errors.append(f"failure taxonomy {category_id} emitting behavior is invalid")
+            continue
+        if metadata.get("emitting") is True:
+            if not isinstance(metadata.get("state_ref"), str) or not isinstance(metadata.get("predicate"), str):
+                errors.append(f"failure taxonomy {category_id} emitting metadata is incomplete")
+            reference = metadata.get("question_metric_ref")
+            if reference is not None:
+                _, target_errors = resolve_question_metric_target(question, reference)
+                errors.extend(target_errors)
+        elif not isinstance(metadata.get("non_emitting_reason_id"), str):
+            errors.append(f"failure taxonomy {category_id} non-emitting metadata is incomplete")
+    return errors
+
+
 def validate_run_role_binding(run, question):
     errors = []
     if run.get("question_id") != question.get("question_id"):
@@ -259,7 +775,7 @@ def _validate_bundle(bundle, *, policy, question, deck_path, deck_fingerprint, l
     expected = {"policy": policy, "question": question}
     policy_refs = policy.get("references") or {}
     map_names = {
-        "card_semantics": "card_semantics", "canonical_card_facts": "canonical_card_facts",
+        "card_semantics": "card_semantics", "mana_source_semantics": "mana_source_semantics", "canonical_card_facts": "canonical_card_facts",
         "failure_pattern_taxonomy": "failure_pattern_taxonomy",
         "simulation_question_contract": "simulation_question_contract",
         "simulation_run_contract": "simulation_run_contract",
@@ -291,6 +807,120 @@ def validate_failure_pattern(pattern, run_iteration_count, taxonomy_ids):
     if _integer(raw) and _integer(size) and not 0 <= raw <= size: errors.append("failure pattern raw_count must be within 0..sample_size")
     if not _number(frequency) or not 0 <= frequency <= 1: errors.append("failure pattern frequency must be within 0..1")
     elif _integer(raw) and _integer(size) and size and not math.isclose(frequency, raw / size, abs_tol=1e-12): errors.append("failure pattern frequency does not equal raw_count/sample_size")
+    return errors
+
+
+def validate_result_failure_patterns(patterns, run_iteration_count, taxonomy, question):
+    """Enforce the v3 emitting/non-emitting taxonomy boundary."""
+    if not isinstance(taxonomy, dict):
+        return ["failure patterns require the resolved failure taxonomy artifact"]
+    taxonomy_errors = validate_failure_pattern_taxonomy(taxonomy, policy={"policy_version": taxonomy.get("policy_version")}, question=question)
+    if taxonomy_errors:
+        return ["failure patterns require a valid resolved failure taxonomy artifact", *taxonomy_errors]
+    contract = taxonomy.get("emission_contract") or {}
+    categories = contract.get("categories") or {}
+    errors = []
+    emitting = {key for key, value in categories.items() if isinstance(value, dict) and value.get("emitting") is True}
+    non_emitting = {key for key, value in categories.items() if isinstance(value, dict) and value.get("emitting") is False}
+    actual = [item.get("category_id") for item in patterns if isinstance(item, dict)] if isinstance(patterns, list) else []
+    if len(actual) != len(set(actual)): errors.append("failure_patterns contains duplicate category_id")
+    if set(actual) != emitting: errors.append("failure_patterns must contain every emitting category exactly once and no non-emitting category")
+    for category_id, metadata in categories.items():
+        reference = metadata.get("question_metric_ref") if isinstance(metadata, dict) else None
+        if reference is not None:
+            _, target_errors = resolve_question_metric_target(question, reference)
+            errors.extend(target_errors)
+    for pattern in patterns if isinstance(patterns, list) else []:
+        errors.extend(validate_failure_pattern(pattern, run_iteration_count, set(categories)))
+    return errors
+
+
+def validate_failure_pattern_aggregate_consistency(metrics, patterns, iteration_count):
+    """Bind emitted failure counts to the aggregate metric events that define them."""
+    if not isinstance(metrics, list) or not isinstance(patterns, list):
+        return []
+    metric_by_id = {metric.get("metric_id"): metric for metric in metrics if isinstance(metric, dict)}
+    pattern_by_id = {pattern.get("category_id"): pattern for pattern in patterns if isinstance(pattern, dict)}
+
+    def pattern_count(category_id):
+        value = pattern_by_id.get(category_id, {}).get("raw_count")
+        return value if _integer(value) else None
+
+    def bernoulli_count(metric_id):
+        value = metric_by_id.get(metric_id, {}).get("raw_count")
+        return value if _integer(value) else None
+
+    colors = metric_by_id.get("distinct_commander_colors_by_turn")
+    bins = colors.get("bins") if isinstance(colors, dict) else None
+    bin_counts = {}
+    if isinstance(bins, list):
+        bin_counts = {
+            item.get("value"): item.get("raw_count")
+            for item in bins if isinstance(item, dict) and _integer(item.get("raw_count"))
+        }
+    errors = []
+
+    def require_exact(category_id, expected, diagnostic):
+        actual = pattern_count(category_id)
+        if actual is not None and expected is not None and actual != expected:
+            errors.append(diagnostic)
+
+    land_success = bernoulli_count("land_drop_success_by_turn")
+    ramp_success = bernoulli_count("ramp_access_by_turn")
+    five_color_success = bernoulli_count("five_color_availability_by_turn")
+    if _integer(iteration_count):
+        require_exact(
+            "missed_land_drop",
+            iteration_count - land_success if land_success is not None else None,
+            "failure pattern missed_land_drop raw_count must equal the complement of land_drop_success_by_turn",
+        )
+        require_exact(
+            "ramp_not_available_by_turn",
+            iteration_count - ramp_success if ramp_success is not None else None,
+            "failure pattern ramp_not_available_by_turn raw_count must equal the complement of ramp_access_by_turn",
+        )
+        require_exact(
+            "five_color_not_complete_by_turn",
+            iteration_count - five_color_success if five_color_success is not None else None,
+            "failure pattern five_color_not_complete_by_turn raw_count must equal the complement of five_color_availability_by_turn",
+        )
+    require_exact(
+        "single_color_missing_by_turn",
+        bin_counts.get(4),
+        "failure pattern single_color_missing_by_turn raw_count must equal distinct_commander_colors_by_turn bin 4",
+    )
+    required_color_bins = (0, 1, 2, 3)
+    if all(value in bin_counts for value in required_color_bins):
+        require_exact(
+            "multiple_colors_missing_by_turn",
+            sum(bin_counts[value] for value in required_color_bins),
+            "failure pattern multiple_colors_missing_by_turn raw_count must equal distinct_commander_colors_by_turn bins 0 through 3",
+        )
+    if five_color_success is not None and bin_counts.get(5) is not None:
+        if five_color_success != bin_counts[5]:
+            errors.append("five_color_availability_by_turn raw_count must equal distinct_commander_colors_by_turn bin 5")
+        five_probability = metric_by_id["five_color_availability_by_turn"].get("probability")
+        color_proportion = next((item.get("proportion") for item in bins if item.get("value") == 5), None)
+        if _number(five_probability) and _number(color_proportion) and not math.isclose(five_probability, color_proportion, abs_tol=1e-12):
+            errors.append("five_color_availability_by_turn probability must equal distinct_commander_colors_by_turn bin 5 proportion")
+    zero_land = bernoulli_count("zero_land_hand_rate")
+    one_land = bernoulli_count("one_land_hand_rate")
+    keepable = bernoulli_count("keepable_opening_hand_rate")
+    excessive_land = bernoulli_count("excessive_land_hand_rate")
+    zero_land_pattern = pattern_count("zero_land_hand")
+    one_land_unkept_pattern = pattern_count("one_land_hand_unkept")
+    excessive_land_pattern = pattern_count("excessive_land_hand")
+    if zero_land is not None and zero_land_pattern is not None and zero_land_pattern < zero_land:
+        errors.append("failure pattern zero_land_hand raw_count must be at least zero_land_hand_rate raw_count")
+    if excessive_land is not None and excessive_land_pattern is not None and excessive_land_pattern < excessive_land:
+        errors.append("failure pattern excessive_land_hand raw_count must be at least excessive_land_hand_rate raw_count")
+    if all(value is not None for value in (iteration_count, zero_land, one_land, excessive_land, keepable)):
+        two_to_five = iteration_count - zero_land - one_land - excessive_land
+        if not two_to_five <= keepable <= two_to_five + one_land:
+            errors.append("keepable_opening_hand_rate raw_count is incompatible with the frozen natural-opening keep rule")
+        natural_one_land_rejected = one_land - (keepable - two_to_five)
+        if one_land_unkept_pattern is not None and one_land_unkept_pattern < natural_one_land_rejected:
+            errors.append("failure pattern one_land_hand_unkept raw_count is below derived natural one-land rejections")
     return errors
 
 
@@ -370,9 +1000,87 @@ def _validate_claims(claims, resolved, expected_type, readable_summary, errors):
     if readable_summary != render_evidence_claims(claims): errors.append("readable_summary must be the deterministic rendering of evidence_claims")
 
 
+def validate_recording_context(context, *, id_field, created_at_required):
+    """Fail closed on the persisted caller-owned recording boundary."""
+    if not isinstance(context, dict):
+        return ["recording_context must be an object"]
+    errors = []
+    if context.get("contract_id") != RECORDING_CONTEXT_ID:
+        errors.append("recording_context contract_id is invalid")
+    boundary = context.get("engine_boundary")
+    expected_boundary = {
+        "wall_clock_read_permitted": False,
+        "random_or_uuid_recording_id_permitted": False,
+        "recording_metadata_owner": "caller",
+    }
+    if boundary != expected_boundary:
+        errors.append("recording_context engine boundary must be caller-owned and prohibit clock/random IDs")
+    identity = context.get("artifact_identity")
+    expected_identity = {
+        "algorithm_id": RECORDING_ARTIFACT_ALGORITHM,
+        "coverage": RECORDING_ARTIFACT_COVERAGE,
+        "replay_equivalence": RECORDING_REPLAY_EQUIVALENCE,
+    }
+    if identity != expected_identity:
+        errors.append("recording_context artifact identity boundary is invalid")
+    expected_fields = {"id_field": id_field, "id_owner": "caller"}
+    if created_at_required:
+        expected_fields.update({"created_at_field": "created_at", "created_at_owner": "caller"})
+    else:
+        expected_fields["created_at_required"] = False
+    if context.get("record_fields") != expected_fields:
+        errors.append("recording_context record fields are not caller-owned exact fields")
+    return errors
+
+
+def _valid_recording_timestamp(value):
+    if not isinstance(value, str) or not value:
+        return False
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%dT%H:%M:%SZ") == value
+    except ValueError:
+        return False
+
+
+def _required_unsupported_limitation_ids(run, *, load_reference):
+    """Derive limitation identifiers from unsupported executable profiles in deck."""
+    dependencies = run.get("semantic_dependencies") if isinstance(run, dict) else None
+    registry_reference = dependencies.get("mana_source_semantics") if isinstance(dependencies, dict) else None
+    try:
+        registry = load_reference((registry_reference or {}).get("path"))
+        version = load_reference(run.get("deck_version_path"))
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return set(), ["unable to resolve evidence for unsupported-behavior limitations"]
+    records = {record.get("card_name"): record for record in registry.get("records", []) if isinstance(record, dict)}
+    cards = [version.get("commander")] + list(version.get("main_deck") or []) if isinstance(version, dict) else []
+    ids = set()
+    for card in cards:
+        record = records.get(card.get("name")) if isinstance(card, dict) else None
+        if not isinstance(record, dict):
+            continue
+        for group in record.get("activation_groups", []):
+            for profile in group.get("profiles", []) if isinstance(group, dict) else []:
+                if isinstance(profile, dict) and profile.get("supported") is False:
+                    ids.add(f"unsupported_mana_profile:{record.get('oracle_id')}:{profile.get('unsupported_reason_id')}")
+    return ids, []
+
+
+def _validate_unsupported_limitations(value, required_ids, label, errors):
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        errors.append(f"{label} limitations must be an array of strings")
+        return
+    missing = sorted(required_ids - set(value))
+    if missing:
+        errors.append(f"{label} limitations omit required unsupported behavior IDs: {', '.join(missing)}")
+
+
 def validate_simulation_run(run, *, question, policy, run_contract, project_id, load_reference, fingerprint_for_version):
     errors = _required(run, (run_contract.get("required_fields") or {}).keys(), "run")
     if not isinstance(run, dict): return errors
+    errors.extend(_unregistered_top_level_field_errors(run, run_contract, "run"))
+    errors.extend(validate_recording_context(run_contract.get("recording_context"), id_field="run_id", created_at_required=False))
+    if not isinstance(run.get("run_id"), str) or not run.get("run_id"):
+        errors.append("run run_id must be a non-empty string")
     if run.get("artifact_type") != "simulation_run": errors.append("run artifact_type must be 'simulation_run'")
     if run.get("project_id") != project_id: errors.append("run project_id does not match the project")
     if run.get("policy_id") != policy.get("policy_id") or run.get("policy_version") != policy.get("policy_version"): errors.append("run policy binding does not match policy")
@@ -403,15 +1111,21 @@ def validate_simulation_run(run, *, question, policy, run_contract, project_id, 
         "bottoming_rule_ref": f"{policy.get('policy_version')}:bottoming_rule",
         "observation_horizon_turn": (policy.get("turn_semantics") or {}).get("observation_horizon_turn"),
         "card_semantics_ref": (policy.get("references") or {}).get("card_semantics", {}).get("path"),
+        "mana_source_semantics_ref": (policy.get("references") or {}).get("mana_source_semantics", {}).get("path"),
     }
     config = run.get("config")
-    if not isinstance(config, dict) or any(config.get(field) != expected for field, expected in expected_config.items()):
+    expected_config_fields = set((run_contract.get("required_fields", {}).get("config", {}).get("required_fields") or []))
+    if not isinstance(config, dict) or set(config) != expected_config_fields or any(config.get(field) != expected for field, expected in expected_config.items()):
         errors.append("run configuration does not match the resolved policy")
     if not isinstance(config, dict) or config.get("sequencing_levels") != ["level_1", "level_2"]:
         errors.append("run config.sequencing_levels must equal the approved sequence")
     boundary = run.get("explicit_boundary")
-    if not isinstance(boundary, dict) or any(boundary.get(key) is not False for key in ("carries_metrics", "carries_interpretation", "creates_deck_version")):
+    expected_boundary_fields = set((run_contract.get("required_fields", {}).get("explicit_boundary", {}).get("required_fields") or []))
+    if not isinstance(boundary, dict) or set(boundary) != expected_boundary_fields or any(boundary.get(key) is not False for key in expected_boundary_fields):
         errors.append("run explicit_boundary flags must all be false")
+    required_limitations, limitation_errors = _required_unsupported_limitation_ids(run, load_reference=load_reference)
+    errors.extend(limitation_errors)
+    _validate_unsupported_limitations(run.get("limitations"), required_limitations, "run", errors)
     errors.extend(_reserved_lifecycle_key_errors(run))
     for key in ("metrics", "probability", "metric_deltas", "result_id", "comparison_id"):
         if key in run: errors.append(f"run must not carry {key}")
@@ -423,6 +1137,11 @@ def validate_simulation_result(result, *, run, policy, question, result_contract
     if not isinstance(result, dict): return errors
     errors.extend(_unregistered_top_level_field_errors(result, result_contract, "result"))
     errors.extend(_reserved_lifecycle_key_errors(result))
+    errors.extend(validate_recording_context(result_contract.get("recording_context"), id_field="result_id", created_at_required=True))
+    if not isinstance(result.get("result_id"), str) or not result.get("result_id"):
+        errors.append("result result_id must be a non-empty string")
+    if not _valid_recording_timestamp(result.get("created_at")):
+        errors.append("result created_at must be a non-empty ISO-8601 UTC recording string")
     if result.get("artifact_type") != "simulation_result": errors.append("result artifact_type must be 'simulation_result'")
     for field in ("project_id", "run_id", "deck_version_id", "deck_content_fingerprint", "policy_version", "iteration_count"):
         if result.get(field) != run.get(field): errors.append(f"result {field} does not match run")
@@ -445,7 +1164,15 @@ def validate_simulation_result(result, *, run, policy, question, result_contract
         if definition is None: continue
         if definition.get("shape") == "categorical_count": _validate_categorical(metric, run.get("iteration_count"), errors)
         else: _validate_bernoulli(metric, run.get("iteration_count"), errors)
-    for pattern in result.get("failure_patterns", []): errors.extend(validate_failure_pattern(pattern, run.get("iteration_count"), taxonomy_ids))
+    if not isinstance(taxonomy_ids, dict):
+        errors.append("result validation requires the resolved failure taxonomy artifact")
+    else:
+        errors.extend(validate_failure_pattern_taxonomy(taxonomy_ids, policy=policy, question=question))
+        errors.extend(validate_result_failure_patterns(result.get("failure_patterns"), run.get("iteration_count"), taxonomy_ids, question))
+    errors.extend(validate_failure_pattern_aggregate_consistency(metrics, result.get("failure_patterns"), run.get("iteration_count")))
+    required_limitations, limitation_errors = _required_unsupported_limitation_ids(run, load_reference=load_reference)
+    errors.extend(limitation_errors)
+    _validate_unsupported_limitations(result.get("limitations"), required_limitations, "result", errors)
     if "observations" in result: errors.append("result must not carry free-form observations")
     boundary = result.get("explicit_boundary")
     if not isinstance(boundary, dict) or any(boundary.get(key) is not False for key in ("carries_interpretation", "carries_product_owner_decision", "is_gameplay_claim", "creates_deck_version")):
@@ -459,6 +1186,11 @@ def validate_comparison_result(comparison, *, baseline_run, candidate_run, basel
     if not isinstance(comparison, dict): return errors
     errors.extend(_unregistered_top_level_field_errors(comparison, comparison_contract, "comparison"))
     errors.extend(_reserved_lifecycle_key_errors(comparison))
+    errors.extend(validate_recording_context(comparison_contract.get("recording_context"), id_field="comparison_id", created_at_required=True))
+    if not isinstance(comparison.get("comparison_id"), str) or not comparison.get("comparison_id"):
+        errors.append("comparison comparison_id must be a non-empty string")
+    if not _valid_recording_timestamp(comparison.get("created_at")):
+        errors.append("comparison created_at must be a non-empty ISO-8601 UTC recording string")
     if comparison.get("artifact_type") != "comparison_result": errors.append("comparison artifact_type must be 'comparison_result'")
     if comparison.get("project_id") != project_id: errors.append("comparison project_id does not match the project")
     if comparison.get("question_id") != question.get("question_id"): errors.append("comparison question_id does not match the question")

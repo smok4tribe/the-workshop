@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the active Sprint 2 simulation-policy-v3 contract layer."""
+"""Validate the active Sprint 2 simulation-policy-v4 contract layer."""
 
 from __future__ import annotations
 
@@ -17,8 +17,12 @@ from workshop.shared.identity import (  # noqa: E402
 )
 from workshop.shared.simulation_determinism import derive_iteration_seed, derive_run_seed  # noqa: E402
 from workshop.simulation.instance_validation import (  # noqa: E402
+    validate_card_semantics_registry_parity,
+    validate_failure_pattern_taxonomy,
+    validate_mana_source_semantics,
     validate_policy_metric_contracts,
     validate_question_role_bindings,
+    validate_recording_context,
 )
 
 PROJECT_ID = "the-myr-singularity"
@@ -77,6 +81,7 @@ def _check_reference(reference, expected_path, expected_document, label):
 def main():
     files = {
         "policy": SIM / "simulation_policy.json", "semantics": SIM / "card_semantics.json",
+        "mana_source_semantics": SIM / "mana_source_semantics.json",
         "question": SIM / "questions" / "question-001-mana-color.json",
         "taxonomy": CONTRACTS / "failure_pattern_taxonomy.json",
         "question_contract": CONTRACTS / "simulation_question.contract.json",
@@ -91,19 +96,40 @@ def main():
             docs[name] = load_json(path)
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             errors.append(f"{name} does not strictly parse: {exc}")
-    checks = [("all v3 artifacts exist and strictly parse", errors)]
+    checks = [("all v4 executable-semantics artifacts exist and strictly parse", errors)]
     if errors:
         return report(checks)
     policy, semantics, question, taxonomy = (docs[k] for k in ("policy", "semantics", "question", "taxonomy"))
 
     errors = _required(policy, ("policy_id", "policy_version", "references", "randomness_policy", "deck_fingerprint_policy", "metric_catalog", "level_2_sequencing"), "policy")
-    if policy.get("policy_version") != "sim-policy-v3": errors.append("policy_version must be sim-policy-v3")
+    if policy.get("policy_version") != "sim-policy-v4": errors.append("policy_version must be sim-policy-v4")
     if policy.get("bottoming_rule", {}).get("rule_id") != "deterministic-bottoming-v2": errors.append("policy must use deterministic-bottoming-v2")
-    checks.append(("policy has versioned v3 ownership", errors))
+    transition = policy.get("mulligan_policy", {}).get("executable_state_transition", {})
+    expected_transition = {
+        "canonical_library": "99 physical card-instance tokens in canonical token order",
+        "initial_shuffle": "fisher_yates_full_library_with_iteration_pcg32",
+        "rejected_hand_transition": [
+            "return_all_physical_tokens_to_eligibility",
+            "reconstruct_full_library_in_canonical_instance_token_order",
+            "increment_mulligans_taken_before_recording_next_attempt",
+            "fisher_yates_full_library_with_same_continuous_iteration_pcg32",
+            "draw_opening_hand_size",
+        ],
+        "rng_reset_permitted": False,
+        "rng_consumption": "fisher_yates_and_registered_bounded_rejection_sampling_only",
+        "force_keep_when_mulligans_taken_equals": 6,
+        "bottom_count": "max(0, mulligans_taken - free_mulligans)",
+        "bottoming_consumes_rng": False,
+        "bottom_placement": "append_selected_cards_to_current_post_draw_library_in_selection_order",
+    }
+    if transition != expected_transition:
+        errors.append("policy executable mulligan transition is incomplete")
+    checks.append(("policy has versioned v4 executable ownership", errors))
 
     errors = []
     expected_refs = {
         "card_semantics": ("workshop/projects/the-myr-singularity/simulation/card_semantics.json", semantics),
+        "mana_source_semantics": ("workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json", docs["mana_source_semantics"]),
         "canonical_card_facts": ("workshop/card-data/cards.json", docs["cards"]),
         "failure_pattern_taxonomy": ("workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json", taxonomy),
         "simulation_question_contract": ("workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json", docs["question_contract"]),
@@ -113,6 +139,12 @@ def main():
     }
     for key, (path, document) in expected_refs.items(): errors.extend(_check_reference((policy.get("references") or {}).get(key), path, document, f"policy.references.{key}"))
     checks.append(("policy pins every immutable semantic dependency without self-hashing", errors))
+
+    errors = validate_mana_source_semantics(
+        docs["mana_source_semantics"], policy=policy, cards=docs["cards"]["cards"],
+        versions=[load_json(PROJECT / "versions" / "v1.0.json"), load_json(PROJECT / "versions" / "v1.1.json")],
+    )
+    checks.append(("normalized source registry covers v1.0/v1.1 with controlled executable semantics", errors))
 
     errors = []
     fp = policy.get("deck_fingerprint_policy", {})
@@ -140,15 +172,21 @@ def main():
     checks.append(("metric registry has complete v3 measurement contracts", errors))
 
     errors = []
-    if semantics.get("policy_version") != "sim-policy-v3": errors.append("card semantics must bind sim-policy-v3")
+    if semantics.get("policy_version") != "sim-policy-v4": errors.append("card semantics must bind sim-policy-v4")
     saga = next((e for e in semantics.get("entries", []) if e.get("card_identity", {}).get("name") == "Urza's Saga"), {})
     if saga.get("source", {}).get("oracle_basis") != "Saga land with a Chapter I {T}: Add {C} ability and a Chapter III ability.": errors.append("Urza's Saga must use the approved narrow oracle basis")
     if "upkeep" in saga.get("source", {}).get("oracle_basis", "").casefold(): errors.append("Urza's Saga source basis must not contain upkeep")
     if saga.get("time_dependent_availability", {}).get("removal_event", {}).get("trigger") != "final_chapter_ability_leaves_stack": errors.append("Urza's Saga removal trigger is incorrect")
     checks.append(("Urza's Saga source prose and bounded removal are consistent", errors))
 
+    errors = validate_failure_pattern_taxonomy(taxonomy, policy=policy, question=question)
+    checks.append(("failure taxonomy v3 is a complete fail-closed emission contract", errors))
+
+    errors = validate_card_semantics_registry_parity(semantics, docs["mana_source_semantics"])
+    checks.append(("card semantics and executable registry have one result-changing interpretation", errors))
+
     errors = []
-    if question.get("policy_version") != "sim-policy-v3": errors.append("question must bind sim-policy-v3")
+    if question.get("policy_version") != "sim-policy-v4": errors.append("question must bind sim-policy-v4")
     errors.extend(_check_reference(question.get("policy_reference"), "workshop/projects/the-myr-singularity/simulation/simulation_policy.json", policy, "question.policy_reference"))
     required = {(m.get("metric_id"), m.get("target_turn")) for m in question.get("required_metrics", [])}
     optional = {(m.get("metric_id"), m.get("target_turn")) for m in question.get("optional_metrics", [])}
@@ -161,9 +199,25 @@ def main():
     checks.append(("question structurally separates required and optional metrics", errors))
 
     errors = []
-    for name, expected_id in (("question_contract", "simulation-question-contract-v2"), ("run_contract", "simulation-run-contract-v2"), ("result_contract", "simulation-result-contract-v2"), ("comparison_contract", "comparison-result-contract-v2")):
-        if docs[name].get("contract_id") != expected_id: errors.append(f"{name} must have v2 contract identity")
-    checks.append(("materially changed schemas use v2 contract identities", errors))
+    for name, expected_id in (("question_contract", "simulation-question-contract-v2"), ("run_contract", "simulation-run-contract-v3"), ("result_contract", "simulation-result-contract-v3"), ("comparison_contract", "comparison-result-contract-v3")):
+        if docs[name].get("contract_id") != expected_id: errors.append(f"{name} has an unexpected contract identity")
+    checks.append(("materially changed contracts use v3 identities", errors))
+
+    errors = []
+    legacy_level2 = (policy.get("sequencing_semantics") or {}).get("level_2_mana_development") or {}
+    legacy_text = json.dumps(legacy_level2, sort_keys=True)
+    if "canonical produced_mana, or explicitly modeled" in legacy_text or "Conditional, activated-cost-dependent" in legacy_text or "canonical produced_mana list" in legacy_text:
+        errors.append("legacy Level 2 source authority contradicts the executable mana-source registry")
+    if "mana_source_semantics.json" not in legacy_text:
+        errors.append("legacy Level 2 section does not delegate executable behavior to the registry")
+    limitations = ((policy.get("card_behavior_boundary") or {}).get("unsupported_behavior_handling") or {}).get("limitation_representation")
+    if limitations != {
+        "format": "unsupported_mana_profile:<oracle_id>:<unsupported_reason_id>",
+        "derivation": "For every unsupported executable profile on a source present in the run DeckVersion, derive exactly one limitation ID. The SimulationRun and its SimulationResult must both carry the complete applicable set.",
+        "metric_boundary": "Unsupported behavior contributes zero modeled mana/colors and cannot improve a success metric.",
+    }:
+        errors.append("unsupported behavior limitation representation is incomplete")
+    checks.append(("Level 2 has one registry authority and deterministic unsupported limitations", errors))
 
     errors = []
     level2 = policy.get("level_2_sequencing", {})
@@ -171,7 +225,42 @@ def main():
         errors.append("Level 2 turn order is not frozen")
     if not level2.get("land_selection_priority") or not level2.get("ramp_deployment_priority") or not level2.get("payment_priority"):
         errors.append("Level 2 selection and payment priorities are incomplete")
+    if level2.get("mana_source_resolution", {}).get("state_transition_timing") != "registered end-step removal conditions execute after deterministic same-turn development actions and before the applicable end-of-turn observation":
+        errors.append("Level 2 source state-transition timing is not frozen")
+    projection = level2.get("mana_source_projection") or {}
+    if projection.get("contract_id") != "mana-source-projection-v1" or set((projection.get("land_selector_fields") or {})) != {"colors", "five_color_source", "permanent", "remaining_availability", "mana_units", "identity"} or set((projection.get("ramp_selector_fields") or {})) != {"payable", "same_turn_online_noncreature", "output_units", "color_flexibility", "mana_value", "identity"}:
+        errors.append("Level 2 mana-source selector projection is incomplete")
+    phases = projection.get("condition_evaluation_phases") or {}
+    if phases != {
+        "land_candidate": {
+            "generic_payment_available_from_other_sources": "pre_play_resources_excluding_candidate",
+            "complete_tron_set_controlled": "hypothetical_post_play_controlled_lands_including_candidate",
+            "bounded_controller_turn_window": "candidate_controller_turn_offset_default_zero",
+            "commander_color_identity": "static_scenario_state",
+            "artifact_controlled": "pre_selection_state_for_selector_persistence",
+            "end_step_remove_unless_condition": "post_development_state",
+        },
+        "ramp_candidate": {
+            "deployment_payment": "pre_deployment_resources",
+            "activation_profiles": "post_deployment_residual_resources_after_reserved_payment",
+            "self_funding": "forbidden",
+        },
+    }:
+        errors.append("Level 2 condition evaluation phases are not frozen")
+    if "W, U, B, R, and G" not in (projection.get("land_selector_fields") or {}).get("colors", "") or "C never contributes" not in (projection.get("land_selector_fields") or {}).get("colors", ""):
+        errors.append("Level 2 land selector colors are not restricted to commander colors")
     checks.append(("Level 2 trace sequencing is explicit and deterministic", errors))
+
+    errors = []
+    expected_recording = {
+        "simulation_run.contract.json": ("run_id", False),
+        "simulation_result.contract.json": ("result_id", "created_at"),
+        "comparison_result.contract.json": ("comparison_id", "created_at"),
+    }
+    for name, (identifier, timestamp) in expected_recording.items():
+        context = docs[{"simulation_run.contract.json": "run_contract", "simulation_result.contract.json": "result_contract", "comparison_result.contract.json": "comparison_contract"}[name]].get("recording_context") or {}
+        errors.extend(f"{name} {error}" for error in validate_recording_context(context, id_field=identifier, created_at_required=timestamp is not False))
+    checks.append(("persisted RecordingContext keeps identity and time outside the engine", errors))
 
     errors = []
     for path in SIM.rglob("*.json"):

@@ -1,10 +1,10 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "artifact_type": "failure_pattern_taxonomy",
-  "taxonomy_id": "sim-failure-taxonomy-v2",
-  "taxonomy_version": "v2",
+  "taxonomy_id": "sim-failure-taxonomy-v3",
+  "taxonomy_version": "v3",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v3",
+  "policy_version": "sim-policy-v4",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the controlled vocabulary of failure-pattern categories that a SimulationResult may reference. Results reference these category IDs; they never invent new failure categories inline. Categories cover hand, land, mana, ramp, and color failures for the committed Sprint 2 metrics.",
   "scope": {
@@ -94,6 +94,25 @@
       "distinguishes": "evidence_boundary"
     }
   ],
+  "emission_contract": {
+    "boolean_once_per_iteration": true,
+    "overlap": "permitted",
+    "result_inclusion": "all_emitting_categories_exactly_once_including_zero_counts",
+    "categories": {
+      "zero_land_hand": {"emitting": true, "state_ref": "iteration.mulligan_attempts[*].land_count", "predicate": "equals_zero_and_rejected", "policy_ref": "simulation_policy.keep_rule.base_rule.zero_land_hands"},
+      "one_land_hand_unkept": {"emitting": true, "state_ref": "iteration.mulligan_attempts[*]", "predicate": "one_land_exception_false_and_rejected", "policy_ref": "simulation_policy.keep_rule.base_rule.one_land_exception"},
+      "excessive_land_hand": {"emitting": true, "state_ref": "iteration.mulligan_attempts[*].land_count", "predicate": "in_six_or_seven_and_rejected", "policy_ref": "simulation_policy.keep_rule.base_rule.six_or_seven_land_hands"},
+      "mulligan_to_low_hand": {"emitting": true, "state_ref": "iteration.kept_hand.bottom_count", "predicate": "greater_than_zero", "policy_ref": "simulation_policy.mulligan_policy.free_mulligans"},
+      "missed_land_drop": {"emitting": true, "question_metric_ref": {"source": "simulation_question.required_metrics", "metric_id": "land_drop_success_by_turn", "field": "target_turn"}, "state_ref": "iteration.land_drop_by_turn", "predicate": "any_required_turn_false"},
+      "insufficient_mana_by_turn": {"emitting": false, "non_emitting_reason_id": "no_selected_numeric_mana_threshold"},
+      "ramp_not_available_by_turn": {"emitting": true, "question_metric_ref": {"source": "simulation_question.required_metrics", "metric_id": "ramp_access_by_turn", "field": "target_turn"}, "state_ref": "metric_observations.ramp_access_by_turn", "predicate": "false_at_target"},
+      "single_color_missing_by_turn": {"emitting": true, "question_metric_ref": {"source": "simulation_question.required_metrics", "metric_id": "distinct_commander_colors_by_turn", "field": "target_turn"}, "state_ref": "metric_observations.distinct_commander_colors_by_turn", "predicate": "equals_four_at_target"},
+      "multiple_colors_missing_by_turn": {"emitting": true, "question_metric_ref": {"source": "simulation_question.required_metrics", "metric_id": "distinct_commander_colors_by_turn", "field": "target_turn"}, "state_ref": "metric_observations.distinct_commander_colors_by_turn", "predicate": "at_most_three_at_target"},
+      "five_color_not_complete_by_turn": {"emitting": true, "question_metric_ref": {"source": "simulation_question.required_metrics", "metric_id": "five_color_availability_by_turn", "field": "target_turn"}, "state_ref": "metric_observations.five_color_availability_by_turn", "predicate": "false_at_target"},
+      "mana_present_wrong_colors": {"emitting": false, "non_emitting_reason_id": "no_selected_joint_quantity_and_colored_payment_metric"},
+      "unsupported_card_behavior_limited_run": {"emitting": false, "non_emitting_reason_id": "static_limitation_not_per_iteration_event"}
+    }
+  },
   "family_summary": {
     "hand": "Keepability and mulligan outcomes.",
     "land": "Land-drop development.",

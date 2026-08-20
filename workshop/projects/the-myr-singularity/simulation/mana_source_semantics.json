@@ -1,0 +1,2521 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "project_scoped_mana_source_semantics",
+  "artifact_id": "the-myr-singularity-mana-source-semantics-v1",
+  "project_id": "the-myr-singularity",
+  "policy_version": "sim-policy-v4",
+  "condition_vocabulary": {
+    "artifact_controlled": {
+      "required_params": [
+        "minimum_count"
+      ]
+    },
+    "complete_tron_set_controlled": {
+      "required_params": [
+        "oracle_ids"
+      ]
+    },
+    "generic_payment_available_from_other_sources": {
+      "required_params": [
+        "required_units"
+      ]
+    },
+    "commander_color_identity": {
+      "required_params": [
+        "colors"
+      ]
+    },
+    "bounded_controller_turn_window": {
+      "required_params": [
+        "start_offset",
+        "end_offset",
+        "removal_event"
+      ]
+    }
+  },
+  "unsupported_reason_ids": [
+    "creature_type_choice_and_count_not_registered",
+    "opponent_mana_capability_not_modeled",
+    "secondary_artifact_or_creature_tap_target_not_registered",
+    "secondary_creature_tap_target_not_registered"
+  ],
+  "records": [
+    {
+      "card_name": "Academy Ruins",
+      "oracle_id": "a3da7d5b-2c2b-45fe-b9c5-413b8c8fc0a2",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Ancient Den",
+      "oracle_id": "02f16726-f2f6-4943-b71a-93f8e26251d3",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "w",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "W"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Buried Ruin",
+      "oracle_id": "3644f316-f9a3-46c9-9b1e-747f86cf4ead",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Darksteel Citadel",
+      "oracle_id": "8dc067bf-f78f-4ac4-b6e7-b305c42cf0bc",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Fomori Vault",
+      "oracle_id": "622a53bd-d894-422c-a606-7126041afa02",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Forest",
+      "oracle_id": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "g",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "G"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Great Furnace",
+      "oracle_id": "f4819061-b0b5-48ab-af7b-6525c3d2eab7",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "r",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "R"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Inventors' Fair",
+      "oracle_id": "91d4a5fe-fd6d-4b14-a63f-61b4d0ecd9c4",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Island",
+      "oracle_id": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "u",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "U"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Mountain",
+      "oracle_id": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "r",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "R"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Plains",
+      "oracle_id": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "w",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "W"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Reliquary Tower",
+      "oracle_id": "c23e5b80-08d2-4e24-9908-fe2aa4f30f6f",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Seat of the Synod",
+      "oracle_id": "39451b4d-cd7a-40da-b457-cb51b609173f",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "u",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "U"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Snow-Covered Island",
+      "oracle_id": "5b2460a5-6ae5-4cad-ba94-1a9e98e6e4c0",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "u",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "U"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Swamp",
+      "oracle_id": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "b",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Tree of Tales",
+      "oracle_id": "8b4aa971-b919-4750-8388-33d4f42c9280",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "g",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "G"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Urza's Cave",
+      "oracle_id": "4474ecee-0ec3-409b-90df-738d9313fe3c",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Vault of Whispers",
+      "oracle_id": "09496421-74e4-466a-9546-56f2a0c8eef4",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "b",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Adarkar Wastes",
+      "oracle_id": "d5ad26cc-2bdb-46b7-b8bf-dd099d5fa09b",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "choice",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C",
+                "U",
+                "W"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Shivan Reef",
+      "oracle_id": "0fe16212-66c3-4e45-a641-7391e9b2e304",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "choice",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C",
+                "R",
+                "U"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Underground River",
+      "oracle_id": "857febd9-cdd7-4f8e-a852-d88084b0cfbc",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "choice",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B",
+                "C",
+                "U"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Yavimaya Coast",
+      "oracle_id": "40b36bc6-c185-4bda-99e7-0118953c2c97",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "choice",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C",
+                "G",
+                "U"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Tarnished Citadel",
+      "oracle_id": "66ae2562-68e9-4c77-ba0a-57f8ff37f656",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "choice",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B",
+                "C",
+                "G",
+                "R",
+                "U",
+                "W"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 3,
+                  "treatment": "ignored"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Command Tower",
+      "oracle_id": "0895c9b7-ae7d-4bb3-af17-3b75deb50a25",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "commander-choice",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B",
+                "G",
+                "R",
+                "U",
+                "W"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [
+                {
+                  "condition_id": "commander_color_identity",
+                  "params": {
+                    "colors": [
+                      "B",
+                      "G",
+                      "R",
+                      "U",
+                      "W"
+                    ]
+                  }
+                }
+              ],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "City of Brass",
+      "oracle_id": "f25351e3-539b-4bbc-b92d-6480acf4d722",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "any-color",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B",
+                "G",
+                "R",
+                "U",
+                "W"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+            "life": {
+              "amount": 0,
+              "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Mana Confluence",
+      "oracle_id": "d0ee5bdc-2b69-4b73-9a20-ffcc18783b29",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "any-color",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B",
+                "G",
+                "R",
+                "U",
+                "W"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 1,
+                  "treatment": "ignored"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Glimmervoid",
+      "oracle_id": "b92e9854-4527-4133-8615-e282a213e7e3",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "any-color",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B",
+                "G",
+                "R",
+                "U",
+                "W"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ],
+      "state_transitions": [
+        {
+          "event_id": "end_step_remove_unless_condition",
+          "condition": {
+            "condition_id": "artifact_controlled",
+            "params": {
+              "minimum_count": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "card_name": "Spire of Industry",
+      "oracle_id": "55a519b4-61cb-448a-875b-4d6dbe00580f",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            },
+            {
+              "profile_id": "colored",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B",
+                "G",
+                "R",
+                "U",
+                "W"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 1,
+                  "treatment": "ignored"
+                }
+              },
+              "conditions": [
+                {
+                  "condition_id": "artifact_controlled",
+                  "params": {
+                    "minimum_count": 1
+                  }
+                }
+              ],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Cascading Cataracts",
+      "oracle_id": "d98b4250-3492-4864-9c4c-42db09b3ccd4",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            },
+            {
+              "profile_id": "filter-five",
+              "priority": 0,
+              "mana_units": 5,
+              "output_capabilities": [
+                "B",
+                "G",
+                "R",
+                "U",
+                "W"
+              ],
+              "output_selection": "any_combination",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 5,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [
+                {
+                  "condition_id": "generic_payment_available_from_other_sources",
+                  "params": {
+                    "required_units": 5
+                  }
+                }
+              ],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "The Mycosynth Gardens",
+      "oracle_id": "03f5c566-825c-4c46-9c01-a2f9b1e70a13",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            },
+            {
+              "profile_id": "filter",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B",
+                "G",
+                "R",
+                "U",
+                "W"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 1,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [
+                {
+                  "condition_id": "generic_payment_available_from_other_sources",
+                  "params": {
+                    "required_units": 1
+                  }
+                }
+              ],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Three Tree City",
+      "oracle_id": "da3b17a2-e1e1-44e9-b9b1-ae54a92037db",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            },
+            {
+              "profile_id": "creature-type-colored",
+              "priority": 0,
+              "mana_units": 0,
+              "output_capabilities": [],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 2,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": false,
+              "unsupported_reason_id": "creature_type_choice_and_count_not_registered"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Urza's Mine",
+      "oracle_id": "33e85a8a-86df-4cdc-a9cc-8cbabe92c3c0",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "highest_priority_matching_profile",
+          "profiles": [
+            {
+              "profile_id": "enhanced",
+              "priority": 100,
+              "mana_units": 2,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [
+                {
+                  "condition_id": "complete_tron_set_controlled",
+                  "params": {
+                    "oracle_ids": [
+                      "33e85a8a-86df-4cdc-a9cc-8cbabe92c3c0",
+                      "e11966cd-2ee3-4df4-b099-abf42dcdf0db",
+                      "32fbb638-ab14-4e8b-a07a-d4c44e3496f2"
+                    ]
+                  }
+                }
+              ],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            },
+            {
+              "profile_id": "base",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Urza's Power Plant",
+      "oracle_id": "e11966cd-2ee3-4df4-b099-abf42dcdf0db",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "highest_priority_matching_profile",
+          "profiles": [
+            {
+              "profile_id": "enhanced",
+              "priority": 100,
+              "mana_units": 2,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [
+                {
+                  "condition_id": "complete_tron_set_controlled",
+                  "params": {
+                    "oracle_ids": [
+                      "33e85a8a-86df-4cdc-a9cc-8cbabe92c3c0",
+                      "e11966cd-2ee3-4df4-b099-abf42dcdf0db",
+                      "32fbb638-ab14-4e8b-a07a-d4c44e3496f2"
+                    ]
+                  }
+                }
+              ],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            },
+            {
+              "profile_id": "base",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Urza's Tower",
+      "oracle_id": "32fbb638-ab14-4e8b-a07a-d4c44e3496f2",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "highest_priority_matching_profile",
+          "profiles": [
+            {
+              "profile_id": "enhanced",
+              "priority": 100,
+              "mana_units": 3,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [
+                {
+                  "condition_id": "complete_tron_set_controlled",
+                  "params": {
+                    "oracle_ids": [
+                      "33e85a8a-86df-4cdc-a9cc-8cbabe92c3c0",
+                      "e11966cd-2ee3-4df4-b099-abf42dcdf0db",
+                      "32fbb638-ab14-4e8b-a07a-d4c44e3496f2"
+                    ]
+                  }
+                }
+              ],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            },
+            {
+              "profile_id": "base",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Urza's Saga",
+      "oracle_id": "4c6a0c30-b547-4eff-8ff4-0ca25803c076",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "highest_priority_matching_profile",
+          "profiles": [
+            {
+              "profile_id": "bounded-c",
+              "priority": 100,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [
+                {
+                  "condition_id": "bounded_controller_turn_window",
+                  "params": {
+                    "start_offset": 0,
+                    "end_offset": 2,
+                    "removal_event": "final_chapter_ability_leaves_stack"
+                  }
+                }
+              ],
+              "online_model": "bounded_window",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Exotic Orchard",
+      "oracle_id": "27b047e3-0d41-45e2-98e9-9391d7923a1e",
+      "source_kind": "land",
+      "deployment": {
+        "casting_cost": {
+          "generic": 0,
+          "colored": []
+        },
+        "counts_as_land_drop": true
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "opponent-colors",
+              "priority": 0,
+              "mana_units": 0,
+              "output_capabilities": [],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": false,
+              "unsupported_reason_id": "opponent_mana_capability_not_modeled"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Arcane Signet",
+      "oracle_id": "0bc7f093-bef0-4f1a-852c-4b75ebf54838",
+      "source_kind": "mana_rock",
+      "deployment": {
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "any",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B",
+                "G",
+                "R",
+                "U",
+                "W"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Sol Ring",
+      "oracle_id": "6ad8011d-3471-4369-9d68-b264cc027487",
+      "source_kind": "mana_rock",
+      "deployment": {
+        "casting_cost": {
+          "generic": 1,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "cc",
+              "priority": 0,
+              "mana_units": 2,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Relic of Legends",
+      "oracle_id": "4d9554de-c005-41ab-a941-39328ebff9de",
+      "source_kind": "mana_rock",
+      "deployment": {
+        "casting_cost": {
+          "generic": 3,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "self-any",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B",
+                "G",
+                "R",
+                "U",
+                "W"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Copper Myr",
+      "oracle_id": "8b52f30c-5e38-4333-88ab-901b37105b36",
+      "source_kind": "mana_creature",
+      "deployment": {
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "g",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "G"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "next_controller_turn",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Gold Myr",
+      "oracle_id": "bd6af7b3-b30f-4a65-a18f-8655f778e76a",
+      "source_kind": "mana_creature",
+      "deployment": {
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "w",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "W"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "next_controller_turn",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Iron Myr",
+      "oracle_id": "6c5cbab6-ee27-46f5-97a7-df85698d1e9f",
+      "source_kind": "mana_creature",
+      "deployment": {
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "r",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "R"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "next_controller_turn",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Plague Myr",
+      "oracle_id": "2f328e05-5edf-4b21-9c2a-50dcf1e7b3ec",
+      "source_kind": "mana_creature",
+      "deployment": {
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "next_controller_turn",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Silver Myr",
+      "oracle_id": "66e8f7f8-3a6d-46ba-837c-b9713ddf7f40",
+      "source_kind": "mana_creature",
+      "deployment": {
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "u",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "U"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "next_controller_turn",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Palladium Myr",
+      "oracle_id": "7b0767b8-b504-456e-93bd-218502f73b3d",
+      "source_kind": "mana_creature",
+      "deployment": {
+        "casting_cost": {
+          "generic": 3,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "cc",
+              "priority": 0,
+              "mana_units": 2,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "next_controller_turn",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Basalt Monolith",
+      "oracle_id": "6b8cf2a0-b045-4d91-9d91-c602d40c6237",
+      "source_kind": "mana_rock",
+      "deployment": {
+        "casting_cost": {
+          "generic": 3,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "ccc",
+              "priority": 0,
+              "mana_units": 3,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "does_not_naturally_untap",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Prismatic Lens",
+      "oracle_id": "e3056f28-868b-401a-a528-7528d639bdeb",
+      "source_kind": "mana_rock",
+      "deployment": {
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "c",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "C"
+              ],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            },
+            {
+              "profile_id": "filter",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B",
+                "G",
+                "R",
+                "U",
+                "W"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 1,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [
+                {
+                  "condition_id": "generic_payment_available_from_other_sources",
+                  "params": {
+                    "required_units": 1
+                  }
+                }
+              ],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Moonsnare Prototype",
+      "oracle_id": "7346c266-19d8-4432-acf5-f00aff074ad5",
+      "source_kind": "mana_rock",
+      "deployment": {
+        "casting_cost": {
+          "generic": 1,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "secondary-tap",
+              "priority": 0,
+              "mana_units": 0,
+              "output_capabilities": [],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": false,
+              "unsupported_reason_id": "secondary_artifact_or_creature_tap_target_not_registered"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Springleaf Drum",
+      "oracle_id": "bdeb440d-a714-40e8-9038-f651e6ae45fb",
+      "source_kind": "mana_rock",
+      "deployment": {
+        "casting_cost": {
+          "generic": 1,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "secondary-tap",
+              "priority": 0,
+              "mana_units": 0,
+              "output_capabilities": [],
+              "output_selection": "fixed",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 0,
+                  "treatment": "not_applicable"
+                }
+              },
+              "conditions": [],
+              "online_model": "immediate",
+              "natural_untap_model": "normal",
+              "supported": false,
+              "unsupported_reason_id": "secondary_creature_tap_target_not_registered"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "card_name": "Myr Convert",
+      "oracle_id": "6abf433e-27da-4abb-b262-3af792a1db23",
+      "source_kind": "mana_creature",
+      "deployment": {
+        "casting_cost": {
+          "generic": 2,
+          "colored": []
+        },
+        "counts_as_land_drop": false
+      },
+      "activation_groups": [
+        {
+          "group_id": "mana",
+          "selection": "independent_modes",
+          "profiles": [
+            {
+              "profile_id": "any",
+              "priority": 0,
+              "mana_units": 1,
+              "output_capabilities": [
+                "B",
+                "G",
+                "R",
+                "U",
+                "W"
+              ],
+              "output_selection": "one_choice",
+              "tap_model": "tap_self_once",
+              "payment": {
+                "generic": 0,
+                "colored": [],
+                "life": {
+                  "amount": 2,
+                  "treatment": "ignored"
+                }
+              },
+              "conditions": [],
+              "online_model": "next_controller_turn",
+              "natural_untap_model": "normal",
+              "supported": true,
+              "unsupported_reason_id": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

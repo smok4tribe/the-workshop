@@ -1,9 +1,9 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "artifact_type": "simulation_run_contract",
-  "contract_id": "simulation-run-contract-v2",
+  "contract_id": "simulation-run-contract-v3",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v3",
+  "policy_version": "sim-policy-v4",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a SimulationRun. A SimulationRun stores exact configuration and identity for one execution against one DeckVersion: the project, the DeckVersion, the deck-content fingerprint, the question, the policy, the seed, the iteration count, the RNG identity, and the run status. It stores no metrics and no interpretation. Task 30 defines this contract but creates no SimulationRun instance.",
   "scope": {
@@ -89,11 +89,12 @@
     },
     "config": {
       "type": "object",
-      "description": "Run configuration that references, not restates, policy semantics.",
+      "description": "Run configuration that references, not restates, policy semantics. Its keys are exactly the registered required_fields; runtime semantic overrides are forbidden.",
       "required_fields": [
         "mulligan_policy_ref",
         "keep_rule_ref",
         "bottoming_rule_ref",
+        "mana_source_semantics_ref",
         "observation_horizon_turn",
         "sequencing_levels",
         "card_semantics_ref"
@@ -110,11 +111,11 @@
     },
     "limitations": {
       "type": "array",
-      "description": "Limitations applicable to this run, including any unsupported-card-behavior limitations surfaced from the modeled deck."
+      "description": "Limitations applicable to this run. Every unsupported executable profile on a source present in the DeckVersion is represented by exactly one deterministic unsupported_mana_profile:<oracle_id>:<unsupported_reason_id> limitation ID."
     },
     "explicit_boundary": {
       "type": "object",
-      "description": "Boolean boundary flags.",
+      "description": "Boolean boundary flags with exactly the registered required_fields.",
       "required_fields": [
         "carries_metrics",
         "carries_interpretation",
@@ -128,6 +129,7 @@
         "policy",
         "question",
         "card_semantics",
+        "mana_source_semantics",
         "canonical_card_facts",
         "failure_pattern_taxonomy",
         "simulation_question_contract",
@@ -147,7 +149,8 @@
     "config references policy rules by reference and never restates their semantics.",
     "A SimulationRun carries no metrics, no probabilities, and no interpretation.",
     "A SimulationRun never creates or edits a DeckVersion.",
-    "Run semantic_dependencies must resolve every immutable source with content fingerprints; DeckVersion uses deck-content-sha256-canonical-v2."
+    "Run semantic_dependencies must resolve every immutable source with content fingerprints; DeckVersion uses deck-content-sha256-canonical-v2.",
+    "Recording identity and metadata are caller-supplied. The engine must not read a wall clock or generate UUID/random recording IDs; artifact-content identity includes the complete persisted caller recording metadata, while replay equivalence remains semantic/execution-based."
   ],
   "validation_expectations": [
     "The run JSON parses and has every required field.",
@@ -158,10 +161,29 @@
     "iteration_count is at least the policy minimum_saved_iterations for a saved run.",
     "No metric, raw count, probability, interval, or failure-pattern frequency field is present.",
     "No reasoning_interpretation or product_owner_decision field is present.",
-    "explicit_boundary.carries_metrics, carries_interpretation, and creates_deck_version are all false."
+    "explicit_boundary.carries_metrics, carries_interpretation, and creates_deck_version are all false.",
+    "The persisted contract records the caller-owned RecordingContext boundary; instance validation never treats generated clock or random recording values as engine output."
   ],
   "task_30_state": {
     "instances_created": 0,
     "note": "Task 30 defines this contract only. No SimulationRun instance is created, so no production run exists."
+  },
+  "recording_context": {
+    "contract_id": "simulation-recording-context-v1",
+    "engine_boundary": {
+      "wall_clock_read_permitted": false,
+      "random_or_uuid_recording_id_permitted": false,
+      "recording_metadata_owner": "caller"
+    },
+    "artifact_identity": {
+      "algorithm_id": "artifact-content-sha256-v1",
+      "coverage": "The complete persisted artifact, including caller-supplied recording metadata.",
+      "replay_equivalence": "Deterministic semantic/execution equivalence; it does not require identical artifact-content identity when recording metadata differs."
+    },
+    "record_fields": {
+      "id_field": "run_id",
+      "id_owner": "caller",
+      "created_at_required": false
+    }
   }
 }
