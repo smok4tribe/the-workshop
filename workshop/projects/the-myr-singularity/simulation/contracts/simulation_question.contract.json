@@ -1,9 +1,9 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "artifact_type": "simulation_question_contract",
-  "contract_id": "simulation-question-contract-v2",
+  "contract_id": "simulation-question-contract-v3",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v4",
+  "policy_version": "sim-policy-v5",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a SimulationQuestion. A SimulationQuestion binds a hypothesis to the compared DeckVersions, the policy, the target metrics, and the success interpretation. It carries no metrics, results, or interpretation, and it does not itself execute a run.",
   "scope": {
@@ -50,7 +50,8 @@
     },
     "compared_versions": {
       "type": "array",
-      "description": "The DeckVersions compared by this question. Each entry records deck_version_id, path, one unique preregistered run_role, and deck_content_fingerprint. Concrete role names are question-specific rather than universal contract rules.",
+      "description": "Exactly two DeckVersions compared by this question. Each entry records deck_version_id, path, one unique preregistered run_role, and deck_content_fingerprint. Concrete role names are question-specific rather than universal contract rules.",
+      "exact_item_count": 2,
       "item_required_fields": [
         "deck_version_id",
         "path",
@@ -65,14 +66,6 @@
         "directional_expectation",
         "notes"
       ]
-    },
-    "execution_status": {
-      "type": "string",
-      "allowed_values": [
-        "not_executed",
-        "executed"
-      ],
-      "description": "Task 30 questions are 'not_executed'. A question becomes 'executed' only when a real SimulationRun and SimulationResult exist in a later task."
     },
     "limitations": {
       "type": "array",
@@ -115,9 +108,9 @@
   "boundary_rules": [
     "A SimulationQuestion references the policy by policy_id and policy_version; it never restates policy semantics.",
     "A SimulationQuestion references DeckVersions by id, path, and deck_content_fingerprint; it never copies deck content.",
-    "Every compared DeckVersion has exactly one non-empty run_role; run_role values are unique within the question and are preregistered to their DeckVersion identity.",
+    "A SimulationQuestion compares exactly two distinct DeckVersions. Every compared DeckVersion has exactly one non-empty run_role; run_role values are unique within the question and are preregistered to their DeckVersion identity.",
     "A SimulationQuestion carries no metric values, raw counts, probabilities, or confidence intervals.",
-    "execution_status 'not_executed' forbids any accompanying SimulationRun or SimulationResult payload.",
+    "A SimulationQuestion is immutable after preregistration. Execution lifecycle is represented only by the canonical simulation_question_lifecycle artifact derived from question_id.",
     "The hypothesis and question_text must obey the policy evidence_language_boundary and contain no forbidden gameplay/win-rate/quality claim.",
     "Policy references use artifact-content-sha256-v1 and compared DeckVersions use deck-content-sha256-canonical-v2."
   ],
@@ -125,11 +118,11 @@
     "The question JSON parses and has every required field.",
     "policy_id and policy_version match the SimulationPolicy.",
     "Every compared_versions entry resolves to an existing DeckVersion whose recomputed deck_content_fingerprint equals the recorded value.",
-    "Every compared_versions entry has its unique preregistered run_role, and a later SimulationRun must use the role bound to its question DeckVersion.",
-    "Every required_metrics and optional_metrics metric_id exists in the policy metric_catalog and its target_turn does not exceed the observation horizon.",
-    "execution_status is 'not_executed' in Task 30 and no result fields are present.",
+    "Exactly two compared_versions entries resolve to distinct DeckVersions with unique preregistered run_role values, and a later SimulationRun must use the role bound to its question DeckVersion.",
+    "required_metrics is a non-empty ordered duplicate-free subset of Policy primary metrics; optional_metrics is an ordered duplicate-free subset of Policy optional metrics; the sets are disjoint and every target_turn exactly matches its resolved Policy metric.",
+    "No lifecycle status, execution note, run, result, or comparison field appears in the immutable Question.",
     "explicit_boundary.carries_results is false, authorizes_deck_change is false, and is_gameplay_claim is false.",
     "No forbidden evidence-language claim or unregistered materiality criterion appears in the hypothesis, question_text, or success_interpretation.",
-    "The companion Markdown states the hypothesis, the compared versions, the target metrics, and the not-executed status."
+    "The companion Markdown states the hypothesis, compared versions, target metrics, and immutable preregistration boundary."
   ]
 }

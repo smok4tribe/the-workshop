@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "simulation_question_lifecycle_contract",
+  "contract_id": "simulation-question-lifecycle-contract-v1",
+  "project_id": "the-myr-singularity",
+  "purpose": "Defines the mutable persistence lifecycle for one immutable SimulationQuestion. Lifecycle state is never an input to seed derivation or simulation semantics.",
+  "required_fields": {
+    "schema_version": {"type": "string", "const": "1.0"},
+    "artifact_type": {"type": "string", "const": "simulation_question_lifecycle"},
+    "lifecycle_id": {"type": "string", "description": "Exactly <question_id>-lifecycle."},
+    "project_id": {"type": "string", "const": "the-myr-singularity"},
+    "question_id": {"type": "string"},
+    "question_path": {"type": "string", "description": "Canonical immutable Question path."},
+    "question_content_fingerprint": {"type": "string", "description": "Fingerprint of the immutable preregistered Question."},
+    "state": {"type": "string", "allowed_values": ["preregistered", "runs_recorded", "results_recorded", "comparison_recorded", "invalidated"]},
+    "recorded_evidence": {
+      "type": "object",
+      "required_fields": ["runs", "results", "comparison"],
+      "reference_shape": {"id": "artifact id", "path": "repo-relative path", "content_fingerprint": "artifact-content-sha256-v1 fingerprint"},
+      "state_cardinality": {
+        "preregistered": {"runs": 0, "results": 0, "comparison": false},
+        "runs_recorded": {"runs": 2, "results": 0, "comparison": false},
+        "results_recorded": {"runs": 2, "results": 2, "comparison": false},
+        "comparison_recorded": {"runs": 2, "results": 2, "comparison": true}
+      },
+      "identity_rules": "runs are exactly one executed Run for each preregistered Question DeckVersion and run_role; results are exactly one Result for each recorded Run; comparison binds exactly those two Runs and Results."
+    },
+    "invalidation": {
+      "type": ["object", "null"],
+      "required_fields_when_present": ["from_state", "reason_id"],
+      "reason_contract_id": "simulation-lifecycle-invalidation-v1",
+      "allowed_reason_ids": ["operator_cancelled", "source_artifact_invalidated", "evidence_integrity_failure", "execution_environment_invalidated"]
+    }
+  },
+  "canonical_path_rule": "workshop/projects/the-myr-singularity/simulation/lifecycle/<question_id>.json",
+  "transitions": {
+    "allowed": [
+      "preregistered->runs_recorded",
+      "runs_recorded->results_recorded",
+      "results_recorded->comparison_recorded",
+      "preregistered->invalidated",
+      "runs_recorded->invalidated",
+      "results_recorded->invalidated"
+    ],
+    "forbidden": ["state regression", "state skipping", "any transition from comparison_recorded", "any transition from invalidated"]
+  },
+  "recording_identity_rules": "Every recorded reference has exactly id, path, and content_fingerprint. Atomic transitions validate both lifecycle states and preserve every earlier reference exactly; a transition may add only the evidence allowed by its state edge.",
+  "persistence_boundary": "The caller, outside the Simulation Engine, validates and atomically persists each lifecycle transition with its referenced evidence. Creation validation validates immutable semantics only; persistence validation requires the canonical lifecycle artifact.",
+  "seed_boundary": "Lifecycle state, lifecycle timestamps, and lifecycle fingerprints are excluded from sim-seed-sha256-v2 inputs."
+}

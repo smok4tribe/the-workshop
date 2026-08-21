@@ -7,10 +7,16 @@ does not discover or create evidence artifacts itself.
 from __future__ import annotations
 
 import math
+import json
 from datetime import datetime
 
 from workshop.shared.identity import artifact_content_fingerprint
-from workshop.shared.simulation_determinism import derive_run_seed
+from workshop.shared.simulation_determinism import (
+    condition_is_satisfied as _condition_is_satisfied,
+    derive_run_seed,
+    evaluate_end_step_state_transitions,
+    resolve_activation_profiles,
+)
 
 
 DEPENDENCY_KEYS = (
@@ -55,8 +61,32 @@ ALLOWED_SUBJECTS = {
     "color_availability", "limitations",
 }
 RESERVED_LIFECYCLE_KEYS = {"reasoning_interpretation", "product_owner_decision"}
-APPROVED_MANA_SOURCE_SEMANTICS_FINGERPRINT = "artifact-content-sha256-v1:86626c278b667c7c83ddc036e2dd7e1ed96fa403052e22a901e9ce2aea55eea3"
-APPROVED_FAILURE_PATTERN_TAXONOMY_FINGERPRINT = "artifact-content-sha256-v1:295f7122deb6caa941a89df7f35904001e0bd9449b745f2734e920011339a38e"
+QUESTION_INSTANCE_FIELDS = {
+    "schema_version", "artifact_type", "question_id", "project_id", "policy_id",
+    "policy_version", "generated_at", "generated_by", "hypothesis", "question_text",
+    "compared_versions", "success_interpretation", "limitations", "explicit_boundary",
+    "policy_reference", "required_metrics", "optional_metrics",
+}
+QUESTION_LIFECYCLE_FIELDS = {
+    "schema_version", "artifact_type", "lifecycle_id", "project_id", "question_id",
+    "question_path", "question_content_fingerprint", "state", "recorded_evidence",
+    "invalidation",
+}
+LIFECYCLE_STATES = {
+    "preregistered", "runs_recorded", "results_recorded", "comparison_recorded", "invalidated",
+}
+LIFECYCLE_MODES = {"creation", "persistence"}
+LIFECYCLE_INVALIDATION_REASON_IDS = {
+    "operator_cancelled", "source_artifact_invalidated", "evidence_integrity_failure",
+    "execution_environment_invalidated",
+}
+CANONICAL_POLICY_PATH = "workshop/projects/the-myr-singularity/simulation/simulation_policy.json"
+CANONICAL_LIFECYCLE_DIRECTORY = "workshop/projects/the-myr-singularity/simulation/lifecycle"
+CANONICAL_QUESTION_CONTRACT_PATH = "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json"
+CANONICAL_LIFECYCLE_CONTRACT_PATH = "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question_lifecycle.contract.json"
+APPROVED_LIFECYCLE_CONTRACT_FINGERPRINT = "artifact-content-sha256-v1:d8e85971e266ae51a781d69a24fa8006a24d05c5096feeb1e30d47d68619f9bc"
+APPROVED_MANA_SOURCE_SEMANTICS_FINGERPRINT = "artifact-content-sha256-v1:847130857b20518b8669d95d978e289602e3b2cf74ab1e529a8f55c3373f52b6"
+APPROVED_FAILURE_PATTERN_TAXONOMY_FINGERPRINT = "artifact-content-sha256-v1:5d34ef7aaf9a00e7d550df223ad4e3cc94a3a0e3c155f8d57ae5c8222cee2c8a"
 RECORDING_CONTEXT_ID = "simulation-recording-context-v1"
 RECORDING_ARTIFACT_ALGORITHM = "artifact-content-sha256-v1"
 RECORDING_ARTIFACT_COVERAGE = "The complete persisted artifact, including caller-supplied recording metadata."
@@ -132,12 +162,12 @@ METRIC_MEASUREMENT_CONTRACTS = {
     ),
     "distinct_commander_colors_by_turn": _measurement_contract(
         level="level_2", target_turn=6, shape="categorical_count",
-        observation_point={"id": "end_of_target_turn_after_level_2_sequencing", "after_pending_time_dependent_removals": True},
+        observation_point={"id": "end_of_target_turn_after_level_2_sequencing", "after_pending_time_dependent_removals": True, "source_capability_observation_contract_id": "source-capability-observation-v1"},
         value={"id": "surviving_online_source_capability_color_cardinality", "projection": "source_capability", "domain": [0, 1, 2, 3, 4, 5], "colors": ["W", "U", "B", "R", "G"], "excluded_colors": ["C"], "source_state": "surviving_and_online", "earlier_tapping_removes_capability": False},
     ),
     "five_color_availability_by_turn": _measurement_contract(
         level="level_2", target_turn=6, shape="bernoulli_probability",
-        observation_point={"id": "end_of_target_turn_after_level_2_sequencing", "after_pending_time_dependent_removals": True},
+        observation_point={"id": "end_of_target_turn_after_level_2_sequencing", "after_pending_time_dependent_removals": True, "source_capability_observation_contract_id": "source-capability-observation-v1"},
         event={"id": "all_required_source_capability_colors_available", "projection": "source_capability", "required_colors": ["W", "U", "B", "R", "G"], "excluded_colors": ["C"], "source_state": "surviving_and_online", "earlier_tapping_removes_capability": False, "requires_simultaneous_spendable_mana": False, "requires_commander_castability": False},
     ),
     "commander_castability_by_turn": _measurement_contract(
@@ -253,6 +283,51 @@ def _resolve_reference(reference, label, errors, load_reference, expected=None):
     return resolved
 
 
+def _resolve_policy_question_contract(policy, supplied_contract, load_reference):
+    """Use the Policy-pinned Question contract, never a caller-weakened copy."""
+    errors = []
+    reference = (policy.get("references") or {}).get("simulation_question_contract") if isinstance(policy, dict) else None
+    if not isinstance(reference, dict) or set(reference) != {"path", "content_fingerprint"}:
+        errors.append("policy simulation_question_contract reference has an invalid field set")
+        return supplied_contract, errors
+    if reference.get("path") != CANONICAL_QUESTION_CONTRACT_PATH:
+        errors.append("policy simulation_question_contract reference path is not canonical")
+    resolved = _resolve_reference(reference, "policy simulation_question_contract reference", errors, load_reference)
+    if isinstance(resolved, dict) and supplied_contract != resolved:
+        errors.append("supplied question_contract does not match the Policy-resolved immutable Question contract")
+    return resolved if isinstance(resolved, dict) else supplied_contract, errors
+
+
+def _resolve_canonical_lifecycle_contract(supplied_contract, load_reference):
+    """Resolve and freeze the v1 lifecycle contract before validating evidence."""
+    errors = []
+    try:
+        canonical = load_reference(CANONICAL_LIFECYCLE_CONTRACT_PATH)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return supplied_contract, [f"canonical lifecycle contract does not resolve: {exc}"]
+    if artifact_content_fingerprint(canonical) != APPROVED_LIFECYCLE_CONTRACT_FINGERPRINT:
+        errors.append("canonical lifecycle contract does not match the approved v1 identity")
+    if supplied_contract != canonical:
+        errors.append("supplied lifecycle_contract does not match the canonical v1 lifecycle contract")
+    required_fields = canonical.get("required_fields") if isinstance(canonical, dict) else None
+    expected_top_level = {
+        "schema_version", "artifact_type", "contract_id", "project_id", "purpose", "required_fields",
+        "canonical_path_rule", "transitions", "recording_identity_rules", "persistence_boundary", "seed_boundary",
+    }
+    if (
+        not isinstance(canonical, dict)
+        or set(canonical) != expected_top_level
+        or canonical.get("schema_version") != "1.0"
+        or canonical.get("artifact_type") != "simulation_question_lifecycle_contract"
+        or canonical.get("contract_id") != "simulation-question-lifecycle-contract-v1"
+        or canonical.get("project_id") != "the-myr-singularity"
+        or not isinstance(required_fields, dict)
+        or set(required_fields) != QUESTION_LIFECYCLE_FIELDS
+    ):
+        errors.append("canonical lifecycle contract has invalid v1 structural requirements")
+    return canonical if isinstance(canonical, dict) else supplied_contract, errors
+
+
 def validate_question_role_bindings(compared_versions):
     if not isinstance(compared_versions, list):
         return ["question compared_versions must be an array"]
@@ -277,6 +352,387 @@ def validate_question_role_bindings(compared_versions):
     return errors
 
 
+def lifecycle_path_for_question(question_id):
+    """Return the single canonical mutable lifecycle path for a Question."""
+    return f"{CANONICAL_LIFECYCLE_DIRECTORY}/{question_id}.json"
+
+
+def _question_metric_entries(question, policy):
+    """Validate generic Question metric subsets against the resolved Policy."""
+    errors = []
+    catalog = _metric_catalog(policy)
+    catalog_by_id = {metric.get("metric_id"): metric for metric in catalog.values() if isinstance(metric, dict)}
+    required = question.get("required_metrics")
+    optional = question.get("optional_metrics")
+    if not isinstance(required, list) or not required:
+        errors.append("question required_metrics must be a non-empty array")
+        required = []
+    if not isinstance(optional, list):
+        errors.append("question optional_metrics must be an array")
+        optional = []
+
+    def validate(entries, label, permitted_kinds):
+        keys = []
+        for index, entry in enumerate(entries):
+            if not isinstance(entry, dict) or set(entry) != {"metric_id", "target_turn"}:
+                errors.append(f"question {label}[{index}] must contain exactly metric_id and target_turn")
+                continue
+            key = _metric_key(entry)
+            metric = catalog.get(key)
+            if metric is None:
+                if entry.get("metric_id") in catalog_by_id:
+                    errors.append(f"question {label}[{index}] target_turn does not match the Policy metric definition")
+                else:
+                    errors.append(f"question {label}[{index}] does not resolve to a Policy metric definition")
+                continue
+            if metric.get("kind") not in permitted_kinds:
+                errors.append(f"question {label}[{index}] is not permitted for that metric kind")
+            if metric.get("target_turn") != entry.get("target_turn"):
+                errors.append(f"question {label}[{index}] target_turn does not match the Policy metric definition")
+            keys.append(key)
+        if len(keys) != len(set(keys)):
+            errors.append(f"question {label} must be duplicate-free")
+        return keys
+
+    required_keys = validate(required, "required_metrics", {"primary"})
+    optional_keys = validate(optional, "optional_metrics", {"optional_sanity"})
+    if set(required_keys) & set(optional_keys):
+        errors.append("question required_metrics and optional_metrics must be disjoint")
+    return errors
+
+
+def validate_simulation_question(question, *, policy, question_contract, project_id, load_reference, fingerprint_for_version):
+    """Fail closed on an immutable preregistered SimulationQuestion."""
+    effective_contract, errors = _resolve_policy_question_contract(policy, question_contract, load_reference)
+    errors.extend(_required(question, (effective_contract.get("required_fields") or {}).keys(), "question"))
+    if not isinstance(question, dict):
+        return errors
+    extras = sorted(set(question) - QUESTION_INSTANCE_FIELDS)
+    if extras:
+        errors.append(f"question has unregistered top-level fields: {', '.join(extras)}")
+    if question.get("schema_version") != "3.0":
+        errors.append("question schema_version must be 3.0")
+    if question.get("artifact_type") != "simulation_question":
+        errors.append("question artifact_type must be 'simulation_question'")
+    if question.get("project_id") != project_id:
+        errors.append("question project_id does not match the project")
+    if question.get("policy_id") != policy.get("policy_id") or question.get("policy_version") != policy.get("policy_version"):
+        errors.append("question policy binding does not match the resolved policy")
+    reference = question.get("policy_reference")
+    if not isinstance(reference, dict) or reference.get("path") != CANONICAL_POLICY_PATH:
+        errors.append("question policy_reference.path is not the canonical SimulationPolicy path")
+    if not isinstance(reference, dict) or set(reference) != {"path", "content_fingerprint"}:
+        errors.append("question policy_reference has an invalid field set")
+    _resolve_reference(reference, "question policy_reference", errors, load_reference, policy)
+
+    compared = question.get("compared_versions")
+    expected_compared_count = ((effective_contract.get("required_fields") or {}).get("compared_versions") or {}).get("exact_item_count")
+    if not isinstance(compared, list) or not _integer(expected_compared_count):
+        errors.append("question compared_versions contract must declare an exact item count")
+        compared = []
+    elif len(compared) != expected_compared_count:
+        errors.append(f"question compared_versions must contain exactly {expected_compared_count} DeckVersions")
+    errors.extend(validate_question_role_bindings(compared))
+    paths = []
+    for index, item in enumerate(compared):
+        if not isinstance(item, dict) or set(item) != {"deck_version_id", "path", "run_role", "deck_content_fingerprint"}:
+            errors.append(f"question compared_versions[{index}] has an invalid field set")
+            continue
+        path = item.get("path")
+        paths.append(path)
+        try:
+            version = load_reference(path)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            errors.append(f"question compared_versions[{index}] DeckVersion does not resolve: {exc}")
+            continue
+        if item.get("deck_version_id") != version.get("version_id"):
+            errors.append(f"question compared_versions[{index}] deck_version_id does not match DeckVersion")
+        if item.get("deck_content_fingerprint") != fingerprint_for_version(version):
+            errors.append(f"question compared_versions[{index}] fingerprint does not match DeckVersion")
+    if len(paths) != len(set(paths)):
+        errors.append("question compared_versions must contain distinct DeckVersion paths")
+    errors.extend(_question_metric_entries(question, policy))
+
+    boundary = question.get("explicit_boundary")
+    if not isinstance(boundary, dict) or set(boundary) != {"statement", "carries_results", "authorizes_deck_change", "is_gameplay_claim"} or any(boundary.get(key) is not False for key in ("carries_results", "authorizes_deck_change", "is_gameplay_claim")):
+        errors.append("question explicit_boundary flags must all be false")
+    interpretation = question.get("success_interpretation")
+    if not isinstance(interpretation, dict) or set(interpretation) != {"directional_expectation", "notes"}:
+        errors.append("question success_interpretation has an invalid field set")
+    text = json.dumps({key: question.get(key) for key in ("hypothesis", "question_text", "success_interpretation")}, sort_keys=True)
+    forbidden = ((policy.get("evidence_language_boundary") or {}).get("forbidden_claims") or [])
+    if any(isinstance(claim, str) and claim.casefold() in text.casefold() for claim in forbidden):
+        errors.append("question contains forbidden evidence-language claim")
+    return errors
+
+
+def _lifecycle_reference_errors(entries, label, load_reference):
+    errors = []
+    if not isinstance(entries, list):
+        return [f"lifecycle recorded_evidence.{label} must be an array"]
+    seen = set()
+    for index, reference in enumerate(entries):
+        if not isinstance(reference, dict) or set(reference) != {"id", "path", "content_fingerprint"}:
+            errors.append(f"lifecycle recorded_evidence.{label}[{index}] has an invalid field set")
+            continue
+        identity = reference.get("id")
+        if not isinstance(identity, str) or identity in seen:
+            errors.append(f"lifecycle recorded_evidence.{label} identities must be unique non-empty strings")
+        seen.add(identity)
+        _resolve_reference(reference, f"lifecycle recorded_evidence.{label}[{index}]", errors, load_reference)
+    return errors
+
+
+def validate_simulation_question_lifecycle(
+    lifecycle, *, question, lifecycle_contract, project_id, load_reference,
+    policy=None, question_contract=None, fingerprint_for_version=None,
+):
+    """Validate the canonical persisted lifecycle without making it semantic RNG input."""
+    effective_contract, errors = _resolve_canonical_lifecycle_contract(lifecycle_contract, load_reference)
+    errors.extend(_required(lifecycle, (effective_contract.get("required_fields") or {}).keys(), "lifecycle"))
+    if not isinstance(lifecycle, dict):
+        return errors
+    extras = sorted(set(lifecycle) - QUESTION_LIFECYCLE_FIELDS)
+    if extras:
+        errors.append(f"lifecycle has unregistered top-level fields: {', '.join(extras)}")
+    if lifecycle.get("artifact_type") != "simulation_question_lifecycle":
+        errors.append("lifecycle artifact_type is invalid")
+    if lifecycle.get("schema_version") != "1.0":
+        errors.append("lifecycle schema_version must be 1.0")
+    invalidation_contract = (effective_contract.get("required_fields") or {}).get("invalidation") or {}
+    if (
+        invalidation_contract.get("reason_contract_id") != "simulation-lifecycle-invalidation-v1"
+        or set(invalidation_contract.get("allowed_reason_ids") or []) != LIFECYCLE_INVALIDATION_REASON_IDS
+    ):
+        errors.append("lifecycle contract invalidation reason vocabulary is not frozen")
+    if lifecycle.get("project_id") != project_id:
+        errors.append("lifecycle project_id does not match the project")
+    if lifecycle.get("question_id") != question.get("question_id"):
+        errors.append("lifecycle question_id does not match the immutable Question")
+    if lifecycle.get("lifecycle_id") != f"{question.get('question_id')}-lifecycle":
+        errors.append("lifecycle_id is not derived from question_id")
+    expected_question_path = f"workshop/projects/the-myr-singularity/simulation/questions/{question.get('question_id')}.json"
+    if lifecycle.get("question_path") != expected_question_path:
+        errors.append("lifecycle question_path is not canonical")
+    if lifecycle.get("question_content_fingerprint") != artifact_content_fingerprint(question):
+        errors.append("lifecycle question_content_fingerprint does not match immutable Question")
+    state = lifecycle.get("state")
+    if state not in LIFECYCLE_STATES:
+        errors.append("lifecycle state is not allowed")
+    evidence = lifecycle.get("recorded_evidence")
+    if not isinstance(evidence, dict) or set(evidence) != {"runs", "results", "comparison"}:
+        return [*errors, "lifecycle recorded_evidence has an invalid field set"]
+    runs, results, comparison = evidence.get("runs"), evidence.get("results"), evidence.get("comparison")
+    errors.extend(_lifecycle_reference_errors(runs, "runs", load_reference))
+    errors.extend(_lifecycle_reference_errors(results, "results", load_reference))
+    if comparison is not None:
+        errors.extend(_lifecycle_reference_errors([comparison], "comparison", load_reference))
+    invalidation = lifecycle.get("invalidation")
+    expected_counts = {
+        "preregistered": (0, 0, False), "runs_recorded": (2, 0, False),
+        "results_recorded": (2, 2, False), "comparison_recorded": (2, 2, True),
+    }
+    if state in expected_counts:
+        run_count, result_count, has_comparison = expected_counts[state]
+        if len(runs or []) != run_count or len(results or []) != result_count or (comparison is not None) != has_comparison:
+            errors.append("lifecycle recorded evidence cardinality does not match state")
+        if invalidation is not None:
+            errors.append("non-invalidated lifecycle must set invalidation to null")
+    elif state == "invalidated":
+        if not isinstance(invalidation, dict) or set(invalidation) != {"from_state", "reason_id"}:
+            errors.append("invalidated lifecycle requires exact invalidation metadata")
+        elif (
+            invalidation.get("from_state") not in {"preregistered", "runs_recorded", "results_recorded"}
+            or invalidation.get("reason_id") not in set(invalidation_contract.get("allowed_reason_ids") or [])
+        ):
+            errors.append("lifecycle invalidation metadata is invalid")
+        else:
+            run_count, result_count, has_comparison = expected_counts[invalidation["from_state"]]
+            if len(runs or []) != run_count or len(results or []) != result_count or (comparison is not None) != has_comparison:
+                errors.append("invalidated lifecycle evidence must preserve its declared prior-state prefix")
+    expected_versions = {
+        item.get("run_role"): item
+        for item in question.get("compared_versions", [])
+        if isinstance(item, dict) and isinstance(item.get("run_role"), str)
+    }
+    resolved_runs = []
+    for reference in runs or []:
+        document = _resolve_reference(reference, "lifecycle run evidence", errors, load_reference)
+        if isinstance(document, dict):
+            resolved_runs.append(document)
+            if document.get("artifact_type") != "simulation_run" or document.get("run_id") != reference.get("id"):
+                errors.append("lifecycle run evidence identity is invalid")
+            if document.get("question_id") != question.get("question_id") or document.get("status") != "executed":
+                errors.append("lifecycle run evidence must be an executed Run for the immutable Question")
+            expected_version = expected_versions.get(document.get("run_role"))
+            if expected_version is None:
+                errors.append("lifecycle Run has an unregistered question-bound run_role")
+            elif (
+                document.get("deck_version_id") != expected_version.get("deck_version_id")
+                or document.get("deck_version_path") != expected_version.get("path")
+                or document.get("deck_content_fingerprint") != expected_version.get("deck_content_fingerprint")
+            ):
+                errors.append("lifecycle Run does not match its preregistered DeckVersion and run_role")
+    if runs and (
+        {item.get("run_role") for item in resolved_runs} != set(expected_versions)
+        or {item.get("deck_version_id") for item in resolved_runs}
+        != {item.get("deck_version_id") for item in expected_versions.values()}
+    ):
+        errors.append("lifecycle runs must contain exactly one executed Run for each preregistered DeckVersion and run_role")
+    run_ids = {item.get("run_id") for item in resolved_runs}
+    resolved_results = []
+    for reference in results or []:
+        document = _resolve_reference(reference, "lifecycle result evidence", errors, load_reference)
+        if isinstance(document, dict):
+            resolved_results.append(document)
+            if document.get("artifact_type") != "simulation_result" or document.get("result_id") != reference.get("id"):
+                errors.append("lifecycle result evidence identity is invalid")
+            if document.get("run_id") not in run_ids:
+                errors.append("lifecycle Result is not bound to a recorded Run")
+    result_run_ids = [item.get("run_id") for item in resolved_results]
+    if results and (len(result_run_ids) != len(set(result_run_ids)) or set(result_run_ids) != run_ids):
+        errors.append("lifecycle results must contain exactly one Result for each recorded Run")
+    if comparison is not None:
+        document = _resolve_reference(comparison, "lifecycle comparison evidence", errors, load_reference)
+        if isinstance(document, dict):
+            result_ids = {item.get("result_id") for item in resolved_results}
+            sides = (document.get("baseline") or {}, document.get("candidate") or {})
+            if document.get("artifact_type") != "comparison_result" or document.get("comparison_id") != comparison.get("id") or document.get("question_id") != question.get("question_id"):
+                errors.append("lifecycle Comparison evidence identity is invalid")
+            if {side.get("run_id") for side in sides} != run_ids or {side.get("result_id") for side in sides} != result_ids:
+                errors.append("lifecycle Comparison does not bind exactly the recorded Runs and Results")
+    if resolved_runs or resolved_results or comparison is not None:
+        if policy is None or question_contract is None or fingerprint_for_version is None:
+            errors.append("lifecycle evidence validation requires policy, Question contract, and DeckVersion fingerprint dependencies")
+            return errors
+        try:
+            references = policy.get("references") or {}
+            run_contract = load_reference(references["simulation_run_contract"]["path"])
+            result_contract = load_reference(references["simulation_result_contract"]["path"])
+            comparison_contract = load_reference(references["comparison_result_contract"]["path"])
+            taxonomy = load_reference(references["failure_pattern_taxonomy"]["path"])
+        except (KeyError, OSError, ValueError, TypeError) as exc:
+            errors.append(f"lifecycle evidence validation cannot resolve required contracts: {exc}")
+            return errors
+        for document in resolved_runs:
+            for error in validate_simulation_run(
+                document, question=question, policy=policy, question_contract=question_contract,
+                run_contract=run_contract, project_id=project_id, load_reference=load_reference,
+                fingerprint_for_version=fingerprint_for_version, lifecycle_mode="creation",
+            ):
+                errors.append(f"lifecycle Run is invalid: {error}")
+        runs_by_id = {document.get("run_id"): document for document in resolved_runs}
+        for document in resolved_results:
+            run = runs_by_id.get(document.get("run_id"))
+            if run is None:
+                continue
+            for error in validate_simulation_result(
+                document, run=run, policy=policy, question=question,
+                question_contract=question_contract, result_contract=result_contract,
+                taxonomy_ids=taxonomy, load_reference=load_reference, project_id=project_id,
+                fingerprint_for_version=fingerprint_for_version, lifecycle_mode="creation",
+            ):
+                errors.append(f"lifecycle Result is invalid: {error}")
+        if comparison is not None:
+            comparison_document = _resolve_reference(comparison, "lifecycle comparison evidence", errors, load_reference)
+            if not isinstance(comparison_document, dict):
+                return errors
+            results_by_id = {item.get("result_id"): item for item in resolved_results}
+            sides = comparison_document.get("baseline") or {}, comparison_document.get("candidate") or {}
+            baseline_run = runs_by_id.get(sides[0].get("run_id"))
+            candidate_run = runs_by_id.get(sides[1].get("run_id"))
+            baseline_result = results_by_id.get(sides[0].get("result_id"))
+            candidate_result = results_by_id.get(sides[1].get("result_id"))
+            if all(isinstance(item, dict) for item in (baseline_run, candidate_run, baseline_result, candidate_result)):
+                for error in validate_comparison_result(
+                    comparison_document, baseline_run=baseline_run, candidate_run=candidate_run,
+                    baseline_result=baseline_result, candidate_result=candidate_result,
+                    policy=policy, question=question, question_contract=question_contract,
+                    comparison_contract=comparison_contract, run_contract=run_contract,
+                    result_contract=result_contract, project_id=project_id, taxonomy_ids=taxonomy,
+                    load_reference=load_reference, fingerprint_for_version=fingerprint_for_version,
+                    lifecycle_mode="creation",
+                ):
+                    errors.append(f"lifecycle Comparison is invalid: {error}")
+    return errors
+
+
+def validate_simulation_question_lifecycle_transition(
+    previous, current, *, question, lifecycle_contract, project_id, load_reference,
+    policy=None, question_contract=None, fingerprint_for_version=None,
+):
+    """Validate one caller-owned atomic transition and immutable evidence prefix."""
+    if not isinstance(previous, dict) or not isinstance(current, dict):
+        return ["lifecycle transition requires previous and current lifecycle objects"]
+    errors = []
+    for label, lifecycle in (("previous", previous), ("current", current)):
+        for error in validate_simulation_question_lifecycle(
+            lifecycle, question=question, lifecycle_contract=lifecycle_contract,
+            project_id=project_id, load_reference=load_reference, policy=policy,
+            question_contract=question_contract, fingerprint_for_version=fingerprint_for_version,
+        ):
+            errors.append(f"{label} lifecycle is invalid: {error}")
+    if errors:
+        return errors
+    previous_state, current_state = previous.get("state"), current.get("state")
+    if previous.get("question_id") != current.get("question_id") or previous.get("question_content_fingerprint") != current.get("question_content_fingerprint"):
+        return ["lifecycle transition must preserve immutable Question identity"]
+    allowed = {
+        ("preregistered", "runs_recorded"), ("runs_recorded", "results_recorded"),
+        ("results_recorded", "comparison_recorded"), ("preregistered", "invalidated"),
+        ("runs_recorded", "invalidated"), ("results_recorded", "invalidated"),
+    }
+    if (previous_state, current_state) not in allowed:
+        return ["lifecycle transition is forbidden"]
+    previous_evidence = previous.get("recorded_evidence")
+    current_evidence = current.get("recorded_evidence")
+    if current_state == "runs_recorded":
+        if current_evidence.get("results") != [] or current_evidence.get("comparison") is not None:
+            return ["preregistered to runs_recorded may add only the exact two Runs"]
+    elif current_state == "results_recorded":
+        if current_evidence.get("runs") != previous_evidence.get("runs"):
+            return ["runs_recorded to results_recorded must preserve recorded Run references exactly"]
+        if current_evidence.get("comparison") is not None:
+            return ["runs_recorded to results_recorded may add only Results"]
+    elif current_state == "comparison_recorded":
+        if (
+            current_evidence.get("runs") != previous_evidence.get("runs")
+            or current_evidence.get("results") != previous_evidence.get("results")
+        ):
+            return ["results_recorded to comparison_recorded must preserve Run and Result references exactly"]
+    elif current_state == "invalidated":
+        if current.get("invalidation", {}).get("from_state") != previous_state:
+            return ["invalidated lifecycle must declare the exact previous state"]
+        if current_evidence != previous_evidence:
+            return ["invalidated lifecycle must preserve the prior evidence prefix exactly"]
+    return []
+
+
+def _validate_lifecycle_mode(*, lifecycle_mode, lifecycle, lifecycle_path, lifecycle_contract, question, policy, question_contract, project_id, load_reference, fingerprint_for_version, artifact, artifact_kind):
+    if lifecycle_mode not in LIFECYCLE_MODES:
+        return ["lifecycle_mode must be explicitly 'creation' or 'persistence'"]
+    if lifecycle_mode == "creation":
+        if lifecycle is not None or lifecycle_path is not None or lifecycle_contract is not None:
+            return ["creation lifecycle mode must not accept persisted lifecycle evidence"]
+        return []
+    if lifecycle is None or lifecycle_contract is None or lifecycle_path != lifecycle_path_for_question(question.get("question_id")):
+        return ["persistence lifecycle mode requires the canonical lifecycle artifact and contract"]
+    errors = validate_simulation_question_lifecycle(
+        lifecycle, question=question, lifecycle_contract=lifecycle_contract,
+        project_id=project_id, load_reference=load_reference, policy=policy,
+        question_contract=question_contract, fingerprint_for_version=fingerprint_for_version,
+    )
+    if errors:
+        return errors
+    evidence = lifecycle.get("recorded_evidence") or {}
+    entries = evidence.get({"run": "runs", "result": "results", "comparison": "comparison"}[artifact_kind])
+    entries = [entries] if artifact_kind == "comparison" and entries is not None else entries
+    expected_id = artifact.get({"run": "run_id", "result": "result_id", "comparison": "comparison_id"}[artifact_kind])
+    if not any(isinstance(entry, dict) and entry.get("id") == expected_id and entry.get("content_fingerprint") == artifact_content_fingerprint(artifact) for entry in (entries or [])):
+        errors.append(f"persisted {artifact_kind} is not recorded by the canonical lifecycle artifact")
+    return errors
+
+
 def resolve_question_metric_target(question, reference):
     """Resolve a taxonomy target reference without positional array semantics."""
     if not isinstance(reference, dict):
@@ -291,54 +747,6 @@ def resolve_question_metric_target(question, reference):
     if not _integer(target):
         return None, [f"question metric {metric_id!r} target_turn must be an integer"]
     return target, []
-
-
-def resolve_activation_profiles(group, condition_truth):
-    """Resolve registry profiles using only registered structured predicates."""
-    profiles = group.get("profiles") if isinstance(group, dict) else None
-    if not isinstance(profiles, list):
-        return [], ["activation group profiles must be an array"]
-    legal = []
-    for profile in profiles:
-        if not isinstance(profile, dict) or not profile.get("supported"):
-            continue
-        if all(_condition_is_satisfied(condition, condition_truth) for condition in profile.get("conditions", [])):
-            legal.append(profile)
-    if group.get("selection") == "independent_modes":
-        return legal, []
-    if not legal:
-        return [], ["highest-priority activation group has no matching supported profile"]
-    highest = max(profile.get("priority") for profile in legal)
-    selected = [profile for profile in legal if profile.get("priority") == highest]
-    if len(selected) != 1:
-        return [], ["highest-priority activation group has tied matching profiles"]
-    return selected, []
-
-
-def _condition_is_satisfied(condition, state):
-    """Resolve one registered condition from the contract-defined evaluation state."""
-    if not isinstance(condition, dict) or not isinstance(state, dict):
-        return False
-    condition_id, params = condition.get("condition_id"), condition.get("params") or {}
-    if condition_id == "generic_payment_available_from_other_sources":
-        available = state.get("generic_payment_available_from_other_sources", 0)
-        return _integer(available) and available >= params.get("required_units")
-    if condition_id == "bounded_controller_turn_window":
-        offset = state.get("controller_turn_offset")
-        return _integer(offset) and params.get("start_offset") <= offset <= params.get("end_offset")
-    if condition_id == "artifact_controlled":
-        count = state.get("artifact_controlled_count", 0)
-        return _integer(count) and count >= params.get("minimum_count")
-    if condition_id == "complete_tron_set_controlled":
-        controlled = state.get("controlled_land_oracle_ids")
-        candidate = state.get("candidate_land_oracle_id")
-        if isinstance(controlled, list) and isinstance(candidate, str):
-            return set(params.get("oracle_ids", [])) <= set(controlled) | {candidate}
-        return state.get("complete_tron_set_controlled") is True
-    if condition_id == "commander_color_identity":
-        colors = state.get("commander_colors")
-        return isinstance(colors, list) and set(colors) == set(params.get("colors", []))
-    return False
 
 
 def project_level_two_land(record, *, condition_state, current_turn, horizon_turn, ordinal=1):
@@ -394,24 +802,6 @@ def project_level_two_land(record, *, condition_state, current_turn, horizon_tur
         "oracle_id": record["oracle_id"],
         "ordinal": ordinal,
     }, []
-
-
-def evaluate_end_step_state_transitions(record, *, post_development_state):
-    """Resolve registered removal conditions after the turn's development actions.
-
-    This is a state-transition contract utility, not a simulation engine. It
-    deliberately accepts post-development state so selection and actual EOT
-    persistence cannot be conflated.
-    """
-    if not isinstance(record, dict):
-        return None, ["end-step transition evaluation requires a registered source"]
-    transitions = record.get("state_transitions") or []
-    removal_transitions = [
-        transition for transition in transitions
-        if isinstance(transition, dict) and transition.get("event_id") == "end_step_remove_unless_condition"
-    ]
-    remains = all(_condition_is_satisfied(transition.get("condition"), post_development_state) for transition in removal_transitions)
-    return {"remains_available": remains, "removed": not remains}, []
 
 
 def project_level_two_ramp(record, *, condition_state, available_generic_mana, available_colors, ordinal=1):
@@ -727,10 +1117,10 @@ def validate_failure_pattern_taxonomy(taxonomy, *, policy, question):
     if not isinstance(taxonomy, dict):
         return ["failure taxonomy must be the resolved taxonomy artifact"]
     errors = []
-    if taxonomy.get("taxonomy_id") != "sim-failure-taxonomy-v3" or taxonomy.get("taxonomy_version") != "v3" or taxonomy.get("policy_version") != policy.get("policy_version"):
+    if taxonomy.get("taxonomy_id") != "sim-failure-taxonomy-v4" or taxonomy.get("taxonomy_version") != "v4" or taxonomy.get("policy_version") != policy.get("policy_version"):
         errors.append("failure taxonomy identity does not match the active policy")
     if artifact_content_fingerprint(taxonomy) != APPROVED_FAILURE_PATTERN_TAXONOMY_FINGERPRINT:
-        errors.append("failure taxonomy does not match the approved v3 emission-semantics fingerprint")
+        errors.append("failure taxonomy does not match the approved v4 emission-semantics fingerprint")
     categories = taxonomy.get("categories")
     emission = taxonomy.get("emission_contract") or {}
     category_contracts = emission.get("categories") or {}
@@ -1074,9 +1464,35 @@ def _validate_unsupported_limitations(value, required_ids, label, errors):
         errors.append(f"{label} limitations omit required unsupported behavior IDs: {', '.join(missing)}")
 
 
-def validate_simulation_run(run, *, question, policy, run_contract, project_id, load_reference, fingerprint_for_version):
+def _validate_selected_metrics(selection, question):
+    """Validate the immutable, ordered execution metric plan."""
+    errors = []
+    if not isinstance(selection, list):
+        return ["run selected_metrics must be an ordered array"]
+    required = question.get("required_metrics") or []
+    optional = question.get("optional_metrics") or []
+    if selection[:len(required)] != required:
+        errors.append("run selected_metrics must begin with every required Question metric in Question order")
+    tail = selection[len(required):]
+    if any(not isinstance(entry, dict) or set(entry) != {"metric_id", "target_turn"} for entry in selection):
+        errors.append("run selected_metrics entries must contain exactly metric_id and target_turn")
+        return errors
+    keys = [_metric_key(entry) for entry in selection]
+    if len(keys) != len(set(keys)):
+        errors.append("run selected_metrics must be duplicate-free")
+    optional_keys = {_metric_key(entry) for entry in optional if isinstance(entry, dict)}
+    if any(_metric_key(entry) not in optional_keys for entry in tail):
+        errors.append("run selected_metrics contains an unregistered optional metric")
+    expected_tail = [entry for entry in optional if isinstance(entry, dict) and _metric_key(entry) in {_metric_key(item) for item in tail if isinstance(item, dict)}]
+    if tail != expected_tail:
+        errors.append("run selected optional metrics must follow Question optional_metrics order")
+    return errors
+
+
+def validate_simulation_run(run, *, question, policy, question_contract, run_contract, project_id, load_reference, fingerprint_for_version, lifecycle_mode, lifecycle=None, lifecycle_path=None, lifecycle_contract=None):
     errors = _required(run, (run_contract.get("required_fields") or {}).keys(), "run")
     if not isinstance(run, dict): return errors
+    errors.extend(validate_simulation_question(question, policy=policy, question_contract=question_contract, project_id=project_id, load_reference=load_reference, fingerprint_for_version=fingerprint_for_version))
     errors.extend(_unregistered_top_level_field_errors(run, run_contract, "run"))
     errors.extend(validate_recording_context(run_contract.get("recording_context"), id_field="run_id", created_at_required=False))
     if not isinstance(run.get("run_id"), str) or not run.get("run_id"):
@@ -1105,6 +1521,7 @@ def validate_simulation_run(run, *, question, policy, run_contract, project_id, 
     if run.get("seed_type") != "unsigned_64_bit": errors.append("run seed_type must be unsigned_64_bit")
     if run.get("scenario_ref") != f"{policy.get('policy_version')}:commander_scenario": errors.append("run scenario_ref does not match the resolved policy")
     if run.get("status") not in (run_contract.get("required_fields", {}).get("status", {}).get("allowed_values") or []): errors.append("run status is not allowed by the contract")
+    errors.extend(_validate_selected_metrics(run.get("selected_metrics"), question))
     expected_config = {
         "mulligan_policy_ref": f"{policy.get('policy_version')}:mulligan_policy",
         "keep_rule_ref": f"{policy.get('policy_version')}:keep_rule",
@@ -1129,12 +1546,19 @@ def validate_simulation_run(run, *, question, policy, run_contract, project_id, 
     errors.extend(_reserved_lifecycle_key_errors(run))
     for key in ("metrics", "probability", "metric_deltas", "result_id", "comparison_id"):
         if key in run: errors.append(f"run must not carry {key}")
+    errors.extend(_validate_lifecycle_mode(
+        lifecycle_mode=lifecycle_mode, lifecycle=lifecycle, lifecycle_path=lifecycle_path, lifecycle_contract=lifecycle_contract,
+        question=question, policy=policy, question_contract=question_contract,
+        project_id=project_id, load_reference=load_reference, fingerprint_for_version=fingerprint_for_version,
+        artifact=run, artifact_kind="run",
+    ))
     return errors
 
 
-def validate_simulation_result(result, *, run, policy, question, result_contract, taxonomy_ids, load_reference):
+def validate_simulation_result(result, *, run, policy, question, question_contract, result_contract, taxonomy_ids, load_reference, project_id, fingerprint_for_version, lifecycle_mode, lifecycle=None, lifecycle_path=None, lifecycle_contract=None):
     errors = _required(result, (result_contract.get("required_fields") or {}).keys(), "result")
     if not isinstance(result, dict): return errors
+    errors.extend(validate_simulation_question(question, policy=policy, question_contract=question_contract, project_id=project_id, load_reference=load_reference, fingerprint_for_version=fingerprint_for_version))
     errors.extend(_unregistered_top_level_field_errors(result, result_contract, "result"))
     errors.extend(_reserved_lifecycle_key_errors(result))
     errors.extend(validate_recording_context(result_contract.get("recording_context"), id_field="result_id", created_at_required=True))
@@ -1152,17 +1576,19 @@ def validate_simulation_result(result, *, run, policy, question, result_contract
         deck_path=run.get("deck_version_path"), deck_fingerprint=run.get("deck_content_fingerprint"),
         load_reference=load_reference,
     ))
-    catalog = _metric_catalog(policy); required = {_metric_key(m) for m in question.get("required_metrics", [])}; optional = {_metric_key(m) for m in question.get("optional_metrics", [])}; metrics = result.get("metrics")
+    catalog = _metric_catalog(policy); metrics = result.get("metrics")
     if not isinstance(metrics, list) or not metrics: errors.append("result metrics must be non-empty") ; return errors
     if any(not isinstance(m, dict) for m in metrics): errors.append("result metrics must contain only objects")
     keys = [_metric_key(m) for m in metrics if isinstance(m, dict)]
     if len(keys) != len(set(keys)): errors.append("result metrics contain duplicate metric keys")
-    if not required <= set(keys): errors.append("result metrics are missing required question metrics")
-    if not set(keys) <= required | optional: errors.append("result metrics contain unregistered metric")
+    selected = run.get("selected_metrics")
+    if not isinstance(selected, list) or keys != [_metric_key(m) for m in selected if isinstance(m, dict)]:
+        errors.append("result metrics must exactly equal the Run selected_metrics ordered set")
     for metric in metrics:
         definition = catalog.get(_metric_key(metric))
-        if definition is None: continue
-        if definition.get("shape") == "categorical_count": _validate_categorical(metric, run.get("iteration_count"), errors)
+        if definition is None:
+            errors.append("result metric does not resolve to a Policy metric definition")
+        elif definition.get("shape") == "categorical_count": _validate_categorical(metric, run.get("iteration_count"), errors)
         else: _validate_bernoulli(metric, run.get("iteration_count"), errors)
     if not isinstance(taxonomy_ids, dict):
         errors.append("result validation requires the resolved failure taxonomy artifact")
@@ -1178,10 +1604,16 @@ def validate_simulation_result(result, *, run, policy, question, result_contract
     if not isinstance(boundary, dict) or any(boundary.get(key) is not False for key in ("carries_interpretation", "carries_product_owner_decision", "is_gameplay_claim", "creates_deck_version")):
         errors.append("result explicit_boundary flags must all be false")
     _validate_claims(result.get("evidence_claims"), {_metric_key(m): m for m in metrics if isinstance(m, dict)}, "metric_estimate", result.get("readable_summary"), errors)
+    errors.extend(_validate_lifecycle_mode(
+        lifecycle_mode=lifecycle_mode, lifecycle=lifecycle, lifecycle_path=lifecycle_path, lifecycle_contract=lifecycle_contract,
+        question=question, policy=policy, question_contract=question_contract,
+        project_id=project_id, load_reference=load_reference, fingerprint_for_version=fingerprint_for_version,
+        artifact=result, artifact_kind="result",
+    ))
     return errors
 
 
-def validate_comparison_result(comparison, *, baseline_run, candidate_run, baseline_result, candidate_result, policy, question, comparison_contract, run_contract, result_contract, project_id, taxonomy_ids, load_reference, fingerprint_for_version):
+def validate_comparison_result(comparison, *, baseline_run, candidate_run, baseline_result, candidate_result, policy, question, question_contract, comparison_contract, run_contract, result_contract, project_id, taxonomy_ids, load_reference, fingerprint_for_version, lifecycle_mode, lifecycle=None, lifecycle_path=None, lifecycle_contract=None):
     errors = _required(comparison, (comparison_contract.get("required_fields") or {}).keys(), "comparison")
     if not isinstance(comparison, dict): return errors
     errors.extend(_unregistered_top_level_field_errors(comparison, comparison_contract, "comparison"))
@@ -1198,9 +1630,9 @@ def validate_comparison_result(comparison, *, baseline_run, candidate_run, basel
     if comparison.get("iteration_count") != baseline_run.get("iteration_count") or comparison.get("iteration_count") != candidate_run.get("iteration_count"):
         errors.append("comparison iteration_count does not match both runs")
     for label, run in (("baseline", baseline_run), ("candidate", candidate_run)):
-        for error in validate_simulation_run(run, question=question, policy=policy, run_contract=run_contract, project_id=project_id, load_reference=load_reference, fingerprint_for_version=fingerprint_for_version): errors.append(f"comparison {label} SimulationRun is invalid: {error}")
+        for error in validate_simulation_run(run, question=question, policy=policy, question_contract=question_contract, run_contract=run_contract, project_id=project_id, load_reference=load_reference, fingerprint_for_version=fingerprint_for_version, lifecycle_mode=lifecycle_mode, lifecycle=lifecycle, lifecycle_path=lifecycle_path, lifecycle_contract=lifecycle_contract): errors.append(f"comparison {label} SimulationRun is invalid: {error}")
     for label, result, run in (("baseline", baseline_result, baseline_run), ("candidate", candidate_result, candidate_run)):
-        for error in validate_simulation_result(result, run=run, policy=policy, question=question, result_contract=result_contract, taxonomy_ids=taxonomy_ids, load_reference=load_reference): errors.append(f"comparison {label} SimulationResult is invalid: {error}")
+        for error in validate_simulation_result(result, run=run, policy=policy, question=question, question_contract=question_contract, result_contract=result_contract, taxonomy_ids=taxonomy_ids, load_reference=load_reference, project_id=project_id, fingerprint_for_version=fingerprint_for_version, lifecycle_mode=lifecycle_mode, lifecycle=lifecycle, lifecycle_path=lifecycle_path, lifecycle_contract=lifecycle_contract): errors.append(f"comparison {label} SimulationResult is invalid: {error}")
     expected_bundle = {key: value for key, value in (baseline_run.get("semantic_dependencies") or {}).items() if key != "deck_version"}
     if comparison.get("semantic_dependencies") != expected_bundle:
         errors.append("comparison semantic dependencies do not match resolved run lineage")
@@ -1228,6 +1660,8 @@ def validate_comparison_result(comparison, *, baseline_run, candidate_run, basel
     for field in ("question_id", "policy_id", "policy_version", "iteration_count", "scenario_ref", "config", "rng_id", "seed_derivation_algorithm_id"):
         if baseline_run.get(field) != candidate_run.get(field):
             errors.append(f"comparison semantic parity fails for {field}")
+    if baseline_run.get("selected_metrics") != candidate_run.get("selected_metrics"):
+        errors.append("comparison selected_metrics must be identical across both Runs")
     bmetrics={_metric_key(m):m for m in baseline_result.get("metrics", []) if isinstance(m, dict)}; cmetrics={_metric_key(m):m for m in candidate_result.get("metrics", []) if isinstance(m, dict)}
     if set(bmetrics) != set(cmetrics): errors.append("comparison optional metric selection is asymmetric")
     deltas=comparison.get("metric_deltas")
@@ -1235,7 +1669,8 @@ def validate_comparison_result(comparison, *, baseline_run, candidate_run, basel
     if any(not isinstance(d, dict) for d in deltas): errors.append("comparison metric_deltas must contain only objects")
     keys=[_metric_key(d) for d in deltas if isinstance(d,dict)]
     if len(keys)!=len(set(keys)): errors.append("comparison metric_deltas contain duplicate metric keys")
-    if set(keys)!=set(bmetrics): errors.append("comparison metric_deltas must exactly cover reported metrics")
+    selected_keys = [_metric_key(m) for m in baseline_run.get("selected_metrics", []) if isinstance(m, dict)]
+    if keys != selected_keys: errors.append("comparison metric_deltas must exactly equal the selected metric set in order")
     for delta in deltas:
         key=_metric_key(delta); bm,cm=bmetrics.get(key),cmetrics.get(key)
         if not bm or not cm: continue
@@ -1270,4 +1705,10 @@ def validate_comparison_result(comparison, *, baseline_run, candidate_run, basel
         errors.append("comparison explicit_boundary flags are invalid")
     _validate_claims(comparison.get("evidence_claims"), {_metric_key(d): d for d in deltas if isinstance(d, dict)}, "comparison_delta", comparison.get("readable_summary"), errors)
     if baseline_run.get("deck_content_fingerprint")==candidate_run.get("deck_content_fingerprint") and (comparison.get("explicit_boundary") or {}).get("attributes_deck_content_effect") is not False: errors.append("equal-content comparison must not attribute a deck-content effect")
+    errors.extend(_validate_lifecycle_mode(
+        lifecycle_mode=lifecycle_mode, lifecycle=lifecycle, lifecycle_path=lifecycle_path, lifecycle_contract=lifecycle_contract,
+        question=question, policy=policy, question_contract=question_contract,
+        project_id=project_id, load_reference=load_reference, fingerprint_for_version=fingerprint_for_version,
+        artifact=comparison, artifact_kind="comparison",
+    ))
     return errors

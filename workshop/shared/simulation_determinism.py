@@ -140,3 +140,239 @@ def choose_payment(allocations):
         ))
         return item["flexible_generic_spend"], item["tapped_source_count"], ordered
     return min(allocations, key=key)
+
+
+def _is_integer(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def condition_is_satisfied(condition, state):
+    """Resolve one registered mana-source condition against observation state."""
+    if not isinstance(condition, dict) or not isinstance(state, dict):
+        return False
+    condition_id, params = condition.get("condition_id"), condition.get("params") or {}
+    if condition_id == "generic_payment_available_from_other_sources":
+        available = state.get("generic_payment_available_from_other_sources", 0)
+        return _is_integer(available) and available >= params.get("required_units")
+    if condition_id == "bounded_controller_turn_window":
+        offset = state.get("controller_turn_offset")
+        return _is_integer(offset) and params.get("start_offset") <= offset <= params.get("end_offset")
+    if condition_id == "artifact_controlled":
+        count = state.get("artifact_controlled_count", 0)
+        return _is_integer(count) and count >= params.get("minimum_count")
+    if condition_id == "complete_tron_set_controlled":
+        controlled = state.get("controlled_land_oracle_ids")
+        candidate = state.get("candidate_land_oracle_id")
+        if isinstance(controlled, list) and isinstance(candidate, str):
+            return set(params.get("oracle_ids", [])) <= set(controlled) | {candidate}
+        return state.get("complete_tron_set_controlled") is True
+    if condition_id == "commander_color_identity":
+        colors = state.get("commander_colors")
+        return isinstance(colors, list) and set(colors) == set(params.get("colors", []))
+    return False
+
+
+def resolve_activation_profiles(group, condition_truth):
+    """Resolve registered activation profiles using structured predicates only."""
+    profiles = group.get("profiles") if isinstance(group, dict) else None
+    if not isinstance(profiles, list):
+        return [], ["activation group profiles must be an array"]
+    legal = []
+    for profile in profiles:
+        if not isinstance(profile, dict) or not profile.get("supported"):
+            continue
+        if all(condition_is_satisfied(condition, condition_truth) for condition in profile.get("conditions", [])):
+            legal.append(profile)
+    if group.get("selection") == "independent_modes":
+        return legal, []
+    if not legal:
+        return [], ["highest-priority activation group has no matching supported profile"]
+    highest = max(profile.get("priority") for profile in legal)
+    selected = [profile for profile in legal if profile.get("priority") == highest]
+    if len(selected) != 1:
+        return [], ["highest-priority activation group has tied matching profiles"]
+    return selected, []
+
+
+def evaluate_end_step_state_transitions(record, *, post_development_state):
+    """Resolve registered end-step removals after deterministic development."""
+    if not isinstance(record, dict):
+        return None, ["end-step transition evaluation requires a registered source"]
+    transitions = record.get("state_transitions") or []
+    removal_transitions = [
+        transition for transition in transitions
+        if isinstance(transition, dict) and transition.get("event_id") == "end_step_remove_unless_condition"
+    ]
+    remains = all(
+        condition_is_satisfied(transition.get("condition"), post_development_state)
+        for transition in removal_transitions
+    )
+    return {"remains_available": remains, "removed": not remains}, []
+
+
+def _record_map(records):
+    if isinstance(records, dict):
+        return records
+    if isinstance(records, list):
+        return {
+            record.get("oracle_id"): record
+            for record in records
+            if isinstance(record, dict) and isinstance(record.get("oracle_id"), str)
+        }
+    return {}
+
+
+def _source_state(source, shared_state):
+    state = dict(shared_state or {})
+    state.update(source.get("condition_state") or {})
+    return state
+
+
+def _has_generic_payment_condition(profile):
+    return any(
+        isinstance(condition, dict)
+        and condition.get("condition_id") == "generic_payment_available_from_other_sources"
+        for condition in (profile.get("conditions") or [])
+    )
+
+
+def _resolved_profiles(record, state, *, exclude_generic_payment):
+    profiles = []
+    for group in record.get("activation_groups") or []:
+        selected, errors = resolve_activation_profiles(group, state)
+        if errors == ["highest-priority activation group has no matching supported profile"]:
+            continue
+        if errors:
+            return [], errors
+        profiles.extend(
+            profile for profile in selected
+            if not exclude_generic_payment or not _has_generic_payment_condition(profile)
+        )
+    return profiles, []
+
+
+def _expired_bounded_source(record, state):
+    supported = [
+        profile
+        for group in record.get("activation_groups") or []
+        for profile in (group.get("profiles") or [])
+        if isinstance(profile, dict) and profile.get("supported")
+    ]
+    if not supported or not all(any(
+        isinstance(condition, dict) and condition.get("condition_id") == "bounded_controller_turn_window"
+        for condition in (profile.get("conditions") or [])
+    ) for profile in supported):
+        return False
+    # A bounded profile with a registered removal event remains usable during
+    # the final development window, then is absent from the EOT observation.
+    offset = state.get("controller_turn_offset")
+    if _is_integer(offset) and all(any(
+        isinstance(condition, dict)
+        and condition.get("condition_id") == "bounded_controller_turn_window"
+        and condition.get("params", {}).get("removal_event")
+        and offset >= condition.get("params", {}).get("end_offset")
+        for condition in (profile.get("conditions") or [])
+    ) for profile in supported):
+        return True
+    return not any(
+        all(condition_is_satisfied(condition, state) for condition in profile.get("conditions", []))
+        for profile in supported
+    )
+
+
+def observe_source_capability(*, source_records, source_states, candidate_source_id, condition_state=None):
+    """Evaluate source-capability-observation-v1 without reconstructing Policy prose.
+
+    ``source_states`` contains the actual post-development sources. Each entry
+    needs a unique ``source_id``, registered ``oracle_id``, ``online`` and
+    ``tapped`` booleans, and may provide per-source ``condition_state``.
+    Earlier tapping is intentionally ignored for gross source capability, but
+    retained for residual spendable-mana checks.
+    """
+    records = _record_map(source_records)
+    if not isinstance(source_states, list) or not isinstance(candidate_source_id, str):
+        raise ValueError("source capability observation requires source states and candidate_source_id")
+    shared_state = dict(condition_state or {})
+    if "generic_payment_available_from_other_sources" in shared_state:
+        raise ValueError("source capability observation derives external generic payment internally")
+    seen_ids, surviving, candidate_state = set(), [], None
+    for source in source_states:
+        if not isinstance(source, dict):
+            raise ValueError("source capability observation source states must be objects")
+        source_id, oracle_id = source.get("source_id"), source.get("oracle_id")
+        if not isinstance(source_id, str) or not source_id or source_id in seen_ids:
+            raise ValueError("source capability observation source_id values must be unique non-empty strings")
+        seen_ids.add(source_id)
+        if not isinstance(oracle_id, str) or oracle_id not in records:
+            raise ValueError("source capability observation requires registered source oracle_ids")
+        if not isinstance(source.get("online"), bool) or not isinstance(source.get("tapped"), bool):
+            raise ValueError("source capability observation requires explicit online and tapped state")
+        local_state = _source_state(source, shared_state)
+        if "generic_payment_available_from_other_sources" in local_state:
+            raise ValueError("source capability observation derives external generic payment internally")
+        if source_id == candidate_source_id:
+            candidate_state = (source, records[oracle_id], local_state)
+        if source.get("online") is not True or source.get("removed") is True:
+            continue
+        transition, errors = evaluate_end_step_state_transitions(records[oracle_id], post_development_state=local_state)
+        if errors:
+            raise ValueError(errors[0])
+        if transition["removed"]:
+            continue
+        if _expired_bounded_source(records[oracle_id], local_state):
+            continue
+        surviving.append((source, records[oracle_id], local_state))
+    if candidate_state is None:
+        raise ValueError("source capability observation candidate_source_id must identify one supplied source")
+
+    def base_capacity(item):
+        _, record, local_state = item
+        profiles, errors = _resolved_profiles(record, local_state, exclude_generic_payment=True)
+        if errors:
+            raise ValueError(errors[0])
+        return max((profile.get("mana_units", 0) for profile in profiles), default=0)
+
+    external = [item for item in surviving if item[0]["source_id"] != candidate_source_id]
+    external_base_capacity = sum(base_capacity(item) for item in external)
+    residual_external_capacity = sum(base_capacity(item) for item in external if item[0]["tapped"] is False)
+    candidates = [item for item in surviving if item[0]["source_id"] == candidate_source_id]
+    if not candidates:
+        return {
+            "survives": False,
+            "online": False,
+            "source_capability": [],
+            "five_color_available": False,
+            "external_base_capacity": external_base_capacity,
+            "residual_external_payment_capacity": residual_external_capacity,
+            "candidate_spendable_output_capabilities": [],
+        }
+    candidate = candidates[0]
+
+    candidate_state = dict(candidate[2])
+    candidate_state["generic_payment_available_from_other_sources"] = external_base_capacity
+    capability_profiles, errors = _resolved_profiles(candidate[1], candidate_state, exclude_generic_payment=False)
+    if errors:
+        raise ValueError(errors[0])
+    capability_colors = sorted({
+        color for profile in capability_profiles for color in profile.get("output_capabilities", [])
+        if color in {"W", "U", "B", "R", "G"}
+    })
+
+    spendable_state = dict(candidate[2])
+    spendable_state["generic_payment_available_from_other_sources"] = residual_external_capacity
+    spendable_profiles, errors = _resolved_profiles(candidate[1], spendable_state, exclude_generic_payment=False)
+    if errors:
+        raise ValueError(errors[0])
+    spendable_capabilities = sorted({
+        color for profile in spendable_profiles for color in profile.get("output_capabilities", [])
+        if color in {"W", "U", "B", "R", "G", "C"}
+    }) if candidate[0]["tapped"] is False else []
+    return {
+        "survives": True,
+        "online": True,
+        "source_capability": capability_colors,
+        "five_color_available": set("WUBRG") <= set(capability_colors),
+        "external_base_capacity": external_base_capacity,
+        "residual_external_payment_capacity": residual_external_capacity,
+        "candidate_spendable_output_capabilities": spendable_capabilities,
+    }

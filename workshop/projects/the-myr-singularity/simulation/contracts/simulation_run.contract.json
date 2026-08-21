@@ -1,9 +1,9 @@
 {
-  "schema_version": "3.0",
+  "schema_version": "4.0",
   "artifact_type": "simulation_run_contract",
-  "contract_id": "simulation-run-contract-v3",
+  "contract_id": "simulation-run-contract-v4",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v4",
+  "policy_version": "sim-policy-v5",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a SimulationRun. A SimulationRun stores exact configuration and identity for one execution against one DeckVersion: the project, the DeckVersion, the deck-content fingerprint, the question, the policy, the seed, the iteration count, the RNG identity, and the run status. It stores no metrics and no interpretation. Task 30 defines this contract but creates no SimulationRun instance.",
   "scope": {
@@ -87,6 +87,15 @@
       "type": "string",
       "description": "The exact policy scenario reference used by this run; it participates in computed comparison semantic parity."
     },
+    "selected_metrics": {
+      "type": "array",
+      "description": "Immutable ordered execution plan. It explicitly lists all required Question metric keys first in Question order, followed by selected optional Question metric keys in Question optional order.",
+      "item_required_fields": [
+        "metric_id",
+        "target_turn"
+      ],
+      "item_field_set": "exactly metric_id and target_turn"
+    },
     "config": {
       "type": "object",
       "description": "Run configuration that references, not restates, policy semantics. Its keys are exactly the registered required_fields; runtime semantic overrides are forbidden.",
@@ -147,6 +156,7 @@
     "seed must be derived from question_content_fingerprint, policy_content_fingerprint, deck_content_fingerprint, and run_role via the policy seed derivation.",
     "iteration_count below the policy minimum is not a valid saved run.",
     "config references policy rules by reference and never restates their semantics.",
+    "selected_metrics is preregistered before execution. It controls Result and Comparison coverage but does not alter sim-seed-sha256-v2 because the approved metric observations consume no RNG and do not change execution state.",
     "A SimulationRun carries no metrics, no probabilities, and no interpretation.",
     "A SimulationRun never creates or edits a DeckVersion.",
     "Run semantic_dependencies must resolve every immutable source with content fingerprints; DeckVersion uses deck-content-sha256-canonical-v2.",

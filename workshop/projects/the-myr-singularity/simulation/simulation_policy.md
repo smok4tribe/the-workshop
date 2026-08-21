@@ -1,4 +1,4 @@
-# Simulation Policy sim-policy-v4
+# Simulation Policy sim-policy-v5
 
 Policy id: `the-myr-singularity-simulation-policy` — project `the-myr-singularity`
 
@@ -428,7 +428,8 @@ Each metric below is measured only under its complete Policy-owned contract.
   "target_turn_semantics": "metric.target_turn",
   "observation_point": {
     "id": "end_of_target_turn_after_level_2_sequencing",
-    "after_pending_time_dependent_removals": true
+    "after_pending_time_dependent_removals": true,
+    "source_capability_observation_contract_id": "source-capability-observation-v1"
   },
   "unsupported_behavior": {
     "iteration_remains_in_population": true,
@@ -487,7 +488,8 @@ Each metric below is measured only under its complete Policy-owned contract.
   "target_turn_semantics": "metric.target_turn",
   "observation_point": {
     "id": "end_of_target_turn_after_level_2_sequencing",
-    "after_pending_time_dependent_removals": true
+    "after_pending_time_dependent_removals": true,
+    "source_capability_observation_contract_id": "source-capability-observation-v1"
   },
   "unsupported_behavior": {
     "iteration_remains_in_population": true,
@@ -605,6 +607,17 @@ Condition evaluation phases:
 
 - `land_candidate`: `generic_payment_available_from_other_sources` = pre_play_resources_excluding_candidate; `complete_tron_set_controlled` = hypothetical_post_play_controlled_lands_including_candidate; `bounded_controller_turn_window` = candidate_controller_turn_offset_default_zero; `commander_color_identity` = static_scenario_state; `artifact_controlled` = pre_selection_state_for_selector_persistence; `end_step_remove_unless_condition` = post_development_state
 - `ramp_candidate`: `deployment_payment` = pre_deployment_resources; `activation_profiles` = post_deployment_residual_resources_after_reserved_payment; `self_funding` = forbidden
+- `end_of_turn_source_capability_observation`: `evaluation_phase` = after_deterministic_development_and_pending_removals_before_end_of_turn_observation; `source_snapshot` = surviving_online_sources_after_post_development_removals; `earlier_tapping_and_spending` = do_not_remove_gross_source_capability; `generic_payment_available_from_other_sources` = gross_nonrecursive_base_capacity_from_other_surviving_online_sources; `self_funding` = forbidden; `conditional_profiles_feed_base_capacity` = False; `spendable_mana_relation` = remaining_untapped_payable_resources_only
+
+End-of-turn source-capability observation:
+
+Contract id: `source-capability-observation-v1`
+- `projection`: gross_surviving_online_capability
+- `base_capacity_ledger`: For each other surviving online source, use the greatest supported profile mana_units whose conditions are satisfied at observation and which has no generic_payment_available_from_other_sources condition. Conditional generic-payment profiles never recursively contribute.
+- `conditional_profile_rule`: A candidate profile requiring generic payment is legal exactly when the sum of other-source base-capacity units meets required_units. The candidate source is excluded.
+- `tapping_rule`: Earlier tapping or mana spent during development does not erase gross source capability.
+- `spendable_mana_rule`: Spendable mana remains actual remaining untapped payable resources and is not substituted for source capability.
+- `removal_rule`: Only surviving online sources after registered post-development removals contribute.
 
 Land selector fields:
 
