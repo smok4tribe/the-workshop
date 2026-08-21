@@ -226,6 +226,11 @@ def render_policy(policy):
             for candidate, phases in level_two['mana_source_projection']['condition_evaluation_phases'].items()
         ],
         "",
+        "End-of-turn source-capability observation:",
+        "",
+        f"Contract id: `{level_two['mana_source_projection']['source_capability_observation']['contract_id']}`",
+        *[f"- `{field}`: {rule}" for field, rule in level_two['mana_source_projection']['source_capability_observation'].items() if field != 'contract_id'],
+        "",
         "Land selector fields:",
         "",
         *[f"- `{field}`: {rule}" for field, rule in level_two['mana_source_projection']['land_selector_fields'].items()],
@@ -262,9 +267,7 @@ def render_question(question):
         f"Project `{question['project_id']}` — policy `{question['policy_id']}` "
         f"({question['policy_version']})",
         "",
-        f"Execution status: **{question['execution_status']}**",
-        "",
-        question["execution_note"],
+        "Immutable preregistered semantic Question. Execution lifecycle is recorded separately at the canonical lifecycle path derived from this Question id.",
         "",
         "## Hypothesis",
         "",

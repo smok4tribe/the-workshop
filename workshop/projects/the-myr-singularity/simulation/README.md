@@ -1,6 +1,6 @@
 # Simulation Contracts and Policy
 
-This directory holds the Sprint 2, Task 30 simulation semantic contract for
+This directory holds the Sprint 2 simulation semantic contract for
 The Myr Singularity. Task 30 freezes the contract before any simulation engine
 is implemented or run. No SimulationRun, SimulationResult, or comparison result
 exists here, and no deck artifact is changed.
@@ -13,11 +13,13 @@ exists here, and no deck artifact is changed.
 | `mana_source_semantics.json` | Project-scoped normalized executable source registry for every Level 2 mana source in DeckVersions v1.0 and v1.1, including structured profiles, conditions, priority selection, payments, online timing, untap behavior, and unsupported-mode boundaries. |
 | `card_semantics.json` | Project-scoped, source-aware modeled card behavior for cards whose canonical `produced_mana` is null (City of Brass, Mana Confluence, Urza's Saga). The policy references this artifact; fixture-specific card behavior is never encoded in the policy. |
 | `contracts/simulation_question.contract.json` | The SimulationQuestion data contract. |
+| `contracts/simulation_question_lifecycle.contract.json` | The canonical mutable persistence lifecycle contract for an immutable SimulationQuestion. |
 | `contracts/simulation_run.contract.json` | The SimulationRun data contract. |
 | `contracts/simulation_result.contract.json` | The SimulationResult data contract. |
 | `contracts/comparison_result.contract.json` | The ComparisonResult data contract. |
 | `contracts/failure_pattern_taxonomy.json` | The closed failure-pattern vocabulary and the exact emitting/non-emitting Result inclusion contract. |
-| `questions/question-001-mana-color.json` | The first evidence question, documented and `not_executed`. |
+| `questions/question-001-mana-color.json` | The immutable first evidence question. |
+| `lifecycle/question-001-mana-color.json` | Canonical preregistered lifecycle state for the first evidence question. |
 | `*.md` companions | Deterministic rendered Markdown for the policy and the question. |
 
 Deck identity itself (commander, exact 99-card library, zones) is owned by the
@@ -49,7 +51,9 @@ on both Run and Result as deterministic
 
 ## Lifecycle boundary
 
-`SimulationPolicy` and `SimulationQuestion` do not carry results.
+`SimulationPolicy` and the immutable `SimulationQuestion` do not carry results.
+The separate canonical lifecycle artifact records caller-owned persistence
+transitions and is never part of the seed-bound semantic identity.
 `SimulationRun` carries exact-closed configuration and identity, not metrics.
 `SimulationResult` carries metrics, not interpretation. Reasoning
 interpretation and Product Owner decisions are separate later artifacts. No
@@ -65,4 +69,5 @@ python -m unittest workshop.tests.validation.test_simulation_contracts -v
 
 The renderer is deterministic: a clean render leaves the committed Markdown
 unchanged. The validator recomputes the deck-content fingerprints from the
-immutable DeckVersions and verifies the recorded values.
+immutable DeckVersions, validates the immutable Question, and verifies the
+canonical lifecycle state.

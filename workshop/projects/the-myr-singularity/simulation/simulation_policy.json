@@ -1,8 +1,8 @@
 {
-  "schema_version": "3.0",
+  "schema_version": "4.0",
   "artifact_type": "simulation_policy",
   "policy_id": "the-myr-singularity-simulation-policy",
-  "policy_version": "sim-policy-v4",
+  "policy_version": "sim-policy-v5",
   "project_id": "the-myr-singularity",
   "generated_at": "2026-07-13T00:00:00Z",
   "generated_by": "Terra",
@@ -36,11 +36,11 @@
   "references": {
     "card_semantics": {
       "path": "workshop/projects/the-myr-singularity/simulation/card_semantics.json",
-      "content_fingerprint": "artifact-content-sha256-v1:bf3afba27eadd3cf5a429bb3585606b90b2eeac095b57f9bb66b4c4da3bebae2"
+      "content_fingerprint": "artifact-content-sha256-v1:f5847d407956dd9e10fd75c863660bd503518413274596a5404840011f108cf3"
     },
     "mana_source_semantics": {
       "path": "workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json",
-      "content_fingerprint": "artifact-content-sha256-v1:86626c278b667c7c83ddc036e2dd7e1ed96fa403052e22a901e9ce2aea55eea3"
+      "content_fingerprint": "artifact-content-sha256-v1:847130857b20518b8669d95d978e289602e3b2cf74ab1e529a8f55c3373f52b6"
     },
     "canonical_card_facts": {
       "path": "workshop/card-data/cards.json",
@@ -48,23 +48,23 @@
     },
     "failure_pattern_taxonomy": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json",
-      "content_fingerprint": "artifact-content-sha256-v1:295f7122deb6caa941a89df7f35904001e0bd9449b745f2734e920011339a38e"
+      "content_fingerprint": "artifact-content-sha256-v1:5d34ef7aaf9a00e7d550df223ad4e3cc94a3a0e3c155f8d57ae5c8222cee2c8a"
     },
     "simulation_question_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:0495fe3b6eb9a639eee70a3797caf1be39037c75348246c35204a99489da8b57"
+      "content_fingerprint": "artifact-content-sha256-v1:256158c455960b056b14f756ffabf6e7840c00781b64a09efaf8f555b090ec34"
     },
     "simulation_run_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_run.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:2ddf349aea0f1a86d940f49a4d082e4d82fb6be5ba6d9a2f38a9457705fd417e"
+      "content_fingerprint": "artifact-content-sha256-v1:1e4b8a5d1690f4bbd9ad11afe92788335604e079913a4ea49869986b1e75b37f"
     },
     "simulation_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:188587ce2afc88b8524efff8ed64e0d35a04fb1a9a5ca25f2fbc486308073087"
+      "content_fingerprint": "artifact-content-sha256-v1:6ca16e4054a8352d30a5737e78c289872edff1c55c62a11e6af01405e679a08b"
     },
     "comparison_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/comparison_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:c25802a7f62fdc19ecf00fce7ae68cfe89fd199d5b1a97a95a57058a65a2fc1b"
+      "content_fingerprint": "artifact-content-sha256-v1:460fba80a7003b8dceba405bdab22ecc0d94e02f077a67a85845900372ae04ab"
     }
   },
   "commander_scenario": {
@@ -761,7 +761,8 @@
           "target_turn_semantics": "metric.target_turn",
           "observation_point": {
             "id": "end_of_target_turn_after_level_2_sequencing",
-            "after_pending_time_dependent_removals": true
+            "after_pending_time_dependent_removals": true,
+            "source_capability_observation_contract_id": "source-capability-observation-v1"
           },
           "unsupported_behavior": {
             "iteration_remains_in_population": true,
@@ -822,7 +823,8 @@
           "target_turn_semantics": "metric.target_turn",
           "observation_point": {
             "id": "end_of_target_turn_after_level_2_sequencing",
-            "after_pending_time_dependent_removals": true
+            "after_pending_time_dependent_removals": true,
+            "source_capability_observation_contract_id": "source-capability-observation-v1"
           },
           "unsupported_behavior": {
             "iteration_remains_in_population": true,
@@ -1032,7 +1034,25 @@
           "deployment_payment": "pre_deployment_resources",
           "activation_profiles": "post_deployment_residual_resources_after_reserved_payment",
           "self_funding": "forbidden"
+        },
+        "end_of_turn_source_capability_observation": {
+          "evaluation_phase": "after_deterministic_development_and_pending_removals_before_end_of_turn_observation",
+          "source_snapshot": "surviving_online_sources_after_post_development_removals",
+          "earlier_tapping_and_spending": "do_not_remove_gross_source_capability",
+          "generic_payment_available_from_other_sources": "gross_nonrecursive_base_capacity_from_other_surviving_online_sources",
+          "self_funding": "forbidden",
+          "conditional_profiles_feed_base_capacity": false,
+          "spendable_mana_relation": "remaining_untapped_payable_resources_only"
         }
+      },
+      "source_capability_observation": {
+        "contract_id": "source-capability-observation-v1",
+        "projection": "gross_surviving_online_capability",
+        "base_capacity_ledger": "For each other surviving online source, use the greatest supported profile mana_units whose conditions are satisfied at observation and which has no generic_payment_available_from_other_sources condition. Conditional generic-payment profiles never recursively contribute.",
+        "conditional_profile_rule": "A candidate profile requiring generic payment is legal exactly when the sum of other-source base-capacity units meets required_units. The candidate source is excluded.",
+        "tapping_rule": "Earlier tapping or mana spent during development does not erase gross source capability.",
+        "spendable_mana_rule": "Spendable mana remains actual remaining untapped payable resources and is not substituted for source capability.",
+        "removal_rule": "Only surviving online sources after registered post-development removals contribute."
       },
       "land_selector_fields": {
         "colors": "union of W, U, B, R, and G output_capabilities of currently legal supported profiles for the land; C never contributes to this commander-color selector field.",

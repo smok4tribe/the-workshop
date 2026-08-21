@@ -23,6 +23,8 @@ from workshop.simulation.instance_validation import (  # noqa: E402
     validate_policy_metric_contracts,
     validate_question_role_bindings,
     validate_recording_context,
+    validate_simulation_question,
+    validate_simulation_question_lifecycle,
 )
 
 PROJECT_ID = "the-myr-singularity"
@@ -88,6 +90,8 @@ def main():
         "run_contract": CONTRACTS / "simulation_run.contract.json",
         "result_contract": CONTRACTS / "simulation_result.contract.json",
         "comparison_contract": CONTRACTS / "comparison_result.contract.json",
+        "lifecycle_contract": CONTRACTS / "simulation_question_lifecycle.contract.json",
+        "lifecycle": SIM / "lifecycle" / "question-001-mana-color.json",
         "cards": CARDS,
     }
     docs, errors = {}, []
@@ -96,13 +100,13 @@ def main():
             docs[name] = load_json(path)
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             errors.append(f"{name} does not strictly parse: {exc}")
-    checks = [("all v4 executable-semantics artifacts exist and strictly parse", errors)]
+    checks = [("all v5 executable-semantics artifacts exist and strictly parse", errors)]
     if errors:
         return report(checks)
     policy, semantics, question, taxonomy = (docs[k] for k in ("policy", "semantics", "question", "taxonomy"))
 
     errors = _required(policy, ("policy_id", "policy_version", "references", "randomness_policy", "deck_fingerprint_policy", "metric_catalog", "level_2_sequencing"), "policy")
-    if policy.get("policy_version") != "sim-policy-v4": errors.append("policy_version must be sim-policy-v4")
+    if policy.get("policy_version") != "sim-policy-v5": errors.append("policy_version must be sim-policy-v5")
     if policy.get("bottoming_rule", {}).get("rule_id") != "deterministic-bottoming-v2": errors.append("policy must use deterministic-bottoming-v2")
     transition = policy.get("mulligan_policy", {}).get("executable_state_transition", {})
     expected_transition = {
@@ -124,7 +128,7 @@ def main():
     }
     if transition != expected_transition:
         errors.append("policy executable mulligan transition is incomplete")
-    checks.append(("policy has versioned v4 executable ownership", errors))
+    checks.append(("policy has versioned v5 executable ownership", errors))
 
     errors = []
     expected_refs = {
@@ -172,7 +176,7 @@ def main():
     checks.append(("metric registry has complete v3 measurement contracts", errors))
 
     errors = []
-    if semantics.get("policy_version") != "sim-policy-v4": errors.append("card semantics must bind sim-policy-v4")
+    if semantics.get("policy_version") != "sim-policy-v5": errors.append("card semantics must bind sim-policy-v5")
     saga = next((e for e in semantics.get("entries", []) if e.get("card_identity", {}).get("name") == "Urza's Saga"), {})
     if saga.get("source", {}).get("oracle_basis") != "Saga land with a Chapter I {T}: Add {C} ability and a Chapter III ability.": errors.append("Urza's Saga must use the approved narrow oracle basis")
     if "upkeep" in saga.get("source", {}).get("oracle_basis", "").casefold(): errors.append("Urza's Saga source basis must not contain upkeep")
@@ -180,28 +184,40 @@ def main():
     checks.append(("Urza's Saga source prose and bounded removal are consistent", errors))
 
     errors = validate_failure_pattern_taxonomy(taxonomy, policy=policy, question=question)
-    checks.append(("failure taxonomy v3 is a complete fail-closed emission contract", errors))
+    checks.append(("failure taxonomy v4 is a complete fail-closed emission contract", errors))
 
     errors = validate_card_semantics_registry_parity(semantics, docs["mana_source_semantics"])
     checks.append(("card semantics and executable registry have one result-changing interpretation", errors))
 
-    errors = []
-    if question.get("policy_version") != "sim-policy-v4": errors.append("question must bind sim-policy-v4")
-    errors.extend(_check_reference(question.get("policy_reference"), "workshop/projects/the-myr-singularity/simulation/simulation_policy.json", policy, "question.policy_reference"))
+    errors = validate_simulation_question(
+        question, policy=policy, question_contract=docs["question_contract"], project_id=PROJECT_ID,
+        load_reference=lambda path: load_json(REPO_ROOT / path),
+        fingerprint_for_version=lambda version: deck_content_fingerprint(version, docs["cards"]["cards"]),
+    )
     required = {(m.get("metric_id"), m.get("target_turn")) for m in question.get("required_metrics", [])}
     optional = {(m.get("metric_id"), m.get("target_turn")) for m in question.get("optional_metrics", [])}
     if {mid for mid, _ in required} != EXPECTED_METRICS - {"commander_castability_by_turn"}: errors.append("question required_metrics must contain first eight metrics")
     if {mid for mid, _ in optional} != {"commander_castability_by_turn"}: errors.append("question optional_metrics must contain commander castability")
-    errors.extend(validate_question_role_bindings(question.get("compared_versions")))
-    for entry in question.get("compared_versions", []):
-        version = load_json(REPO_ROOT / entry.get("path", "missing"))
-        if entry.get("deck_content_fingerprint") != deck_content_fingerprint(version, docs["cards"]["cards"]): errors.append(f"question DeckVersion fingerprint does not recompute for {entry.get('deck_version_id')}")
     checks.append(("question structurally separates required and optional metrics", errors))
 
     errors = []
-    for name, expected_id in (("question_contract", "simulation-question-contract-v2"), ("run_contract", "simulation-run-contract-v3"), ("result_contract", "simulation-result-contract-v3"), ("comparison_contract", "comparison-result-contract-v3")):
+    for name, expected_id in (("question_contract", "simulation-question-contract-v3"), ("run_contract", "simulation-run-contract-v4"), ("result_contract", "simulation-result-contract-v4"), ("comparison_contract", "comparison-result-contract-v4"), ("lifecycle_contract", "simulation-question-lifecycle-contract-v1")):
         if docs[name].get("contract_id") != expected_id: errors.append(f"{name} has an unexpected contract identity")
-    checks.append(("materially changed contracts use v3 identities", errors))
+    if docs["question_contract"].get("required_fields", {}).get("compared_versions", {}).get("exact_item_count") != 2:
+        errors.append("Question contract must require exactly two compared DeckVersions")
+    if docs["run_contract"].get("required_fields", {}).get("selected_metrics", {}).get("item_required_fields") != ["metric_id", "target_turn"]:
+        errors.append("Run contract must declare exact selected_metrics item fields")
+    if "exactly equal source SimulationRun.selected_metrics in the same order" not in docs["result_contract"].get("required_fields", {}).get("metrics", {}).get("description", ""):
+        errors.append("Result contract must bind metrics to ordered Run selected_metrics")
+    if "shared ordered SimulationRun.selected_metrics" not in docs["comparison_contract"].get("required_fields", {}).get("metric_deltas", {}).get("description", ""):
+        errors.append("Comparison contract must bind deltas to shared ordered selected_metrics")
+    lifecycle_evidence = docs["lifecycle_contract"].get("required_fields", {}).get("recorded_evidence", {})
+    invalidation = docs["lifecycle_contract"].get("required_fields", {}).get("invalidation", {})
+    if set(lifecycle_evidence.get("reference_shape", {})) != {"id", "path", "content_fingerprint"} or lifecycle_evidence.get("state_cardinality", {}).get("runs_recorded") != {"runs": 2, "results": 0, "comparison": False}:
+        errors.append("Lifecycle contract must declare exact reference shape and cardinality")
+    if invalidation.get("reason_contract_id") != "simulation-lifecycle-invalidation-v1" or not invalidation.get("allowed_reason_ids"):
+        errors.append("Lifecycle contract must freeze a versioned invalidation reason vocabulary")
+    checks.append(("materially changed contracts use v4 identities and lifecycle v1", errors))
 
     errors = []
     legacy_level2 = (policy.get("sequencing_semantics") or {}).get("level_2_mana_development") or {}
@@ -245,11 +261,31 @@ def main():
             "activation_profiles": "post_deployment_residual_resources_after_reserved_payment",
             "self_funding": "forbidden",
         },
+        "end_of_turn_source_capability_observation": {
+            "evaluation_phase": "after_deterministic_development_and_pending_removals_before_end_of_turn_observation",
+            "source_snapshot": "surviving_online_sources_after_post_development_removals",
+            "earlier_tapping_and_spending": "do_not_remove_gross_source_capability",
+            "generic_payment_available_from_other_sources": "gross_nonrecursive_base_capacity_from_other_surviving_online_sources",
+            "self_funding": "forbidden",
+            "conditional_profiles_feed_base_capacity": False,
+            "spendable_mana_relation": "remaining_untapped_payable_resources_only",
+        },
     }:
         errors.append("Level 2 condition evaluation phases are not frozen")
     if "W, U, B, R, and G" not in (projection.get("land_selector_fields") or {}).get("colors", "") or "C never contributes" not in (projection.get("land_selector_fields") or {}).get("colors", ""):
         errors.append("Level 2 land selector colors are not restricted to commander colors")
-    checks.append(("Level 2 trace sequencing is explicit and deterministic", errors))
+    observation = projection.get("source_capability_observation") or {}
+    if observation.get("contract_id") != "source-capability-observation-v1" or observation.get("projection") != "gross_surviving_online_capability":
+        errors.append("EOT source-capability observation contract is incomplete")
+    checks.append(("Level 2 trace sequencing and EOT source capability are explicit and deterministic", errors))
+
+    errors = validate_simulation_question_lifecycle(
+        docs["lifecycle"], question=question, lifecycle_contract=docs["lifecycle_contract"], project_id=PROJECT_ID,
+        load_reference=lambda path: load_json(REPO_ROOT / path),
+    )
+    if docs["lifecycle"].get("state") != "preregistered":
+        errors.append("question-001 lifecycle must remain preregistered without production evidence")
+    checks.append(("immutable Question has canonical preregistered lifecycle state", errors))
 
     errors = []
     expected_recording = {

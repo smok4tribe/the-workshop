@@ -1,9 +1,9 @@
 {
-  "schema_version": "3.0",
+  "schema_version": "4.0",
   "artifact_type": "simulation_result_contract",
-  "contract_id": "simulation-result-contract-v3",
+  "contract_id": "simulation-result-contract-v4",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v4",
+  "policy_version": "sim-policy-v5",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a SimulationResult. A SimulationResult stores registered metrics, standalone uncertainty where applicable, quantitatively auditable failure patterns, typed evidence claims, and limitations produced by exactly one SimulationRun. It stores no free-form observations, reasoning interpretation, or Product Owner decision, and it never claims gameplay performance, win rate, or generic deck quality. Task 30 defines this contract but creates no SimulationResult instance.",
   "scope": {
@@ -60,7 +60,7 @@
     },
     "metrics": {
       "type": "array",
-      "description": "One entry per reported metric.",
+      "description": "Entries exactly equal source SimulationRun.selected_metrics in the same order; no omitted, additional, or reordered metric is permitted.",
       "item_required_fields": [
         "metric_id",
         "target_turn",
@@ -169,7 +169,7 @@
     "No metric or typed claim may express win rate, win probability, average win turn, gameplay or matchup performance, or generic deck quality.",
     "Unsupported card behavior may only appear as a limitation and must never contribute to a metric success count.",
     "A SimulationResult never creates or edits a DeckVersion.",
-    "metrics are non-empty, unique, and exactly Question.required_metrics plus any explicitly selected optional_metrics.",
+    "metrics are non-empty, unique, and exactly equal the source SimulationRun.selected_metrics ordered set.",
     "Recording identity and metadata are caller-supplied. The engine must not read a wall clock or generate UUID/random recording IDs; artifact-content identity includes the complete persisted caller recording metadata, while replay equivalence remains semantic/execution-based."
   ],
   "validation_expectations": [

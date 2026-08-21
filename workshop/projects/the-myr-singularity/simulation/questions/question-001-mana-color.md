@@ -1,10 +1,8 @@
 # Simulation Question question-001-mana-color
 
-Project `the-myr-singularity` — policy `the-myr-singularity-simulation-policy` (sim-policy-v4)
+Project `the-myr-singularity` — policy `the-myr-singularity-simulation-policy` (sim-policy-v5)
 
-Execution status: **not_executed**
-
-Documented in Task 30 per RFC-015. This question is NOT executed in Task 30: no SimulationRun, no SimulationResult, and no v1.0-versus-v1.1 comparison are produced.
+Immutable preregistered semantic Question. Execution lifecycle is recorded separately at the canonical lifecycle path derived from this Question id.
 
 ## Hypothesis
 
@@ -12,7 +10,7 @@ The v1.1 mana-base changes (adding City of Brass and Mana Confluence as any-colo
 
 ## Question
 
-Under the sim-policy-v4 model, how do The Myr Singularity DeckVersion v1.1 and v1.0 compare on the preregistered early mana-development, five-color-availability, keepable-hand, and land-drop metrics through turn 6 under the one-free-mulligan-then-London policy?
+Under the sim-policy-v5 model, how do The Myr Singularity DeckVersion v1.1 and v1.0 compare on the preregistered early mana-development, five-color-availability, keepable-hand, and land-drop metrics through turn 6 under the one-free-mulligan-then-London policy?
 
 ## Compared Versions
 
@@ -42,7 +40,7 @@ This question preregisters metric identities, target turns, and comparison direc
 
 ## Limitations
 
-- Measures the explicit sim-policy-v4 model only: draw/access (Level 1) and simplified mana development (Level 2).
+- Measures the explicit sim-policy-v5 model only: draw/access (Level 1) and simplified mana development (Level 2).
 - No opponent, combat, stack, politics, or Level 3 sequencing.
 - mana_source_semantics.json owns executable Level 2 mana-source behavior. card_semantics.json supplies only the approved project-scoped special semantics/parity for City of Brass, Mana Confluence, and Urza's Saga where canonical produced_mana is null. Urza's Saga bounded deterministic final-chapter removal is modeled; tokens, tutor, exact stack interaction, and unsupported intra-turn Saga behavior are not modeled.
 - Does not prove superior multiplayer gameplay performance.
