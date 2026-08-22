@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the active Sprint 2 simulation-policy-v4 contract layer."""
+"""Validate the active Sprint 2 simulation-policy-v6 contract layer."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from workshop.shared.identity import (  # noqa: E402
 )
 from workshop.shared.simulation_determinism import derive_iteration_seed, derive_run_seed  # noqa: E402
 from workshop.simulation.instance_validation import (  # noqa: E402
+    canonical_question_path,
     validate_card_semantics_registry_parity,
     validate_failure_pattern_taxonomy,
     validate_mana_source_semantics,
@@ -100,13 +101,13 @@ def main():
             docs[name] = load_json(path)
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             errors.append(f"{name} does not strictly parse: {exc}")
-    checks = [("all v5 executable-semantics artifacts exist and strictly parse", errors)]
+    checks = [("all v6 executable-semantics artifacts exist and strictly parse", errors)]
     if errors:
         return report(checks)
     policy, semantics, question, taxonomy = (docs[k] for k in ("policy", "semantics", "question", "taxonomy"))
 
     errors = _required(policy, ("policy_id", "policy_version", "references", "randomness_policy", "deck_fingerprint_policy", "metric_catalog", "level_2_sequencing"), "policy")
-    if policy.get("policy_version") != "sim-policy-v5": errors.append("policy_version must be sim-policy-v5")
+    if policy.get("policy_version") != "sim-policy-v6": errors.append("policy_version must be sim-policy-v6")
     if policy.get("bottoming_rule", {}).get("rule_id") != "deterministic-bottoming-v2": errors.append("policy must use deterministic-bottoming-v2")
     transition = policy.get("mulligan_policy", {}).get("executable_state_transition", {})
     expected_transition = {
@@ -128,7 +129,7 @@ def main():
     }
     if transition != expected_transition:
         errors.append("policy executable mulligan transition is incomplete")
-    checks.append(("policy has versioned v5 executable ownership", errors))
+    checks.append(("policy has versioned v6 executable ownership", errors))
 
     errors = []
     expected_refs = {
@@ -176,7 +177,7 @@ def main():
     checks.append(("metric registry has complete v3 measurement contracts", errors))
 
     errors = []
-    if semantics.get("policy_version") != "sim-policy-v5": errors.append("card semantics must bind sim-policy-v5")
+    if semantics.get("policy_version") != "sim-policy-v6": errors.append("card semantics must bind sim-policy-v6")
     saga = next((e for e in semantics.get("entries", []) if e.get("card_identity", {}).get("name") == "Urza's Saga"), {})
     if saga.get("source", {}).get("oracle_basis") != "Saga land with a Chapter I {T}: Add {C} ability and a Chapter III ability.": errors.append("Urza's Saga must use the approved narrow oracle basis")
     if "upkeep" in saga.get("source", {}).get("oracle_basis", "").casefold(): errors.append("Urza's Saga source basis must not contain upkeep")
@@ -193,6 +194,7 @@ def main():
         question, policy=policy, question_contract=docs["question_contract"], project_id=PROJECT_ID,
         load_reference=lambda path: load_json(REPO_ROOT / path),
         fingerprint_for_version=lambda version: deck_content_fingerprint(version, docs["cards"]["cards"]),
+        question_path=canonical_question_path(question.get("question_id")),
     )
     required = {(m.get("metric_id"), m.get("target_turn")) for m in question.get("required_metrics", [])}
     optional = {(m.get("metric_id"), m.get("target_turn")) for m in question.get("optional_metrics", [])}
@@ -201,10 +203,14 @@ def main():
     checks.append(("question structurally separates required and optional metrics", errors))
 
     errors = []
-    for name, expected_id in (("question_contract", "simulation-question-contract-v3"), ("run_contract", "simulation-run-contract-v4"), ("result_contract", "simulation-result-contract-v4"), ("comparison_contract", "comparison-result-contract-v4"), ("lifecycle_contract", "simulation-question-lifecycle-contract-v1")):
+    for name, expected_id in (("question_contract", "simulation-question-contract-v4"), ("run_contract", "simulation-run-contract-v5"), ("result_contract", "simulation-result-contract-v5"), ("comparison_contract", "comparison-result-contract-v5"), ("lifecycle_contract", "simulation-question-lifecycle-contract-v1")):
         if docs[name].get("contract_id") != expected_id: errors.append(f"{name} has an unexpected contract identity")
+    for name, expected_schema in (("question_contract", "4.0"), ("run_contract", "5.0"), ("result_contract", "5.0"), ("comparison_contract", "5.0"), ("lifecycle_contract", "1.0")):
+        if docs[name].get("schema_version") != expected_schema: errors.append(f"{name} has an unexpected schema version")
     if docs["question_contract"].get("required_fields", {}).get("compared_versions", {}).get("exact_item_count") != 2:
         errors.append("Question contract must require exactly two compared DeckVersions")
+    if docs["question_contract"].get("required_fields", {}).get("comparison_sides", {}).get("required_fields") != ["baseline_run_role", "candidate_run_role"]:
+        errors.append("Question contract must define the exact comparison_sides orientation fields")
     if docs["run_contract"].get("required_fields", {}).get("selected_metrics", {}).get("item_required_fields") != ["metric_id", "target_turn"]:
         errors.append("Run contract must declare exact selected_metrics item fields")
     if "exactly equal source SimulationRun.selected_metrics in the same order" not in docs["result_contract"].get("required_fields", {}).get("metrics", {}).get("description", ""):
@@ -217,7 +223,7 @@ def main():
         errors.append("Lifecycle contract must declare exact reference shape and cardinality")
     if invalidation.get("reason_contract_id") != "simulation-lifecycle-invalidation-v1" or not invalidation.get("allowed_reason_ids"):
         errors.append("Lifecycle contract must freeze a versioned invalidation reason vocabulary")
-    checks.append(("materially changed contracts use v4 identities and lifecycle v1", errors))
+    checks.append(("materially changed contracts use Question v4 and evidence v5 identities with lifecycle v1", errors))
 
     errors = []
     legacy_level2 = (policy.get("sequencing_semantics") or {}).get("level_2_mana_development") or {}

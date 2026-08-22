@@ -1,9 +1,9 @@
 {
-  "schema_version": "4.0",
+  "schema_version": "5.0",
   "artifact_type": "comparison_result_contract",
-  "contract_id": "comparison-result-contract-v4",
+  "contract_id": "comparison-result-contract-v5",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v5",
+  "policy_version": "sim-policy-v6",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a ComparisonResult. A ComparisonResult compares two resolved SimulationResults under computed semantic parity: policy, question, iteration count, configuration, metric definitions, scenario, and RNG strategy. Identity consequences of distinct DeckVersions may differ. It records full side estimates and absolute and optional relative deltas, but no delta confidence interval. It carries no reasoning interpretation and no Product Owner decision. Task 30 defines this contract but creates no ComparisonResult instance.",
   "scope": {
@@ -151,6 +151,8 @@
   },
   "boundary_rules": [
     "The validator resolves both referenced runs and results, then computes semantic parity across policy, question, iteration count, configuration, metric definitions, scenario, and RNG strategy. Self-declared parity booleans are not authoritative.",
+    "The referenced Question comparison_sides mapping is the sole authority for baseline and candidate orientation. A coherent inverse comparison is invalid.",
+    "Comparison validation resolves the Comparison, Run, and Result contracts from authoritative Policy paths and fingerprints and never trusts caller-weakened contracts.",
     "The compared runs must reference distinct DeckVersions, but their deck_content_fingerprints may be equal. When fingerprints are equal, the comparison must not attribute an effect to deck content.",
     "absolute_delta equals candidate_estimate.probability minus baseline_estimate.probability. A delta confidence interval is not defined by this contract.",
     "relative_delta is secondary and valid only when baseline_probability is non-zero.",
@@ -163,6 +165,7 @@
   "validation_expectations": [
     "The comparison JSON parses and has every required field.",
     "Resolved runs and results prove semantic parity across policy, question, iteration count, config, metric definitions, scenario, and RNG strategy.",
+    "baseline and candidate Runs exactly match the roles owned by Question comparison_sides, including each role's bound DeckVersion identity.",
     "baseline and candidate reference distinct DeckVersions with DeckVersion-matching fingerprints; equal fingerprints are structurally valid.",
     "Each metric_delta reports full baseline_estimate and candidate_estimate with the exact registered Bernoulli or categorical delta shape.",
     "relative_delta is present only when baseline_estimate.probability is non-zero.",

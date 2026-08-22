@@ -285,6 +285,12 @@ def render_question(question):
             for version in question["compared_versions"]
         ],
         "",
+        "## Comparison Orientation",
+        "",
+        f"- Baseline run role: `{question['comparison_sides']['baseline_run_role']}`",
+        f"- Candidate run role: `{question['comparison_sides']['candidate_run_role']}`",
+        "- Delta direction: candidate minus baseline",
+        "",
         "## Target Metrics",
         "",
         *[

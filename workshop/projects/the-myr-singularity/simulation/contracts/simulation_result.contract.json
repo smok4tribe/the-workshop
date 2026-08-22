@@ -1,9 +1,9 @@
 {
-  "schema_version": "4.0",
+  "schema_version": "5.0",
   "artifact_type": "simulation_result_contract",
-  "contract_id": "simulation-result-contract-v4",
+  "contract_id": "simulation-result-contract-v5",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v5",
+  "policy_version": "sim-policy-v6",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a SimulationResult. A SimulationResult stores registered metrics, standalone uncertainty where applicable, quantitatively auditable failure patterns, typed evidence claims, and limitations produced by exactly one SimulationRun. It stores no free-form observations, reasoning interpretation, or Product Owner decision, and it never claims gameplay performance, win rate, or generic deck quality. Task 30 defines this contract but creates no SimulationResult instance.",
   "scope": {
@@ -170,6 +170,7 @@
     "Unsupported card behavior may only appear as a limitation and must never contribute to a metric success count.",
     "A SimulationResult never creates or edits a DeckVersion.",
     "metrics are non-empty, unique, and exactly equal the source SimulationRun.selected_metrics ordered set.",
+    "Result validation resolves this contract from the authoritative Policy path and fingerprint and never trusts a caller-weakened contract.",
     "Recording identity and metadata are caller-supplied. The engine must not read a wall clock or generate UUID/random recording IDs; artifact-content identity includes the complete persisted caller recording metadata, while replay equivalence remains semantic/execution-based."
   ],
   "validation_expectations": [
