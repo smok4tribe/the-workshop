@@ -8,6 +8,7 @@ import json
 import subprocess
 import sys
 import unittest
+from collections import UserDict
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -18,12 +19,12 @@ from workshop.shared.identity import (  # noqa: E402
     resolve_card_fact,
 )
 from workshop.shared.simulation_determinism import (  # noqa: E402
-    PCG32, choose_payment, derive_iteration_seed, derive_run_seed,
+    PCG32, choose_payment, condition_is_satisfied, derive_iteration_seed, derive_run_seed,
     observe_source_capability, select_bottom_tokens, select_land,
     select_payable_ramp,
 )
 from workshop.simulation.instance_validation import (  # noqa: E402
-    METRIC_MEASUREMENT_CONTRACTS, canonical_question_path, validate_comparison_result,
+    METRIC_MEASUREMENT_CONTRACTS, build_runtime_state_authority, canonical_question_path, validate_comparison_result,
     evaluate_end_step_state_transitions, project_level_two_land, project_level_two_ramp,
     resolve_activation_profiles, resolve_question_metric_target,
     validate_card_semantics_registry_parity, validate_failure_pattern_taxonomy,
@@ -111,6 +112,17 @@ class SimulationContractV6Tests(unittest.TestCase):
         }
         self.taxonomy = self.documents["workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json"]
         self.taxonomy_ids = {x["category_id"] for x in self.taxonomy["categories"]}
+        self.versions = [
+            self.documents["workshop/projects/the-myr-singularity/versions/v1.0.json"],
+            self.documents["workshop/projects/the-myr-singularity/versions/v1.1.json"],
+        ]
+        self.runtime_authority, authority_errors = build_runtime_state_authority(
+            self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"],
+            policy=self.policy,
+            cards=self.cards["cards"],
+            versions=self.versions,
+        )
+        self.assertEqual([], authority_errors)
 
     def loader(self, path):
         return self.documents[path]
@@ -137,11 +149,7 @@ class SimulationContractV6Tests(unittest.TestCase):
         return validate_comparison_result(comparison or self.comparison, baseline_run=baseline_run or self.baseline_run, candidate_run=candidate_run or self.run, baseline_result=baseline_result or self.baseline_result, candidate_result=candidate_result or self.result, policy=self.policy, question=question or self.question, question_contract=self.contracts["simulation_question.contract.json"], comparison_contract=comparison_contract or self.contracts["comparison_result.contract.json"], run_contract=run_contract or self.contracts["simulation_run.contract.json"], result_contract=result_contract or self.contracts["simulation_result.contract.json"], project_id="the-myr-singularity", taxonomy_ids=self.taxonomy, load_reference=self.loader, fingerprint_for_version=self.fingerprint, lifecycle_mode="creation")
 
     def check_registry(self, registry):
-        versions = [
-            self.documents["workshop/projects/the-myr-singularity/versions/v1.0.json"],
-            self.documents["workshop/projects/the-myr-singularity/versions/v1.1.json"],
-        ]
-        return validate_mana_source_semantics(registry, policy=self.policy, cards=self.cards["cards"], versions=versions)
+        return validate_mana_source_semantics(registry, policy=self.policy, cards=self.cards["cards"], versions=self.versions)
 
     def check_lifecycle(self, lifecycle):
         return validate_simulation_question_lifecycle(
@@ -222,6 +230,7 @@ class SimulationContractV6Tests(unittest.TestCase):
                     source_states=[{"source_id": source_id, "oracle_id": records[card_name]["oracle_id"], "online": True, "tapped": False}, *tower_states],
                     candidate_source_id=source_id,
                     condition_state=shared,
+                    runtime_authority=self.runtime_authority,
                 )
                 self.assertEqual(set("WUBRG"), set(outcome["source_capability"]))
                 self.assertTrue(outcome["five_color_available"])
@@ -234,6 +243,7 @@ class SimulationContractV6Tests(unittest.TestCase):
             source_records=source_records,
             source_states=[{"source_id": "tower", "oracle_id": records["Command Tower"]["oracle_id"], "online": True, "tapped": True}],
             candidate_source_id="tower", condition_state=shared,
+            runtime_authority=self.runtime_authority,
         )
         self.assertEqual(set("WUBRG"), set(tower["source_capability"]))
         self.assertTrue(tower["survives"])
@@ -256,15 +266,16 @@ class SimulationContractV6Tests(unittest.TestCase):
         for offset in (2, 3):
             with self.subTest(saga_offset=offset):
                 removed_saga = observe_source_capability(
-                    source_records=source_records, source_states=[saga], candidate_source_id="saga",
-                    condition_state={"controller_turn_offset": offset},
+                    source_records=source_records,
+                    source_states=[{**saga, "condition_state": {"controller_turn_offset": offset}}],
+                    candidate_source_id="saga",
                 )
                 self.assertEqual({
                     "survives": False, "online": False, "source_capability": [], "five_color_available": False,
                     "external_base_capacity": 0, "residual_external_payment_capacity": 0,
                     "candidate_spendable_output_capabilities": [],
                 }, removed_saga)
-        with self.assertRaisesRegex(ValueError, "derives external generic payment internally"):
+        with self.assertRaisesRegex(ValueError, "unregistered keys: generic_payment_available_from_other_sources"):
             observe_source_capability(
                 source_records=source_records,
                 source_states=[{"source_id": "cataracts", "oracle_id": records["Cascading Cataracts"]["oracle_id"], "online": True, "tapped": False}],
@@ -615,9 +626,15 @@ class SimulationContractV6Tests(unittest.TestCase):
         records = {record["oracle_id"]: record}
         source = {"source_id": "tower", "oracle_id": record["oracle_id"], "online": True, "tapped": False}
         shared = {"commander_colors": ["W", "U", "B", "R", "G"]}
-        absent = observe_source_capability(source_records=records, source_states=[source], candidate_source_id="tower", condition_state=shared)
-        explicit_false = observe_source_capability(source_records=records, source_states=[{**source, "removed": False}], candidate_source_id="tower", condition_state=shared)
-        explicit_true = observe_source_capability(source_records=records, source_states=[{**source, "removed": True}], candidate_source_id="tower", condition_state=shared)
+        kwargs = {
+            "source_records": records,
+            "candidate_source_id": "tower",
+            "condition_state": shared,
+            "runtime_authority": self.runtime_authority,
+        }
+        absent = observe_source_capability(source_states=[source], **kwargs)
+        explicit_false = observe_source_capability(source_states=[{**source, "removed": False}], **kwargs)
+        explicit_true = observe_source_capability(source_states=[{**source, "removed": True}], **kwargs)
         self.assertEqual(absent, explicit_false)
         self.assertTrue(absent["survives"])
         self.assertEqual([], explicit_true["source_capability"])
@@ -625,13 +642,13 @@ class SimulationContractV6Tests(unittest.TestCase):
         for invalid in ("yes", 1, 0, 1.0, None, [], {}):
             with self.subTest(removed=invalid):
                 with self.assertRaisesRegex(ValueError, "removed state must be a boolean"):
-                    observe_source_capability(source_records=records, source_states=[{**source, "removed": invalid}], candidate_source_id="tower", condition_state=shared)
+                    observe_source_capability(source_states=[{**source, "removed": invalid}], **kwargs)
         for field in ("online", "tapped"):
             for invalid in ("yes", 1, 0, 1.0, None, [], {}):
                 with self.subTest(field=field, value=invalid):
                     malformed = {**source, field: invalid}
                     with self.assertRaisesRegex(ValueError, "requires explicit online and tapped state"):
-                        observe_source_capability(source_records=records, source_states=[malformed], candidate_source_id="tower", condition_state=shared)
+                        observe_source_capability(source_states=[malformed], **kwargs)
 
     def test_lifecycle_contract_authority_cannot_be_caller_weakened(self):
         weakened = copy.deepcopy(self.contracts["simulation_question_lifecycle.contract.json"])
@@ -1211,19 +1228,332 @@ class SimulationContractV6Tests(unittest.TestCase):
                 mutate(changed)
                 self.assertTrue(self.check_registry(changed))
 
-    def test_tron_profile_resolution_is_priority_ordered(self):
+    def test_tron_profiles_are_derived_only_from_canonical_controlled_land_identities(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        records = {record["card_name"]: record for record in registry["records"]}
+        mine = records["Urza's Mine"]["oracle_id"]
+        plant = records["Urza's Power Plant"]["oracle_id"]
+        tower = records["Urza's Tower"]["oracle_id"]
+        island = records["Island"]["oracle_id"]
+        plains = records["Plains"]["oracle_id"]
+
+        def project(card_name, controlled):
+            result, errors = project_level_two_land(
+                records[card_name],
+                condition_state={"controlled_land_oracle_ids": controlled},
+                current_turn=3,
+                horizon_turn=6,
+                runtime_authority=self.runtime_authority,
+            )
+            self.assertEqual([], errors)
+            return result["mana_units"]
+
+        self.assertEqual(1, project("Urza's Tower", []))
+        self.assertEqual(1, project("Urza's Tower", [mine]))
+
+        tower_group = records["Urza's Tower"]["activation_groups"][0]
+        selected, errors = resolve_activation_profiles(
+            tower_group,
+            {"controlled_land_oracle_ids": [mine, tower]},
+            runtime_authority=self.runtime_authority,
+        )
+        self.assertEqual([], errors); self.assertEqual("base", selected[0]["profile_id"])
+
+        complete = [mine, plant, tower]
+        expected_units = {"Urza's Mine": 2, "Urza's Power Plant": 2, "Urza's Tower": 3}
+        for card_name, mana_units in expected_units.items():
+            with self.subTest(complete_current=card_name):
+                group = records[card_name]["activation_groups"][0]
+                selected, errors = resolve_activation_profiles(
+                    group,
+                    {"controlled_land_oracle_ids": complete},
+                    runtime_authority=self.runtime_authority,
+                )
+                self.assertEqual([], errors); self.assertEqual(mana_units, selected[0]["mana_units"])
+
+        self.assertEqual(3, project("Urza's Tower", [mine, plant]))
+        self.assertEqual(2, project("Urza's Power Plant", [mine, tower]))
+        self.assertEqual(1, project("Urza's Tower", [island, plains]))
+        self.assertEqual(3, project("Urza's Tower", [mine, plant]))
+        self.assertEqual(3, project("Urza's Tower", [plant, mine]))
+        self.assertEqual(3, project("Urza's Tower", [mine, plant, tower]))
+        self.assertEqual(3, project("Urza's Tower", [mine, mine, plant]))
+
+        reversed_group = copy.deepcopy(tower_group); reversed_group["profiles"].reverse()
+        selected, errors = resolve_activation_profiles(
+            reversed_group,
+            {"controlled_land_oracle_ids": [mine, plant], "candidate_land_oracle_id": tower},
+            runtime_authority=self.runtime_authority,
+        )
+        self.assertEqual([], errors); self.assertEqual("enhanced", selected[0]["profile_id"])
+        tied = copy.deepcopy(tower_group); tied["profiles"][1]["priority"] = 100
+        _, errors = resolve_activation_profiles(
+            tied,
+            {"controlled_land_oracle_ids": [mine, plant], "candidate_land_oracle_id": tower},
+            runtime_authority=self.runtime_authority,
+        )
+        self.assertIn("highest-priority activation group has tied matching profiles", errors)
+
+    def test_legacy_tron_boolean_is_always_rejected(self):
         registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
         group = next(record for record in registry["records"] if record["card_name"] == "Urza's Tower")["activation_groups"][0]
-        selected, errors = resolve_activation_profiles(group, {"complete_tron_set_controlled": True})
-        self.assertEqual([], errors); self.assertEqual("enhanced", selected[0]["profile_id"])
-        selected, errors = resolve_activation_profiles(group, {"complete_tron_set_controlled": False})
-        self.assertEqual([], errors); self.assertEqual("base", selected[0]["profile_id"])
-        reversed_group = copy.deepcopy(group); reversed_group["profiles"].reverse()
-        selected, errors = resolve_activation_profiles(reversed_group, {"complete_tron_set_controlled": True})
-        self.assertEqual([], errors); self.assertEqual("enhanced", selected[0]["profile_id"])
-        tied = copy.deepcopy(group); tied["profiles"][1]["priority"] = 100
-        _, errors = resolve_activation_profiles(tied, {"complete_tron_set_controlled": True})
-        self.assertIn("highest-priority activation group has tied matching profiles", errors)
+        for value in (True, False, None, 1, "true"):
+            with self.subTest(value=value):
+                selected, errors = resolve_activation_profiles(
+                    group,
+                    {"complete_tron_set_controlled": value},
+                    runtime_authority=self.runtime_authority,
+                )
+                self.assertEqual([], selected)
+                self.assertIn("activation condition state complete_tron_set_controlled is forbidden", errors)
+
+    def test_condition_state_containers_fail_closed_at_every_public_boundary(self):
+        class DictSubclass(dict):
+            pass
+
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        records = {record["card_name"]: record for record in registry["records"]}
+        tower = records["Urza's Tower"]
+        glimmervoid = records["Glimmervoid"]
+        lens = records["Prismatic Lens"]
+        tower_condition = tower["activation_groups"][0]["profiles"][0]["conditions"][0]
+        source_records = {records["Command Tower"]["oracle_id"]: records["Command Tower"]}
+        source = {
+            "source_id": "tower",
+            "oracle_id": records["Command Tower"]["oracle_id"],
+            "online": True,
+            "tapped": False,
+        }
+        invalid_states = (
+            [("commander_colors", ["W", "U", "B", "R", "G"])],
+            (("commander_colors", ["W", "U", "B", "R", "G"]),),
+            "condition-state",
+            42,
+            [],
+            [()],
+            object(),
+            DictSubclass(),
+            UserDict(),
+            {"unknown_key": 1},
+        )
+        for invalid in invalid_states:
+            with self.subTest(boundary="condition_is_satisfied", value=repr(invalid)):
+                with self.assertRaises(ValueError):
+                    condition_is_satisfied(tower_condition, invalid, runtime_authority=self.runtime_authority)
+            with self.subTest(boundary="resolve_activation_profiles", value=repr(invalid)):
+                selected, errors = resolve_activation_profiles(
+                    tower["activation_groups"][0], invalid, runtime_authority=self.runtime_authority,
+                )
+                self.assertEqual([], selected); self.assertTrue(errors)
+            with self.subTest(boundary="evaluate_end_step_state_transitions", value=repr(invalid)):
+                result, errors = evaluate_end_step_state_transitions(glimmervoid, post_development_state=invalid)
+                self.assertIsNone(result); self.assertTrue(errors)
+            with self.subTest(boundary="project_level_two_land", value=repr(invalid)):
+                result, errors = project_level_two_land(
+                    tower,
+                    condition_state=invalid,
+                    current_turn=3,
+                    horizon_turn=6,
+                    runtime_authority=self.runtime_authority,
+                )
+                self.assertIsNone(result); self.assertTrue(errors)
+            with self.subTest(boundary="project_level_two_ramp", value=repr(invalid)):
+                result, errors = project_level_two_ramp(
+                    lens, condition_state=invalid, available_generic_mana=2, available_colors=[],
+                )
+                self.assertIsNone(result); self.assertTrue(errors)
+            with self.subTest(boundary="observe_source_capability_shared", value=repr(invalid)):
+                with self.assertRaises(ValueError):
+                    observe_source_capability(
+                        source_records=source_records,
+                        source_states=[source],
+                        candidate_source_id="tower",
+                        condition_state=invalid,
+                        runtime_authority=self.runtime_authority,
+                    )
+            with self.subTest(boundary="observe_source_capability_per_source", value=repr(invalid)):
+                with self.assertRaises(ValueError):
+                    observe_source_capability(
+                        source_records=source_records,
+                        source_states=[{**source, "condition_state": invalid}],
+                        candidate_source_id="tower",
+                        condition_state={"commander_colors": ["W", "U", "B", "R", "G"]},
+                        runtime_authority=self.runtime_authority,
+                    )
+
+    def test_condition_state_values_are_strict_and_canonically_bound(self):
+        records = {
+            record["card_name"]: record
+            for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]
+        }
+        tron_condition = records["Urza's Tower"]["activation_groups"][0]["profiles"][0]["conditions"][0]
+        commander_condition = records["Command Tower"]["activation_groups"][0]["profiles"][0]["conditions"][0]
+        payment_condition = records["Prismatic Lens"]["activation_groups"][0]["profiles"][1]["conditions"][0]
+        saga_condition = records["Urza's Saga"]["activation_groups"][0]["profiles"][0]["conditions"][0]
+        artifact_condition = records["Glimmervoid"]["state_transitions"][0]["condition"]
+        mine = records["Urza's Mine"]["oracle_id"]
+        plant = records["Urza's Power Plant"]["oracle_id"]
+        nonland = records["Sol Ring"]["oracle_id"]
+        unknown = "00000000-0000-0000-0000-000000000000"
+
+        for invalid in ("not-an-array", (mine,), [1], [""], [unknown], [nonland], None):
+            with self.subTest(key="controlled_land_oracle_ids", value=invalid):
+                with self.assertRaises(ValueError):
+                    condition_is_satisfied(
+                        tron_condition,
+                        {"controlled_land_oracle_ids": invalid},
+                        runtime_authority=self.runtime_authority,
+                    )
+        for invalid in (1, "", unknown, nonland, None):
+            with self.subTest(key="candidate_land_oracle_id", value=invalid):
+                with self.assertRaises(ValueError):
+                    condition_is_satisfied(
+                        tron_condition,
+                        {"controlled_land_oracle_ids": [mine, plant], "candidate_land_oracle_id": invalid},
+                        runtime_authority=self.runtime_authority,
+                    )
+        for invalid in (
+            ("W", "U", "B", "R", "G"), "WUBRG", {"W", "U", "B", "R", "G"},
+            [1], ["W", "W", "U", "B", "R", "G"], ["C"], ["X"], ["W"],
+        ):
+            with self.subTest(key="commander_colors", value=invalid):
+                with self.assertRaises(ValueError):
+                    condition_is_satisfied(
+                        commander_condition,
+                        {"commander_colors": invalid},
+                        runtime_authority=self.runtime_authority,
+                    )
+        for condition, key in (
+            (payment_condition, "generic_payment_available_from_other_sources"),
+            (saga_condition, "controller_turn_offset"),
+            (artifact_condition, "artifact_controlled_count"),
+        ):
+            for invalid in (True, -1, 1.5, "1", [], {}, None):
+                with self.subTest(key=key, value=invalid):
+                    with self.assertRaises(ValueError):
+                        condition_is_satisfied(condition, {key: invalid})
+
+    def test_runtime_state_authority_requires_validated_project_inputs(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        authority, errors = build_runtime_state_authority(
+            registry, policy=self.policy, cards=self.cards["cards"], versions=self.versions,
+        )
+        self.assertEqual([], errors)
+        self.assertEqual(self.runtime_authority, authority)
+
+        changed_registry = copy.deepcopy(registry)
+        next(record for record in changed_registry["records"] if record["card_name"] == "Sol Ring")["source_kind"] = "land"
+        authority, errors = build_runtime_state_authority(
+            changed_registry, policy=self.policy, cards=self.cards["cards"], versions=self.versions,
+        )
+        self.assertIsNone(authority); self.assertTrue(errors)
+
+        changed_cards = copy.deepcopy(self.cards["cards"])
+        next(card for card in changed_cards if card["name"] == "Island")["type_line"] = "Artifact"
+        authority, errors = build_runtime_state_authority(
+            registry, policy=self.policy, cards=changed_cards, versions=self.versions,
+        )
+        self.assertIsNone(authority); self.assertTrue(errors)
+
+    def test_helper_owned_state_and_source_state_shape_cannot_be_injected(self):
+        records = {
+            record["card_name"]: record
+            for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]
+        }
+        tower_id = records["Urza's Tower"]["oracle_id"]
+        projected, errors = project_level_two_land(
+            records["Urza's Tower"],
+            condition_state={"candidate_land_oracle_id": tower_id},
+            current_turn=3,
+            horizon_turn=6,
+            runtime_authority=self.runtime_authority,
+        )
+        self.assertIsNone(projected); self.assertTrue(errors)
+
+        source_records = {records["Island"]["oracle_id"]: records["Island"]}
+        source = {"source_id": "island", "oracle_id": records["Island"]["oracle_id"], "online": True, "tapped": False}
+        observed = observe_source_capability(
+            source_records=source_records,
+            source_states=[source],
+            candidate_source_id="island",
+            condition_state=None,
+        )
+        self.assertTrue(observed["survives"])
+        for malformed_source in (
+            {**source, "unknown": True},
+            {key: value for key, value in source.items() if key != "online"},
+            {**source, "condition_state": None},
+        ):
+            with self.subTest(source=malformed_source):
+                with self.assertRaises(ValueError):
+                    observe_source_capability(
+                        source_records=source_records,
+                        source_states=[malformed_source],
+                        candidate_source_id="island",
+                    )
+
+        tower_group = records["Urza's Tower"]["activation_groups"][0]
+        selected, errors = resolve_activation_profiles(
+            tower_group,
+            {"controlled_land_oracle_ids": []},
+        )
+        self.assertEqual([], selected); self.assertTrue(errors)
+
+    def test_malformed_state_cannot_change_registered_runtime_results(self):
+        records = {
+            record["card_name"]: record
+            for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]
+        }
+        pair_state = [("commander_colors", ["W", "U", "B", "R", "G"])]
+        command_tower = records["Command Tower"]
+        source = {"source_id": "tower", "oracle_id": command_tower["oracle_id"], "online": True, "tapped": False}
+        with self.assertRaises(ValueError):
+            observe_source_capability(
+                source_records={command_tower["oracle_id"]: command_tower},
+                source_states=[source],
+                candidate_source_id="tower",
+                condition_state=pair_state,
+                runtime_authority=self.runtime_authority,
+            )
+
+        selected, errors = resolve_activation_profiles(
+            records["Urza's Tower"]["activation_groups"][0],
+            {"complete_tron_set_controlled": True},
+            runtime_authority=self.runtime_authority,
+        )
+        self.assertEqual([], selected); self.assertTrue(errors)
+
+        transition, errors = evaluate_end_step_state_transitions(
+            records["Glimmervoid"],
+            post_development_state=[("artifact_controlled_count", 1)],
+        )
+        self.assertIsNone(transition); self.assertTrue(errors)
+
+        projected, errors = project_level_two_land(
+            records["Cascading Cataracts"],
+            condition_state=[("generic_payment_available_from_other_sources", 5)],
+            current_turn=2,
+            horizon_turn=6,
+            runtime_authority=self.runtime_authority,
+        )
+        self.assertIsNone(projected); self.assertTrue(errors)
+
+        projected, errors = project_level_two_ramp(
+            records["Prismatic Lens"],
+            condition_state={"generic_payment_available_from_other_sources": 99},
+            available_generic_mana=2,
+            available_colors=[],
+        )
+        self.assertIsNone(projected); self.assertTrue(errors)
+
+        saga = {"source_id": "saga", "oracle_id": records["Urza's Saga"]["oracle_id"], "online": True, "tapped": False}
+        with self.assertRaises(ValueError):
+            observe_source_capability(
+                source_records={records["Urza's Saga"]["oracle_id"]: records["Urza's Saga"]},
+                source_states=[saga],
+                candidate_source_id="saga",
+                condition_state={"controller_turn_offset": 0},
+            )
 
     def test_failure_patterns_require_exact_emitting_set_and_question_target(self):
         result = copy.deepcopy(self.result); result["failure_patterns"] = []
@@ -1328,18 +1658,18 @@ class SimulationContractV6Tests(unittest.TestCase):
         registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
         records = {record["card_name"]: record for record in registry["records"]}
         state = {"generic_payment_available_from_other_sources": 0, "controller_turn_offset": 0}
-        cataracts, errors = project_level_two_land(records["Cascading Cataracts"], condition_state=state, current_turn=1, horizon_turn=6)
+        cataracts, errors = project_level_two_land(records["Cascading Cataracts"], condition_state=state, current_turn=1, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual([], cataracts["colors"]); self.assertEqual(1, cataracts["mana_units"])
-        gardens, errors = project_level_two_land(records["The Mycosynth Gardens"], condition_state=state, current_turn=1, horizon_turn=6)
+        gardens, errors = project_level_two_land(records["The Mycosynth Gardens"], condition_state=state, current_turn=1, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual([], gardens["colors"])
-        lens, errors = project_level_two_ramp(records["Prismatic Lens"], condition_state=state, available_generic_mana=2, available_colors=[])
+        lens, errors = project_level_two_ramp(records["Prismatic Lens"], condition_state={}, available_generic_mana=2, available_colors=[])
         self.assertEqual([], errors); self.assertTrue(lens["payable"]); self.assertEqual(1, lens["output_units"])
         state["generic_payment_available_from_other_sources"] = 5
-        cataracts, errors = project_level_two_land(records["Cascading Cataracts"], condition_state=state, current_turn=1, horizon_turn=6)
+        cataracts, errors = project_level_two_land(records["Cascading Cataracts"], condition_state=state, current_turn=1, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual(set("WUBRG"), set(cataracts["colors"])); self.assertEqual(5, cataracts["mana_units"])
-        unsupported, errors = project_level_two_ramp(records["Moonsnare Prototype"], condition_state=state, available_generic_mana=9, available_colors=[])
+        unsupported, errors = project_level_two_ramp(records["Moonsnare Prototype"], condition_state={}, available_generic_mana=9, available_colors=[])
         self.assertEqual([], errors); self.assertFalse(unsupported["payable"]); self.assertEqual(0, unsupported["output_units"])
-        saga, errors = project_level_two_land(records["Urza's Saga"], condition_state={"controller_turn_offset": 2}, current_turn=3, horizon_turn=6)
+        saga, errors = project_level_two_land(records["Urza's Saga"], condition_state={"controller_turn_offset": 2}, current_turn=3, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual([], saga["colors"]); self.assertFalse(saga["permanent"]); self.assertEqual(1, saga["remaining_availability"])
 
     def test_support_boundary_parity_and_recording_context_are_closed(self):
@@ -1403,26 +1733,26 @@ class SimulationContractV6Tests(unittest.TestCase):
 
     def test_unsupported_only_exotic_orchard_is_a_legal_zero_output_land(self):
         records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
-        projected, errors = project_level_two_land(records["Exotic Orchard"], condition_state={}, current_turn=2, horizon_turn=6, ordinal=4)
+        projected, errors = project_level_two_land(records["Exotic Orchard"], condition_state={}, current_turn=2, horizon_turn=6, runtime_authority=self.runtime_authority, ordinal=4)
         self.assertEqual([], errors)
         self.assertEqual({"colors": [], "five_color_source": False, "permanent": True, "remaining_availability": 5, "mana_units": 0, "oracle_id": records["Exotic Orchard"]["oracle_id"], "ordinal": 4}, projected)
 
     def test_cataracts_selector_uses_gross_legal_output_only_when_prepaid(self):
         records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
-        base, errors = project_level_two_land(records["Cascading Cataracts"], condition_state={"generic_payment_available_from_other_sources": 0}, current_turn=1, horizon_turn=6)
+        base, errors = project_level_two_land(records["Cascading Cataracts"], condition_state={"generic_payment_available_from_other_sources": 0}, current_turn=1, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual([], base["colors"]); self.assertEqual(1, base["mana_units"])
-        prepaid, errors = project_level_two_land(records["Cascading Cataracts"], condition_state={"generic_payment_available_from_other_sources": 5}, current_turn=1, horizon_turn=6)
+        prepaid, errors = project_level_two_land(records["Cascading Cataracts"], condition_state={"generic_payment_available_from_other_sources": 5}, current_turn=1, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual(set("WUBRG"), set(prepaid["colors"])); self.assertEqual(5, prepaid["mana_units"])
 
     def test_land_selector_colors_are_wubrg_only_and_drive_selection(self):
         records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
-        island, errors = project_level_two_land(records["Island"], condition_state={"commander_colors": ["U"]}, current_turn=2, horizon_turn=6)
+        island, errors = project_level_two_land(records["Island"], condition_state={}, current_turn=2, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual(["U"], island["colors"])
-        colorless, errors = project_level_two_land(records["Cascading Cataracts"], condition_state={"generic_payment_available_from_other_sources": 0}, current_turn=2, horizon_turn=6)
+        colorless, errors = project_level_two_land(records["Cascading Cataracts"], condition_state={"generic_payment_available_from_other_sources": 0}, current_turn=2, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual([], colorless["colors"])
         self.assertEqual(0, len(set(colorless["colors"]) - {"U"}))
         self.assertEqual(island["oracle_id"], select_land([island, colorless], {"U"}, 6, 2)["oracle_id"])
-        plains, errors = project_level_two_land(records["Plains"], condition_state={"commander_colors": ["U"]}, current_turn=2, horizon_turn=6)
+        plains, errors = project_level_two_land(records["Plains"], condition_state={}, current_turn=2, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual(["W"], plains["colors"])
         self.assertEqual(plains["oracle_id"], select_land([colorless, plains], {"U"}, 6, 2)["oracle_id"])
 
@@ -1430,29 +1760,29 @@ class SimulationContractV6Tests(unittest.TestCase):
         records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
         mine = records["Urza's Mine"]["oracle_id"]
         plant = records["Urza's Power Plant"]["oracle_id"]
-        first, errors = project_level_two_land(records["Urza's Tower"], condition_state={"controlled_land_oracle_ids": []}, current_turn=3, horizon_turn=6)
+        first, errors = project_level_two_land(records["Urza's Tower"], condition_state={"controlled_land_oracle_ids": []}, current_turn=3, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual(1, first["mana_units"])
-        tower, errors = project_level_two_land(records["Urza's Tower"], condition_state={"controlled_land_oracle_ids": [mine, plant]}, current_turn=3, horizon_turn=6)
+        tower, errors = project_level_two_land(records["Urza's Tower"], condition_state={"controlled_land_oracle_ids": [mine, plant]}, current_turn=3, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual(3, tower["mana_units"])
-        incomplete, errors = project_level_two_land(records["Urza's Tower"], condition_state={"controlled_land_oracle_ids": [mine]}, current_turn=3, horizon_turn=6)
+        incomplete, errors = project_level_two_land(records["Urza's Tower"], condition_state={"controlled_land_oracle_ids": [mine]}, current_turn=3, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual(1, incomplete["mana_units"])
         reversed_profiles = copy.deepcopy(records["Urza's Tower"])
         reversed_profiles["activation_groups"][0]["profiles"].reverse()
-        unchanged, errors = project_level_two_land(reversed_profiles, condition_state={"controlled_land_oracle_ids": [mine, plant]}, current_turn=3, horizon_turn=6)
+        unchanged, errors = project_level_two_land(reversed_profiles, condition_state={"controlled_land_oracle_ids": [mine, plant]}, current_turn=3, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual(3, unchanged["mana_units"])
-        lens_two, errors = project_level_two_ramp(records["Prismatic Lens"], condition_state={"generic_payment_available_from_other_sources": 99}, available_generic_mana=2, available_colors=[])
+        lens_two, errors = project_level_two_ramp(records["Prismatic Lens"], condition_state={}, available_generic_mana=2, available_colors=[])
         self.assertEqual([], errors); self.assertTrue(lens_two["payable"]); self.assertEqual(1, lens_two["color_flexibility"])
-        lens_three, errors = project_level_two_ramp(records["Prismatic Lens"], condition_state={"generic_payment_available_from_other_sources": 0}, available_generic_mana=3, available_colors=[])
+        lens_three, errors = project_level_two_ramp(records["Prismatic Lens"], condition_state={}, available_generic_mana=3, available_colors=[])
         self.assertEqual([], errors); self.assertTrue(lens_three["payable"]); self.assertEqual(5, lens_three["color_flexibility"])
-        new_saga, errors = project_level_two_land(records["Urza's Saga"], condition_state={}, current_turn=2, horizon_turn=6)
+        new_saga, errors = project_level_two_land(records["Urza's Saga"], condition_state={}, current_turn=2, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertEqual(3, new_saga["remaining_availability"])
 
     def test_glimmervoid_selection_and_end_step_transition_are_distinct(self):
         records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
         glimmervoid = records["Glimmervoid"]
-        absent, errors = project_level_two_land(glimmervoid, condition_state={"artifact_controlled_count": 0}, current_turn=2, horizon_turn=6)
+        absent, errors = project_level_two_land(glimmervoid, condition_state={"artifact_controlled_count": 0}, current_turn=2, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertFalse(absent["permanent"]); self.assertEqual(1, absent["remaining_availability"])
-        present, errors = project_level_two_land(glimmervoid, condition_state={"artifact_controlled_count": 1}, current_turn=2, horizon_turn=6)
+        present, errors = project_level_two_land(glimmervoid, condition_state={"artifact_controlled_count": 1}, current_turn=2, horizon_turn=6, runtime_authority=self.runtime_authority)
         self.assertEqual([], errors); self.assertTrue(present["permanent"]); self.assertEqual(5, present["remaining_availability"])
         end_step, errors = evaluate_end_step_state_transitions(glimmervoid, post_development_state={"artifact_controlled_count": 1})
         self.assertEqual([], errors); self.assertTrue(end_step["remains_available"])

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from dataclasses import dataclass
 
 
 MASK64 = (1 << 64) - 1
@@ -146,9 +147,110 @@ def _is_integer(value):
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def condition_is_satisfied(condition, state):
+@dataclass(frozen=True)
+class RuntimeStateAuthority:
+    """Trusted, immutable identity domains for runtime condition state."""
+
+    canonical_land_oracle_ids: frozenset[str]
+    canonical_commander_colors: frozenset[str]
+
+    def __post_init__(self):
+        if type(self.canonical_land_oracle_ids) is not frozenset or not self.canonical_land_oracle_ids or any(
+            type(oracle_id) is not str or not oracle_id for oracle_id in self.canonical_land_oracle_ids
+        ):
+            raise ValueError("runtime state authority requires canonical registered-land oracle_ids")
+        if type(self.canonical_commander_colors) is not frozenset or any(
+            type(color) is not str or color not in {"W", "U", "B", "R", "G"}
+            for color in self.canonical_commander_colors
+        ):
+            raise ValueError("runtime state authority requires canonical Commander colors")
+
+
+_CONDITION_STATE_KEYS = {
+    "generic_payment_available_from_other_sources": frozenset({"generic_payment_available_from_other_sources"}),
+    "bounded_controller_turn_window": frozenset({"controller_turn_offset"}),
+    "artifact_controlled": frozenset({"artifact_controlled_count"}),
+    "complete_tron_set_controlled": frozenset({"controlled_land_oracle_ids", "candidate_land_oracle_id"}),
+    "commander_color_identity": frozenset({"commander_colors"}),
+}
+_IDENTITY_STATE_KEYS = frozenset({"controlled_land_oracle_ids", "candidate_land_oracle_id", "commander_colors"})
+
+
+def _condition_state_keys(condition):
+    if not isinstance(condition, dict):
+        return frozenset()
+    return _CONDITION_STATE_KEYS.get(condition.get("condition_id"), frozenset())
+
+
+def _conditions_state_keys(conditions):
+    return frozenset(
+        key
+        for condition in conditions
+        for key in _condition_state_keys(condition)
+    )
+
+
+def _condition_state_for_conditions(state, conditions):
+    """Project already-validated broad state to registered condition-owned keys."""
+    allowed = _conditions_state_keys(conditions)
+    return {key: state[key] for key in allowed if key in state}
+
+
+def _validate_condition_state(state, *, allowed_keys, runtime_authority=None, label="condition state"):
+    """Validate one exact, closed runtime-state mapping without coercion."""
+    if type(state) is not dict:
+        raise ValueError(f"{label} must be an exact object")
+    if "complete_tron_set_controlled" in state:
+        raise ValueError(f"{label} complete_tron_set_controlled is forbidden")
+    extras = sorted(set(state) - set(allowed_keys))
+    if extras:
+        raise ValueError(f"{label} has unregistered keys: {', '.join(extras)}")
+    if set(state) & _IDENTITY_STATE_KEYS and type(runtime_authority) is not RuntimeStateAuthority:
+        raise ValueError(f"{label} requires trusted runtime state authority")
+
+    for key in ("generic_payment_available_from_other_sources", "controller_turn_offset", "artifact_controlled_count"):
+        if key in state and (type(state[key]) is not int or state[key] < 0):
+            raise ValueError(f"{label} {key} must be a non-negative integer")
+
+    if "controlled_land_oracle_ids" in state:
+        controlled = state["controlled_land_oracle_ids"]
+        if type(controlled) is not list:
+            raise ValueError(f"{label} controlled_land_oracle_ids must be an array")
+        if any(type(oracle_id) is not str or not oracle_id for oracle_id in controlled):
+            raise ValueError(f"{label} controlled_land_oracle_ids must contain non-empty strings")
+        if any(oracle_id not in runtime_authority.canonical_land_oracle_ids for oracle_id in controlled):
+            raise ValueError(f"{label} controlled_land_oracle_ids must contain only canonical registered-land identities")
+
+    if "candidate_land_oracle_id" in state:
+        candidate = state["candidate_land_oracle_id"]
+        if type(candidate) is not str or not candidate:
+            raise ValueError(f"{label} candidate_land_oracle_id must be a non-empty string")
+        if candidate not in runtime_authority.canonical_land_oracle_ids:
+            raise ValueError(f"{label} candidate_land_oracle_id must be a canonical registered-land identity")
+
+    if "commander_colors" in state:
+        colors = state["commander_colors"]
+        if type(colors) is not list:
+            raise ValueError(f"{label} commander_colors must be an array")
+        if any(type(color) is not str or color not in {"W", "U", "B", "R", "G"} for color in colors):
+            raise ValueError(f"{label} commander_colors must contain only registered colors")
+        if len(colors) != len(set(colors)):
+            raise ValueError(f"{label} commander_colors must not contain duplicates")
+        if set(colors) != set(runtime_authority.canonical_commander_colors):
+            raise ValueError(f"{label} commander_colors must equal the canonical Commander identity")
+    return state
+
+
+def condition_is_satisfied(condition, state, *, runtime_authority=None):
     """Resolve one registered mana-source condition against observation state."""
-    if not isinstance(condition, dict) or not isinstance(state, dict):
+    allowed_keys = _condition_state_keys(condition)
+    _validate_condition_state(
+        state,
+        allowed_keys=allowed_keys,
+        runtime_authority=runtime_authority,
+        label="condition state",
+    )
+    if not isinstance(condition, dict):
         return False
     condition_id, params = condition.get("condition_id"), condition.get("params") or {}
     if condition_id == "generic_payment_available_from_other_sources":
@@ -161,27 +263,46 @@ def condition_is_satisfied(condition, state):
         count = state.get("artifact_controlled_count", 0)
         return _is_integer(count) and count >= params.get("minimum_count")
     if condition_id == "complete_tron_set_controlled":
-        controlled = state.get("controlled_land_oracle_ids")
-        candidate = state.get("candidate_land_oracle_id")
-        if isinstance(controlled, list) and isinstance(candidate, str):
-            return set(params.get("oracle_ids", [])) <= set(controlled) | {candidate}
-        return state.get("complete_tron_set_controlled") is True
+        controlled = set(state.get("controlled_land_oracle_ids", []))
+        candidate = {state["candidate_land_oracle_id"]} if "candidate_land_oracle_id" in state else set()
+        return set(params.get("oracle_ids", [])) <= controlled | candidate
     if condition_id == "commander_color_identity":
         colors = state.get("commander_colors")
         return isinstance(colors, list) and set(colors) == set(params.get("colors", []))
     return False
 
 
-def resolve_activation_profiles(group, condition_truth):
+def resolve_activation_profiles(group, condition_truth, *, runtime_authority=None):
     """Resolve registered activation profiles using structured predicates only."""
     profiles = group.get("profiles") if isinstance(group, dict) else None
     if not isinstance(profiles, list):
         return [], ["activation group profiles must be an array"]
+    conditions = [
+        condition
+        for profile in profiles if isinstance(profile, dict)
+        for condition in (profile.get("conditions") or [])
+    ]
+    try:
+        _validate_condition_state(
+            condition_truth,
+            allowed_keys=_conditions_state_keys(conditions),
+            runtime_authority=runtime_authority,
+            label="activation condition state",
+        )
+    except ValueError as error:
+        return [], [str(error)]
     legal = []
     for profile in profiles:
         if not isinstance(profile, dict) or not profile.get("supported"):
             continue
-        if all(condition_is_satisfied(condition, condition_truth) for condition in profile.get("conditions", [])):
+        if all(
+            condition_is_satisfied(
+                condition,
+                _condition_state_for_conditions(condition_truth, [condition]),
+                runtime_authority=runtime_authority,
+            )
+            for condition in profile.get("conditions", [])
+        ):
             legal.append(profile)
     if group.get("selection") == "independent_modes":
         return legal, []
@@ -194,7 +315,7 @@ def resolve_activation_profiles(group, condition_truth):
     return selected, []
 
 
-def evaluate_end_step_state_transitions(record, *, post_development_state):
+def evaluate_end_step_state_transitions(record, *, post_development_state, runtime_authority=None):
     """Resolve registered end-step removals after deterministic development."""
     if not isinstance(record, dict):
         return None, ["end-step transition evaluation requires a registered source"]
@@ -203,8 +324,22 @@ def evaluate_end_step_state_transitions(record, *, post_development_state):
         transition for transition in transitions
         if isinstance(transition, dict) and transition.get("event_id") == "end_step_remove_unless_condition"
     ]
+    conditions = [transition.get("condition") for transition in removal_transitions]
+    try:
+        _validate_condition_state(
+            post_development_state,
+            allowed_keys=_conditions_state_keys(conditions),
+            runtime_authority=runtime_authority,
+            label="end-step condition state",
+        )
+    except ValueError as error:
+        return None, [str(error)]
     remains = all(
-        condition_is_satisfied(transition.get("condition"), post_development_state)
+        condition_is_satisfied(
+            transition.get("condition"),
+            _condition_state_for_conditions(post_development_state, [transition.get("condition")]),
+            runtime_authority=runtime_authority,
+        )
         for transition in removal_transitions
     )
     return {"remains_available": remains, "removed": not remains}, []
@@ -223,8 +358,8 @@ def _record_map(records):
 
 
 def _source_state(source, shared_state):
-    state = dict(shared_state or {})
-    state.update(source.get("condition_state") or {})
+    state = shared_state.copy()
+    state.update(source.get("condition_state", {}))
     return state
 
 
@@ -236,10 +371,19 @@ def _has_generic_payment_condition(profile):
     )
 
 
-def _resolved_profiles(record, state, *, exclude_generic_payment):
+def _resolved_profiles(record, state, *, exclude_generic_payment, runtime_authority=None):
     profiles = []
     for group in record.get("activation_groups") or []:
-        selected, errors = resolve_activation_profiles(group, state)
+        conditions = [
+            condition
+            for profile in (group.get("profiles") or []) if isinstance(profile, dict)
+            for condition in (profile.get("conditions") or [])
+        ]
+        selected, errors = resolve_activation_profiles(
+            group,
+            _condition_state_for_conditions(state, conditions),
+            runtime_authority=runtime_authority,
+        )
         if errors == ["highest-priority activation group has no matching supported profile"]:
             continue
         if errors:
@@ -251,7 +395,7 @@ def _resolved_profiles(record, state, *, exclude_generic_payment):
     return profiles, []
 
 
-def _expired_bounded_source(record, state):
+def _expired_bounded_source(record, state, *, runtime_authority=None):
     supported = [
         profile
         for group in record.get("activation_groups") or []
@@ -275,12 +419,19 @@ def _expired_bounded_source(record, state):
     ) for profile in supported):
         return True
     return not any(
-        all(condition_is_satisfied(condition, state) for condition in profile.get("conditions", []))
+        all(
+            condition_is_satisfied(
+                condition,
+                _condition_state_for_conditions(state, [condition]),
+                runtime_authority=runtime_authority,
+            )
+            for condition in profile.get("conditions", [])
+        )
         for profile in supported
     )
 
 
-def observe_source_capability(*, source_records, source_states, candidate_source_id, condition_state=None):
+def observe_source_capability(*, source_records, source_states, candidate_source_id, condition_state=None, runtime_authority=None):
     """Evaluate source-capability-observation-v1 without reconstructing Policy prose.
 
     ``source_states`` contains the actual post-development sources. Each entry
@@ -290,38 +441,62 @@ def observe_source_capability(*, source_records, source_states, candidate_source
     retained for residual spendable-mana checks.
     """
     records = _record_map(source_records)
-    if not isinstance(source_states, list) or not isinstance(candidate_source_id, str):
+    if type(source_states) is not list or type(candidate_source_id) is not str or not candidate_source_id:
         raise ValueError("source capability observation requires source states and candidate_source_id")
-    shared_state = dict(condition_state or {})
-    if "generic_payment_available_from_other_sources" in shared_state:
-        raise ValueError("source capability observation derives external generic payment internally")
+    shared_state = {} if condition_state is None else condition_state
+    _validate_condition_state(
+        shared_state,
+        allowed_keys={"commander_colors", "artifact_controlled_count", "controlled_land_oracle_ids"},
+        runtime_authority=runtime_authority,
+        label="source capability shared condition state",
+    )
     seen_ids, surviving, candidate_state = set(), [], None
     for source in source_states:
-        if not isinstance(source, dict):
+        if type(source) is not dict:
             raise ValueError("source capability observation source states must be objects")
+        required_source_keys = {"source_id", "oracle_id", "online", "tapped"}
+        allowed_source_keys = required_source_keys | {"removed", "condition_state"}
+        if set(source) - allowed_source_keys:
+            raise ValueError("source capability observation source states have unregistered fields")
+        if not required_source_keys <= set(source):
+            raise ValueError("source capability observation source states are missing required fields")
         source_id, oracle_id = source.get("source_id"), source.get("oracle_id")
-        if not isinstance(source_id, str) or not source_id or source_id in seen_ids:
+        if type(source_id) is not str or not source_id or source_id in seen_ids:
             raise ValueError("source capability observation source_id values must be unique non-empty strings")
         seen_ids.add(source_id)
-        if not isinstance(oracle_id, str) or oracle_id not in records:
+        if type(oracle_id) is not str or oracle_id not in records:
             raise ValueError("source capability observation requires registered source oracle_ids")
         if type(source.get("online")) is not bool or type(source.get("tapped")) is not bool:
             raise ValueError("source capability observation requires explicit online and tapped state")
         if "removed" in source and type(source["removed"]) is not bool:
             raise ValueError("source capability observation removed state must be a boolean")
-        local_state = _source_state(source, shared_state)
-        if "generic_payment_available_from_other_sources" in local_state:
-            raise ValueError("source capability observation derives external generic payment internally")
+        per_source_state = source.get("condition_state", {})
+        _validate_condition_state(
+            per_source_state,
+            allowed_keys={"controller_turn_offset"},
+            runtime_authority=runtime_authority,
+            label="source capability per-source condition state",
+        )
+        local_state = _source_state({**source, "condition_state": per_source_state}, shared_state)
         if source_id == candidate_source_id:
             candidate_state = (source, records[oracle_id], local_state)
         if source.get("online") is not True or source.get("removed", False):
             continue
-        transition, errors = evaluate_end_step_state_transitions(records[oracle_id], post_development_state=local_state)
+        transition_conditions = [
+            transition.get("condition")
+            for transition in (records[oracle_id].get("state_transitions") or [])
+            if isinstance(transition, dict) and transition.get("event_id") == "end_step_remove_unless_condition"
+        ]
+        transition, errors = evaluate_end_step_state_transitions(
+            records[oracle_id],
+            post_development_state=_condition_state_for_conditions(local_state, transition_conditions),
+            runtime_authority=runtime_authority,
+        )
         if errors:
             raise ValueError(errors[0])
         if transition["removed"]:
             continue
-        if _expired_bounded_source(records[oracle_id], local_state):
+        if _expired_bounded_source(records[oracle_id], local_state, runtime_authority=runtime_authority):
             continue
         surviving.append((source, records[oracle_id], local_state))
     if candidate_state is None:
@@ -329,7 +504,12 @@ def observe_source_capability(*, source_records, source_states, candidate_source
 
     def base_capacity(item):
         _, record, local_state = item
-        profiles, errors = _resolved_profiles(record, local_state, exclude_generic_payment=True)
+        profiles, errors = _resolved_profiles(
+            record,
+            local_state,
+            exclude_generic_payment=True,
+            runtime_authority=runtime_authority,
+        )
         if errors:
             raise ValueError(errors[0])
         return max((profile.get("mana_units", 0) for profile in profiles), default=0)
@@ -350,9 +530,14 @@ def observe_source_capability(*, source_records, source_states, candidate_source
         }
     candidate = candidates[0]
 
-    candidate_state = dict(candidate[2])
+    candidate_state = candidate[2].copy()
     candidate_state["generic_payment_available_from_other_sources"] = external_base_capacity
-    capability_profiles, errors = _resolved_profiles(candidate[1], candidate_state, exclude_generic_payment=False)
+    capability_profiles, errors = _resolved_profiles(
+        candidate[1],
+        candidate_state,
+        exclude_generic_payment=False,
+        runtime_authority=runtime_authority,
+    )
     if errors:
         raise ValueError(errors[0])
     capability_colors = sorted({
@@ -360,9 +545,14 @@ def observe_source_capability(*, source_records, source_states, candidate_source
         if color in {"W", "U", "B", "R", "G"}
     })
 
-    spendable_state = dict(candidate[2])
+    spendable_state = candidate[2].copy()
     spendable_state["generic_payment_available_from_other_sources"] = residual_external_capacity
-    spendable_profiles, errors = _resolved_profiles(candidate[1], spendable_state, exclude_generic_payment=False)
+    spendable_profiles, errors = _resolved_profiles(
+        candidate[1],
+        spendable_state,
+        exclude_generic_payment=False,
+        runtime_authority=runtime_authority,
+    )
     if errors:
         raise ValueError(errors[0])
     spendable_capabilities = sorted({
