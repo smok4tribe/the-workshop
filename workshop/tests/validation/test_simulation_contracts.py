@@ -19,14 +19,15 @@ from workshop.shared.identity import (  # noqa: E402
     resolve_card_fact,
 )
 from workshop.shared.simulation_determinism import (  # noqa: E402
-    PCG32, choose_payment, condition_is_satisfied, derive_iteration_seed, derive_run_seed,
-    observe_source_capability, select_bottom_tokens, select_land,
+    PCG32, SimulationRuntimeContext, _condition_is_satisfied, _resolve_activation_profiles, choose_payment, derive_iteration_seed, derive_run_seed,
+    evaluate_end_step_state_transitions as _evaluate_end_step_state_transitions,
+    observe_source_capability as _observe_source_capability, select_bottom_tokens, select_land,
     select_payable_ramp,
 )
 from workshop.simulation.instance_validation import (  # noqa: E402
-    METRIC_MEASUREMENT_CONTRACTS, build_runtime_state_authority, canonical_question_path, validate_comparison_result,
-    evaluate_end_step_state_transitions, project_level_two_land, project_level_two_ramp,
-    resolve_activation_profiles, resolve_question_metric_target,
+    METRIC_MEASUREMENT_CONTRACTS, build_simulation_runtime_context, canonical_question_path, validate_comparison_result,
+    project_level_two_land as _project_level_two_land, project_level_two_ramp as _project_level_two_ramp,
+    resolve_question_metric_target,
     validate_card_semantics_registry_parity, validate_failure_pattern_taxonomy,
     validate_mana_source_semantics,
     validate_policy_metric_contracts, validate_recording_context,
@@ -39,6 +40,29 @@ PROJECT = REPO_ROOT / "workshop" / "projects" / "the-myr-singularity"
 SIM = PROJECT / "simulation"
 CONTRACTS = SIM / "contracts"
 FIXTURES = REPO_ROOT / "workshop" / "tests" / "fixtures" / "simulation" / "valid"
+_ACTIVE_TEST_CONTEXT = None
+
+
+# Legacy test call shapes are adapted locally; production helpers accept only
+# a trusted context and Oracle ID after Task 32E.
+def observe_source_capability(*, source_records=None, runtime_authority=None, runtime_context=None, **kwargs):
+    return _observe_source_capability(runtime_context=runtime_context or runtime_authority or _ACTIVE_TEST_CONTEXT, **kwargs)
+
+
+def project_level_two_land(record, *, runtime_authority=None, runtime_context=None, **kwargs):
+    return _project_level_two_land(runtime_context=runtime_context or runtime_authority or _ACTIVE_TEST_CONTEXT, oracle_id=record["oracle_id"], **kwargs)
+
+
+def project_level_two_ramp(record, *, runtime_authority=None, runtime_context=None, **kwargs):
+    return _project_level_two_ramp(runtime_context=runtime_context or runtime_authority or _ACTIVE_TEST_CONTEXT, oracle_id=record["oracle_id"], **kwargs)
+
+
+def evaluate_end_step_state_transitions(record, *, runtime_authority=None, runtime_context=None, **kwargs):
+    return _evaluate_end_step_state_transitions(runtime_context=runtime_context or runtime_authority or _ACTIVE_TEST_CONTEXT, oracle_id=record["oracle_id"], **kwargs)
+
+
+condition_is_satisfied = _condition_is_satisfied
+resolve_activation_profiles = _resolve_activation_profiles
 
 
 def load(path):
@@ -116,13 +140,15 @@ class SimulationContractV6Tests(unittest.TestCase):
             self.documents["workshop/projects/the-myr-singularity/versions/v1.0.json"],
             self.documents["workshop/projects/the-myr-singularity/versions/v1.1.json"],
         ]
-        self.runtime_authority, authority_errors = build_runtime_state_authority(
+        self.runtime_authority, authority_errors = build_simulation_runtime_context(
             self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"],
             policy=self.policy,
-            cards=self.cards["cards"],
+            card_facts=self.cards,
             versions=self.versions,
         )
         self.assertEqual([], authority_errors)
+        global _ACTIVE_TEST_CONTEXT
+        _ACTIVE_TEST_CONTEXT = self.runtime_authority
 
     def loader(self, path):
         return self.documents[path]
@@ -1435,23 +1461,73 @@ class SimulationContractV6Tests(unittest.TestCase):
 
     def test_runtime_state_authority_requires_validated_project_inputs(self):
         registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
-        authority, errors = build_runtime_state_authority(
-            registry, policy=self.policy, cards=self.cards["cards"], versions=self.versions,
+        authority, errors = build_simulation_runtime_context(
+            registry, policy=self.policy, card_facts=self.cards, versions=self.versions,
         )
         self.assertEqual([], errors)
         self.assertEqual(self.runtime_authority, authority)
 
         changed_registry = copy.deepcopy(registry)
         next(record for record in changed_registry["records"] if record["card_name"] == "Sol Ring")["source_kind"] = "land"
-        authority, errors = build_runtime_state_authority(
-            changed_registry, policy=self.policy, cards=self.cards["cards"], versions=self.versions,
+        authority, errors = build_simulation_runtime_context(
+            changed_registry, policy=self.policy, card_facts=self.cards, versions=self.versions,
         )
         self.assertIsNone(authority); self.assertTrue(errors)
 
-        changed_cards = copy.deepcopy(self.cards["cards"])
-        next(card for card in changed_cards if card["name"] == "Island")["type_line"] = "Artifact"
-        authority, errors = build_runtime_state_authority(
-            registry, policy=self.policy, cards=changed_cards, versions=self.versions,
+    def test_runtime_semantic_provenance_rejects_forgery_before_execution(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        by_name = {record["card_name"]: record for record in registry["records"]}
+        sol_id, island_id = by_name["Sol Ring"]["oracle_id"], by_name["Island"]["oracle_id"]
+        source = {"source_id": "source", "oracle_id": sol_id, "online": True, "tapped": False}
+
+        with self.assertRaises(TypeError):
+            _observe_source_capability(runtime_context=self.runtime_authority, source_records={}, source_states=[source], candidate_source_id="source")
+        with self.assertRaises(TypeError):
+            _project_level_two_land(runtime_context=self.runtime_authority, record=by_name["Island"], condition_state={}, current_turn=1, horizon_turn=6)
+        with self.assertRaises(TypeError):
+            SimulationRuntimeContext()
+        with self.assertRaises(TypeError):
+            self.runtime_authority._records_by_oracle_id[sol_id]["source_kind"] = "land"
+
+        def assert_forged(mutator, oracle_id=sol_id):
+            changed = copy.deepcopy(registry); mutator(changed["records"])
+            forged = SimulationRuntimeContext._from_validated_registry(changed)
+            with self.assertRaisesRegex(ValueError, "does not authenticate"):
+                _observe_source_capability(
+                    runtime_context=forged,
+                    source_states=[{**source, "oracle_id": oracle_id}],
+                    candidate_source_id="source",
+                )
+
+        def by(card_name, records):
+            return next(record for record in records if record["card_name"] == card_name)
+        assert_forged(lambda records: by("Sol Ring", records).__setitem__("mana_units", 9))
+        assert_forged(lambda records: by("Sol Ring", records)["activation_groups"][0]["profiles"][0]["output_capabilities"].append("W"))
+        assert_forged(lambda records: by("Sol Ring", records).__setitem__("source_kind", "land"))
+        assert_forged(lambda records: by("Sol Ring", records)["activation_groups"][0]["profiles"][0]["conditions"].append({"condition_id": "artifact_controlled", "params": {"minimum_count": 1}}))
+        assert_forged(lambda records: by("Sol Ring", records)["deployment"]["casting_cost"].__setitem__("generic", 9))
+        assert_forged(lambda records: by("Glimmervoid", records)["state_transitions"][0].__setitem__("event_id", "forged"))
+        assert_forged(lambda records: records.__setitem__(records.index(by("Sol Ring", records)), {**copy.deepcopy(by("Command Tower", records)), "oracle_id": sol_id}))
+        assert_forged(lambda records: records.__setitem__(records.index(by("Island", records)), {**copy.deepcopy(by("Prismatic Lens", records)), "oracle_id": island_id}), island_id)
+        assert_forged(lambda records: records.pop())
+        assert_forged(lambda records: by("Sol Ring", records).__setitem__("oracle_id", "reidentified-sol-ring"))
+
+        unknown, errors = _project_level_two_land(runtime_context=self.runtime_authority, oracle_id="unknown", condition_state={}, current_turn=1, horizon_turn=6)
+        self.assertIsNone(unknown); self.assertTrue(errors)
+        non_source_id = next(card["oracle_id"] for card in self.cards["cards"] if card["name"] == "Aetherflux Reservoir")
+        unknown, errors = _project_level_two_land(runtime_context=self.runtime_authority, oracle_id=non_source_id, condition_state={}, current_turn=1, horizon_turn=6)
+        self.assertIsNone(unknown); self.assertTrue(errors)
+
+        for field, value in (("canonical_land_oracle_ids", frozenset()), ("canonical_commander_colors", frozenset({"U"})), ("registry_content_fingerprint", "artifact-content-sha256-v1:" + "0" * 64)):
+            forged = copy.copy(self.runtime_authority)
+            object.__setattr__(forged, field, value)
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                _observe_source_capability(runtime_context=forged, source_states=[source], candidate_source_id="source")
+
+        changed_cards = copy.deepcopy(self.cards)
+        next(card for card in changed_cards["cards"] if card["name"] == "Island")["type_line"] = "Artifact"
+        authority, errors = build_simulation_runtime_context(
+            registry, policy=self.policy, card_facts=changed_cards, versions=self.versions,
         )
         self.assertIsNone(authority); self.assertTrue(errors)
 

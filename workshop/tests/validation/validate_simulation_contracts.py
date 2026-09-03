@@ -17,6 +17,7 @@ from workshop.shared.identity import (  # noqa: E402
 )
 from workshop.shared.simulation_determinism import derive_iteration_seed, derive_run_seed  # noqa: E402
 from workshop.simulation.instance_validation import (  # noqa: E402
+    build_simulation_runtime_context,
     canonical_question_path,
     validate_card_semantics_registry_parity,
     validate_failure_pattern_taxonomy,
@@ -150,6 +151,14 @@ def main():
         versions=[load_json(PROJECT / "versions" / "v1.0.json"), load_json(PROJECT / "versions" / "v1.1.json")],
     )
     checks.append(("normalized source registry covers v1.0/v1.1 with controlled executable semantics", errors))
+
+    runtime_context, errors = build_simulation_runtime_context(
+        docs["mana_source_semantics"], policy=policy, card_facts=docs["cards"],
+        versions=[load_json(PROJECT / "versions" / "v1.0.json"), load_json(PROJECT / "versions" / "v1.1.json")],
+    )
+    if runtime_context is None and not errors:
+        errors.append("canonical runtime semantic context was not constructed")
+    checks.append(("approved registry seals a canonical immutable runtime semantic context", errors))
 
     errors = []
     fp = policy.get("deck_fingerprint_policy", {})
