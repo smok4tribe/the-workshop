@@ -1,9 +1,9 @@
 {
   "fixture_note": "Contract KAT only; not a production simulation trace or evidence artifact.",
   "trace_contract_id": "simulation-iteration-trace-v1",
-  "run_seed": 17507270021680097520,
+  "run_seed": 6031826351887326048,
   "iteration_index": 1,
-  "iteration_seed": 6055234187381229165,
+  "iteration_seed": 18286694482864418478,
   "canonical_library": {
     "count": 99,
     "first_tokens": [
@@ -18,13 +18,13 @@
     ]
   },
   "first_opening_hand": [
-    "8dc067bf-f78f-4ac4-b6e7-b305c42cf0bc#1",
-    "82004860-e589-4e38-8d61-8c0210e4ea39#1",
-    "42a3855d-25ab-45b3-9e5d-9a0f3da35a05#1",
-    "39451b4d-cd7a-40da-b457-cb51b609173f#1",
-    "f4819061-b0b5-48ab-af7b-6525c3d2eab7#1",
-    "1b388371-f9ef-45b4-82a3-ca20a8cd7807#1",
-    "18bdc181-9592-4147-81fb-7f83ce137f70#1"
+    "ea9709b6-4c37-4d5a-b04d-cd4c42e4f9dd#1",
+    "6ad8011d-3471-4369-9d68-b264cc027487#1",
+    "a3da7d5b-2c2b-45fe-b9c5-413b8c8fc0a2#1",
+    "c8b143ad-43ec-4e0d-a440-e348daa31391#1",
+    "0826cf7d-7ccc-459b-a92f-29dc169628f8#1",
+    "ca204b66-8d0c-431a-8d34-282f7c2d17da#1",
+    "cce9bbff-82dc-4b2f-addd-d6715588de20#1"
   ],
   "required_cases": [
     "ordinary_keep",

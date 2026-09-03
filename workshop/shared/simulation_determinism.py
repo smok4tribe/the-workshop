@@ -305,14 +305,16 @@ def observe_source_capability(*, source_records, source_states, candidate_source
         seen_ids.add(source_id)
         if not isinstance(oracle_id, str) or oracle_id not in records:
             raise ValueError("source capability observation requires registered source oracle_ids")
-        if not isinstance(source.get("online"), bool) or not isinstance(source.get("tapped"), bool):
+        if type(source.get("online")) is not bool or type(source.get("tapped")) is not bool:
             raise ValueError("source capability observation requires explicit online and tapped state")
+        if "removed" in source and type(source["removed"]) is not bool:
+            raise ValueError("source capability observation removed state must be a boolean")
         local_state = _source_state(source, shared_state)
         if "generic_payment_available_from_other_sources" in local_state:
             raise ValueError("source capability observation derives external generic payment internally")
         if source_id == candidate_source_id:
             candidate_state = (source, records[oracle_id], local_state)
-        if source.get("online") is not True or source.get("removed") is True:
+        if source.get("online") is not True or source.get("removed", False):
             continue
         transition, errors = evaluate_end_step_state_transitions(records[oracle_id], post_development_state=local_state)
         if errors:

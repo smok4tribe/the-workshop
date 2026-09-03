@@ -1,4 +1,4 @@
-# Simulation Policy sim-policy-v5
+# Simulation Policy sim-policy-v6
 
 Policy id: `the-myr-singularity-simulation-policy` — project `the-myr-singularity`
 

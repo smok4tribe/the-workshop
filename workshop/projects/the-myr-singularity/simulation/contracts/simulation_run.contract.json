@@ -1,9 +1,9 @@
 {
-  "schema_version": "4.0",
+  "schema_version": "5.0",
   "artifact_type": "simulation_run_contract",
-  "contract_id": "simulation-run-contract-v4",
+  "contract_id": "simulation-run-contract-v5",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v5",
+  "policy_version": "sim-policy-v6",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a SimulationRun. A SimulationRun stores exact configuration and identity for one execution against one DeckVersion: the project, the DeckVersion, the deck-content fingerprint, the question, the policy, the seed, the iteration count, the RNG identity, and the run status. It stores no metrics and no interpretation. Task 30 defines this contract but creates no SimulationRun instance.",
   "scope": {
@@ -160,6 +160,7 @@
     "A SimulationRun carries no metrics, no probabilities, and no interpretation.",
     "A SimulationRun never creates or edits a DeckVersion.",
     "Run semantic_dependencies must resolve every immutable source with content fingerprints; DeckVersion uses deck-content-sha256-canonical-v2.",
+    "Run validation resolves this contract from the authoritative Policy path and fingerprint and never trusts a caller-weakened contract.",
     "Recording identity and metadata are caller-supplied. The engine must not read a wall clock or generate UUID/random recording IDs; artifact-content identity includes the complete persisted caller recording metadata, while replay equivalence remains semantic/execution-based."
   ],
   "validation_expectations": [

@@ -1,4 +1,4 @@
-"""Positive and adversarial coverage for the active simulation-policy-v4 contract."""
+"""Positive and adversarial coverage for the active simulation-policy-v6 contract."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from workshop.shared.simulation_determinism import (  # noqa: E402
     select_payable_ramp,
 )
 from workshop.simulation.instance_validation import (  # noqa: E402
-    METRIC_MEASUREMENT_CONTRACTS, validate_comparison_result,
+    METRIC_MEASUREMENT_CONTRACTS, canonical_question_path, validate_comparison_result,
     evaluate_end_step_state_transitions, project_level_two_land, project_level_two_ramp,
     resolve_activation_profiles, resolve_question_metric_target,
     validate_card_semantics_registry_parity, validate_failure_pattern_taxonomy,
@@ -74,7 +74,7 @@ class IndependentPCG32:
         return result
 
 
-class SimulationContractV5Tests(unittest.TestCase):
+class SimulationContractV6Tests(unittest.TestCase):
     def setUp(self):
         self.policy = load(SIM / "simulation_policy.json")
         self.question = load(SIM / "questions" / "question-001-mana-color.json")
@@ -118,17 +118,23 @@ class SimulationContractV5Tests(unittest.TestCase):
     def fingerprint(self, version):
         return deck_content_fingerprint(version, self.cards["cards"])
 
-    def check_question(self, question=None):
-        return validate_simulation_question(question or self.question, policy=self.policy, question_contract=self.contracts["simulation_question.contract.json"], project_id="the-myr-singularity", load_reference=self.loader, fingerprint_for_version=self.fingerprint)
+    def check_question(self, question=None, question_path=None, question_contract=None):
+        return validate_simulation_question(
+            question or self.question, policy=self.policy,
+            question_contract=question_contract or self.contracts["simulation_question.contract.json"],
+            project_id="the-myr-singularity", load_reference=self.loader,
+            fingerprint_for_version=self.fingerprint,
+            question_path=question_path or canonical_question_path((question or self.question)["question_id"]),
+        )
 
-    def check_run(self, run=None, question=None):
-        return validate_simulation_run(run or self.run, question=question or self.question, policy=self.policy, question_contract=self.contracts["simulation_question.contract.json"], run_contract=self.contracts["simulation_run.contract.json"], project_id="the-myr-singularity", load_reference=self.loader, fingerprint_for_version=self.fingerprint, lifecycle_mode="creation")
+    def check_run(self, run=None, question=None, run_contract=None):
+        return validate_simulation_run(run or self.run, question=question or self.question, policy=self.policy, question_contract=self.contracts["simulation_question.contract.json"], run_contract=run_contract or self.contracts["simulation_run.contract.json"], project_id="the-myr-singularity", load_reference=self.loader, fingerprint_for_version=self.fingerprint, lifecycle_mode="creation")
 
-    def check_result(self, result=None, run=None, question=None):
-        return validate_simulation_result(result or self.result, run=run or self.run, policy=self.policy, question=question or self.question, question_contract=self.contracts["simulation_question.contract.json"], result_contract=self.contracts["simulation_result.contract.json"], taxonomy_ids=self.taxonomy, load_reference=self.loader, project_id="the-myr-singularity", fingerprint_for_version=self.fingerprint, lifecycle_mode="creation")
+    def check_result(self, result=None, run=None, question=None, result_contract=None):
+        return validate_simulation_result(result or self.result, run=run or self.run, policy=self.policy, question=question or self.question, question_contract=self.contracts["simulation_question.contract.json"], result_contract=result_contract or self.contracts["simulation_result.contract.json"], taxonomy_ids=self.taxonomy, load_reference=self.loader, project_id="the-myr-singularity", fingerprint_for_version=self.fingerprint, lifecycle_mode="creation")
 
-    def check_comparison(self, comparison=None, baseline_result=None, candidate_result=None, question=None):
-        return validate_comparison_result(comparison or self.comparison, baseline_run=self.baseline_run, candidate_run=self.run, baseline_result=baseline_result or self.baseline_result, candidate_result=candidate_result or self.result, policy=self.policy, question=question or self.question, question_contract=self.contracts["simulation_question.contract.json"], comparison_contract=self.contracts["comparison_result.contract.json"], run_contract=self.contracts["simulation_run.contract.json"], result_contract=self.contracts["simulation_result.contract.json"], project_id="the-myr-singularity", taxonomy_ids=self.taxonomy, load_reference=self.loader, fingerprint_for_version=self.fingerprint, lifecycle_mode="creation")
+    def check_comparison(self, comparison=None, baseline_run=None, candidate_run=None, baseline_result=None, candidate_result=None, question=None, comparison_contract=None, run_contract=None, result_contract=None):
+        return validate_comparison_result(comparison or self.comparison, baseline_run=baseline_run or self.baseline_run, candidate_run=candidate_run or self.run, baseline_result=baseline_result or self.baseline_result, candidate_result=candidate_result or self.result, policy=self.policy, question=question or self.question, question_contract=self.contracts["simulation_question.contract.json"], comparison_contract=comparison_contract or self.contracts["comparison_result.contract.json"], run_contract=run_contract or self.contracts["simulation_run.contract.json"], result_contract=result_contract or self.contracts["simulation_result.contract.json"], project_id="the-myr-singularity", taxonomy_ids=self.taxonomy, load_reference=self.loader, fingerprint_for_version=self.fingerprint, lifecycle_mode="creation")
 
     def check_registry(self, registry):
         versions = [
@@ -150,7 +156,7 @@ class SimulationContractV5Tests(unittest.TestCase):
         result = subprocess.run([sys.executable, "workshop/tests/validation/validate_simulation_contracts.py"], cwd=REPO_ROOT, text=True, capture_output=True, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_valid_v5_fixtures_validate(self):
+    def test_valid_v6_fixtures_validate(self):
         self.assertEqual([], self.check_run())
         self.assertEqual([], self.check_result())
         self.assertEqual([], self.check_comparison())
@@ -453,6 +459,180 @@ class SimulationContractV5Tests(unittest.TestCase):
                 for errors in all_evidence_errors(policy, contract):
                     self.assertTrue(any(expected in error for error in errors), errors)
 
+    def test_evidence_contract_authority_cannot_be_caller_weakened(self):
+        cases = (
+            (
+                "run", "simulation_run.contract.json", "run_contract",
+                self.run, self.check_run,
+                lambda contract: contract.__setitem__("semantic_override", True),
+                lambda contract: contract["required_fields"].pop("run_id"),
+                lambda contract: contract["required_fields"]["status"].__setitem__("allowed_values", ["caller_approved"]),
+            ),
+            (
+                "result", "simulation_result.contract.json", "result_contract",
+                self.result, self.check_result,
+                lambda contract: contract.__setitem__("semantic_override", True),
+                lambda contract: contract["required_fields"].pop("result_id"),
+                lambda contract: contract["required_fields"]["confidence"].__setitem__("allowed_values", ["caller_approved"]),
+            ),
+            (
+                "comparison", "comparison_result.contract.json", "comparison_contract",
+                self.comparison, self.check_comparison,
+                lambda contract: contract.__setitem__("semantic_override", True),
+                lambda contract: contract["required_fields"].pop("comparison_id"),
+                lambda contract: contract["required_fields"]["artifact_type"].__setitem__("allowed_values", ["caller_comparison"]),
+            ),
+        )
+        for label, filename, argument, payload, validate, *mutations in cases:
+            recording_mutation = lambda contract: contract["recording_context"]["engine_boundary"].__setitem__("recording_metadata_owner", "engine")
+            for mutation_name, mutation in (*zip(("semantic_override", "required_field", "allowed_values"), mutations), ("recording_context", recording_mutation)):
+                with self.subTest(artifact=label, mutation=mutation_name):
+                    weakened = copy.deepcopy(self.contracts[filename])
+                    mutation(weakened)
+                    matching_payload = copy.deepcopy(payload)
+                    if mutation_name == "required_field":
+                        matching_payload.pop({"run": "run_id", "result": "result_id", "comparison": "comparison_id"}[label])
+                    elif mutation_name == "allowed_values":
+                        if label == "run":
+                            matching_payload["status"] = "caller_approved"
+                        elif label == "result":
+                            matching_payload["confidence"] = "caller_approved"
+                        else:
+                            matching_payload["artifact_type"] = "caller_comparison"
+                    errors = validate(matching_payload, **{argument: weakened})
+                    self.assertTrue(any(f"supplied {argument} does not match" in error for error in errors), errors)
+
+        weakened_run = copy.deepcopy(self.contracts["simulation_run.contract.json"])
+        weakened_run["semantic_override"] = True
+        errors = self.check_comparison(run_contract=weakened_run)
+        self.assertTrue(any("supplied run_contract does not match" in error for error in errors), errors)
+        weakened_result = copy.deepcopy(self.contracts["simulation_result.contract.json"])
+        weakened_result["semantic_override"] = True
+        errors = self.check_comparison(result_contract=weakened_result)
+        self.assertTrue(any("supplied result_contract does not match" in error for error in errors), errors)
+
+    def test_question_owns_comparison_direction_and_role_coverage(self):
+        self.assertEqual([], self.check_question())
+        mutations = (
+            ("equal", lambda sides: sides.__setitem__("candidate_run_role", sides["baseline_run_role"]), "roles must be distinct"),
+            ("missing", lambda sides: sides.pop("candidate_run_role"), "must contain exactly"),
+            ("unknown", lambda sides: sides.__setitem__("candidate_run_role", "unknown-role"), "must resolve exactly one"),
+            ("partial", lambda sides: sides.__setitem__("baseline_run_role", "unknown-baseline"), "exactly cover"),
+        )
+        for label, mutate, diagnostic in mutations:
+            with self.subTest(label=label):
+                question = copy.deepcopy(self.question)
+                mutate(question["comparison_sides"])
+                errors = validate_simulation_question(
+                    question, policy=self.policy,
+                    question_contract=self.contracts["simulation_question.contract.json"],
+                    project_id="the-myr-singularity", load_reference=self.loader,
+                    fingerprint_for_version=self.fingerprint,
+                    question_path=canonical_question_path(question["question_id"]),
+                )
+                self.assertTrue(any(diagnostic in error for error in errors), errors)
+
+    def _coherent_inverse_comparison(self):
+        inverse = copy.deepcopy(self.comparison)
+        refs = inverse["source_references"]
+        refs["baseline_run"], refs["candidate_run"] = refs["candidate_run"], refs["baseline_run"]
+        refs["baseline_result"], refs["candidate_result"] = refs["candidate_result"], refs["baseline_result"]
+        inverse["baseline"], inverse["candidate"] = inverse["candidate"], inverse["baseline"]
+
+        for delta in inverse["metric_deltas"]:
+            delta["baseline_estimate"], delta["candidate_estimate"] = delta["candidate_estimate"], delta["baseline_estimate"]
+            baseline = delta["baseline_estimate"]
+            candidate = delta["candidate_estimate"]
+            if "bins" in baseline:
+                delta["mean_absolute_delta"] = candidate["mean"] - baseline["mean"]
+                for item, baseline_bin, candidate_bin in zip(delta["bin_proportion_deltas"], baseline["bins"], candidate["bins"]):
+                    item["absolute_delta"] = candidate_bin["proportion"] - baseline_bin["proportion"]
+            else:
+                delta["absolute_delta"] = candidate["probability"] - baseline["probability"]
+                if baseline["probability"]:
+                    delta["relative_delta"] = delta["absolute_delta"] / baseline["probability"]
+                    delta["relative_delta_applicable"] = True
+                else:
+                    delta.pop("relative_delta", None)
+                    delta["relative_delta_applicable"] = False
+        deltas = {(item["metric_id"], item["target_turn"]): item for item in inverse["metric_deltas"]}
+        for claim in inverse["evidence_claims"]:
+            if claim.get("claim_type") == "comparison_delta":
+                claim["comparison"] = copy.deepcopy(deltas[(claim["metric_id"], claim["target_turn"])])
+        return inverse
+
+    def test_fully_coherent_inverse_comparison_is_rejected_by_question_direction(self):
+        inverse = self._coherent_inverse_comparison()
+        errors = self.check_comparison(
+            inverse, baseline_run=self.run, candidate_run=self.baseline_run,
+            baseline_result=self.result, candidate_result=self.baseline_result,
+        )
+        self.assertTrue(any("baseline Run role does not match Question comparison_sides" in error for error in errors), errors)
+        self.assertTrue(any("candidate Run role does not match Question comparison_sides" in error for error in errors), errors)
+
+    def test_question_identity_and_canonical_path_are_fail_closed(self):
+        self.assertEqual([], self.check_question())
+        invalid_ids = (
+            "", "   ", "Question-001", "question_001", "question/001",
+            "question.001", "-question", "question-", "question--001",
+        )
+        for question_id in invalid_ids:
+            with self.subTest(question_id=question_id):
+                question = copy.deepcopy(self.question)
+                question["question_id"] = question_id
+                errors = validate_simulation_question(
+                    question, policy=self.policy,
+                    question_contract=self.contracts["simulation_question.contract.json"],
+                    project_id="the-myr-singularity", load_reference=self.loader,
+                    fingerprint_for_version=self.fingerprint,
+                    question_path=canonical_question_path(self.question["question_id"]),
+                )
+                self.assertTrue(any("lowercase kebab-case identity" in error for error in errors), errors)
+        omitted_path_errors = validate_simulation_question(
+            self.question, policy=self.policy,
+            question_contract=self.contracts["simulation_question.contract.json"],
+            project_id="the-myr-singularity", load_reference=self.loader,
+            fingerprint_for_version=self.fingerprint,
+            question_path=None,
+        )
+        self.assertIn("question source path must be a non-empty caller-supplied string", omitted_path_errors)
+        errors = validate_simulation_question(
+            self.question, policy=self.policy,
+            question_contract=self.contracts["simulation_question.contract.json"],
+            project_id="the-myr-singularity", load_reference=self.loader,
+            fingerprint_for_version=self.fingerprint,
+            question_path="workshop/projects/the-myr-singularity/simulation/questions/other.json",
+        )
+        self.assertIn("question source path does not match the canonical path derived from question_id", errors)
+        self.assertEqual(
+            "workshop/projects/the-myr-singularity/simulation/questions/question-001-mana-color.json",
+            canonical_question_path(self.question["question_id"]),
+        )
+
+    def test_removed_source_state_is_strictly_typed(self):
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        record = next(item for item in registry["records"] if item["card_name"] == "Command Tower")
+        records = {record["oracle_id"]: record}
+        source = {"source_id": "tower", "oracle_id": record["oracle_id"], "online": True, "tapped": False}
+        shared = {"commander_colors": ["W", "U", "B", "R", "G"]}
+        absent = observe_source_capability(source_records=records, source_states=[source], candidate_source_id="tower", condition_state=shared)
+        explicit_false = observe_source_capability(source_records=records, source_states=[{**source, "removed": False}], candidate_source_id="tower", condition_state=shared)
+        explicit_true = observe_source_capability(source_records=records, source_states=[{**source, "removed": True}], candidate_source_id="tower", condition_state=shared)
+        self.assertEqual(absent, explicit_false)
+        self.assertTrue(absent["survives"])
+        self.assertEqual([], explicit_true["source_capability"])
+        self.assertFalse(explicit_true["survives"])
+        for invalid in ("yes", 1, 0, 1.0, None, [], {}):
+            with self.subTest(removed=invalid):
+                with self.assertRaisesRegex(ValueError, "removed state must be a boolean"):
+                    observe_source_capability(source_records=records, source_states=[{**source, "removed": invalid}], candidate_source_id="tower", condition_state=shared)
+        for field in ("online", "tapped"):
+            for invalid in ("yes", 1, 0, 1.0, None, [], {}):
+                with self.subTest(field=field, value=invalid):
+                    malformed = {**source, field: invalid}
+                    with self.assertRaisesRegex(ValueError, "requires explicit online and tapped state"):
+                        observe_source_capability(source_records=records, source_states=[malformed], candidate_source_id="tower", condition_state=shared)
+
     def test_lifecycle_contract_authority_cannot_be_caller_weakened(self):
         weakened = copy.deepcopy(self.contracts["simulation_question_lifecycle.contract.json"])
         del weakened["required_fields"]["recorded_evidence"]
@@ -668,11 +848,11 @@ class SimulationContractV5Tests(unittest.TestCase):
                 self.assertTrue(any("content fingerprint" in error or "expected artifact" in error for error in self.check_run()))
                 self.documents[path] = original
 
-    def test_v5_seed_and_iteration_vectors(self):
+    def test_v6_seed_and_iteration_vectors(self):
         seed = derive_run_seed(self.run["semantic_dependencies"]["question"]["content_fingerprint"], self.run["semantic_dependencies"]["policy"]["content_fingerprint"], self.run["deck_content_fingerprint"], self.run["run_role"])
         self.assertEqual(seed, self.run["seed"])
-        self.assertEqual(derive_iteration_seed(seed, 1), 2450005096603072066)
-        self.assertEqual(derive_iteration_seed(seed, 2), 12952584345195902821)
+        self.assertEqual(derive_iteration_seed(seed, 1), 18286694482864418478)
+        self.assertEqual(derive_iteration_seed(seed, 2), 9245378503593541660)
 
     def test_trace_kat_freezes_canonical_expansion_and_opening_shuffle(self):
         kat = load(REPO_ROOT / "workshop" / "tests" / "fixtures" / "simulation" / "simulation_iteration_trace.v1.json")

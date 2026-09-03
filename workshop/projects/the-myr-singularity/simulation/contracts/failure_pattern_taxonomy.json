@@ -4,7 +4,7 @@
   "taxonomy_id": "sim-failure-taxonomy-v4",
   "taxonomy_version": "v4",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v5",
+  "policy_version": "sim-policy-v6",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the controlled vocabulary of failure-pattern categories that a SimulationResult may reference. Results reference these category IDs; they never invent new failure categories inline. Categories cover hand, land, mana, ramp, and color failures for the committed Sprint 2 metrics.",
   "scope": {

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 import json
+import re
 from datetime import datetime
 
 from workshop.shared.identity import artifact_content_fingerprint
@@ -65,7 +66,7 @@ QUESTION_INSTANCE_FIELDS = {
     "schema_version", "artifact_type", "question_id", "project_id", "policy_id",
     "policy_version", "generated_at", "generated_by", "hypothesis", "question_text",
     "compared_versions", "success_interpretation", "limitations", "explicit_boundary",
-    "policy_reference", "required_metrics", "optional_metrics",
+    "policy_reference", "required_metrics", "optional_metrics", "comparison_sides",
 }
 QUESTION_LIFECYCLE_FIELDS = {
     "schema_version", "artifact_type", "lifecycle_id", "project_id", "question_id",
@@ -81,12 +82,45 @@ LIFECYCLE_INVALIDATION_REASON_IDS = {
     "execution_environment_invalidated",
 }
 CANONICAL_POLICY_PATH = "workshop/projects/the-myr-singularity/simulation/simulation_policy.json"
+CANONICAL_QUESTION_DIRECTORY = "workshop/projects/the-myr-singularity/simulation/questions"
 CANONICAL_LIFECYCLE_DIRECTORY = "workshop/projects/the-myr-singularity/simulation/lifecycle"
 CANONICAL_QUESTION_CONTRACT_PATH = "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json"
 CANONICAL_LIFECYCLE_CONTRACT_PATH = "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question_lifecycle.contract.json"
+QUESTION_ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+ARTIFACT_FINGERPRINT_RE = re.compile(r"^artifact-content-sha256-v1:[0-9a-f]{64}$")
+POLICY_CONTRACT_REGISTRY = {
+    "simulation_question_contract": {
+        "path": CANONICAL_QUESTION_CONTRACT_PATH,
+        "artifact_type": "simulation_question_contract",
+        "contract_id": "simulation-question-contract-v4",
+        "schema_version": "4.0",
+        "argument_name": "question_contract",
+    },
+    "simulation_run_contract": {
+        "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_run.contract.json",
+        "artifact_type": "simulation_run_contract",
+        "contract_id": "simulation-run-contract-v5",
+        "schema_version": "5.0",
+        "argument_name": "run_contract",
+    },
+    "simulation_result_contract": {
+        "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_result.contract.json",
+        "artifact_type": "simulation_result_contract",
+        "contract_id": "simulation-result-contract-v5",
+        "schema_version": "5.0",
+        "argument_name": "result_contract",
+    },
+    "comparison_result_contract": {
+        "path": "workshop/projects/the-myr-singularity/simulation/contracts/comparison_result.contract.json",
+        "artifact_type": "comparison_result_contract",
+        "contract_id": "comparison-result-contract-v5",
+        "schema_version": "5.0",
+        "argument_name": "comparison_contract",
+    },
+}
 APPROVED_LIFECYCLE_CONTRACT_FINGERPRINT = "artifact-content-sha256-v1:d8e85971e266ae51a781d69a24fa8006a24d05c5096feeb1e30d47d68619f9bc"
-APPROVED_MANA_SOURCE_SEMANTICS_FINGERPRINT = "artifact-content-sha256-v1:847130857b20518b8669d95d978e289602e3b2cf74ab1e529a8f55c3373f52b6"
-APPROVED_FAILURE_PATTERN_TAXONOMY_FINGERPRINT = "artifact-content-sha256-v1:5d34ef7aaf9a00e7d550df223ad4e3cc94a3a0e3c155f8d57ae5c8222cee2c8a"
+APPROVED_MANA_SOURCE_SEMANTICS_FINGERPRINT = "artifact-content-sha256-v1:bd867436cc899bf18a4a3d89550f820c8096db1e1ca5290fdda36c1a04d2c7fa"
+APPROVED_FAILURE_PATTERN_TAXONOMY_FINGERPRINT = "artifact-content-sha256-v1:7e2413fbca56dddfea2a16491548b95138191f0badfd80c5cecb0c9bf51b8742"
 RECORDING_CONTEXT_ID = "simulation-recording-context-v1"
 RECORDING_ARTIFACT_ALGORITHM = "artifact-content-sha256-v1"
 RECORDING_ARTIFACT_COVERAGE = "The complete persisted artifact, including caller-supplied recording metadata."
@@ -283,19 +317,47 @@ def _resolve_reference(reference, label, errors, load_reference, expected=None):
     return resolved
 
 
-def _resolve_policy_question_contract(policy, supplied_contract, load_reference):
-    """Use the Policy-pinned Question contract, never a caller-weakened copy."""
+def resolve_policy_pinned_contract(policy, supplied_contract, *, reference_key, load_reference):
+    """Resolve one trusted Policy-pinned contract without caller-data fallback."""
     errors = []
-    reference = (policy.get("references") or {}).get("simulation_question_contract") if isinstance(policy, dict) else None
+    trusted = POLICY_CONTRACT_REGISTRY.get(reference_key)
+    if trusted is None:
+        return None, [f"unsupported Policy contract reference {reference_key!r}"]
+    reference = (policy.get("references") or {}).get(reference_key) if isinstance(policy, dict) else None
     if not isinstance(reference, dict) or set(reference) != {"path", "content_fingerprint"}:
-        errors.append("policy simulation_question_contract reference has an invalid field set")
-        return supplied_contract, errors
-    if reference.get("path") != CANONICAL_QUESTION_CONTRACT_PATH:
-        errors.append("policy simulation_question_contract reference path is not canonical")
-    resolved = _resolve_reference(reference, "policy simulation_question_contract reference", errors, load_reference)
-    if isinstance(resolved, dict) and supplied_contract != resolved:
-        errors.append("supplied question_contract does not match the Policy-resolved immutable Question contract")
-    return resolved if isinstance(resolved, dict) else supplied_contract, errors
+        return None, [f"policy {reference_key} reference has an invalid field set"]
+    if reference.get("path") != trusted["path"]:
+        errors.append(f"policy {reference_key} reference path is not canonical")
+    fingerprint = reference.get("content_fingerprint")
+    if not isinstance(fingerprint, str) or not ARTIFACT_FINGERPRINT_RE.fullmatch(fingerprint):
+        errors.append(f"policy {reference_key} reference has an invalid content fingerprint")
+    resolved = _resolve_reference(reference, f"policy {reference_key} reference", errors, load_reference)
+    if not isinstance(resolved, dict):
+        return None, errors
+    if resolved.get("artifact_type") != trusted["artifact_type"]:
+        errors.append(f"policy {reference_key} does not resolve to the trusted artifact_type")
+    if resolved.get("contract_id") != trusted["contract_id"]:
+        errors.append(f"policy {reference_key} does not resolve to the trusted contract_id")
+    if resolved.get("schema_version") != trusted["schema_version"]:
+        errors.append(f"policy {reference_key} does not resolve to the trusted schema_version")
+    if resolved.get("policy_version") != policy.get("policy_version"):
+        errors.append(f"policy {reference_key} contract policy_version does not match the Policy")
+    if supplied_contract != resolved:
+        errors.append(
+            f"supplied {trusted['argument_name']} does not match the Policy-resolved immutable "
+            f"{trusted['artifact_type'].replace('_', ' ')}"
+        )
+    if errors:
+        return None, errors
+    return resolved, []
+
+
+def _resolve_policy_question_contract(policy, supplied_contract, load_reference):
+    return resolve_policy_pinned_contract(
+        policy, supplied_contract,
+        reference_key="simulation_question_contract",
+        load_reference=load_reference,
+    )
 
 
 def _resolve_canonical_lifecycle_contract(supplied_contract, load_reference):
@@ -352,6 +414,43 @@ def validate_question_role_bindings(compared_versions):
     return errors
 
 
+def validate_question_comparison_sides(comparison_sides, compared_versions):
+    errors = []
+    fields = {"baseline_run_role", "candidate_run_role"}
+    if not isinstance(comparison_sides, dict) or set(comparison_sides) != fields:
+        return ["question comparison_sides must contain exactly baseline_run_role and candidate_run_role"]
+    roles = []
+    for field in ("baseline_run_role", "candidate_run_role"):
+        role = comparison_sides.get(field)
+        if not isinstance(role, str) or not role:
+            errors.append(f"question comparison_sides.{field} must be a non-empty string")
+        else:
+            roles.append(role)
+    if len(roles) == 2 and roles[0] == roles[1]:
+        errors.append("question comparison_sides roles must be distinct")
+    compared_roles = [
+        item.get("run_role") for item in compared_versions
+        if isinstance(item, dict) and isinstance(item.get("run_role"), str) and item.get("run_role")
+    ]
+    for role in roles:
+        if compared_roles.count(role) != 1:
+            errors.append(f"question comparison_sides role {role!r} must resolve exactly one compared version")
+    if len(roles) == 2 and set(roles) != set(compared_roles):
+        errors.append("question comparison_sides must exactly cover both compared version roles")
+    return errors
+
+
+def canonical_question_path(question_id):
+    """Return the canonical path for a validated Question identity."""
+    if (
+        not isinstance(question_id, str)
+        or not 1 <= len(question_id) <= 64
+        or not QUESTION_ID_RE.fullmatch(question_id)
+    ):
+        raise ValueError("question_id must be a 1..64 character lowercase kebab-case identity")
+    return f"{CANONICAL_QUESTION_DIRECTORY}/{question_id}.json"
+
+
 def lifecycle_path_for_question(question_id):
     """Return the single canonical mutable lifecycle path for a Question."""
     return f"{CANONICAL_LIFECYCLE_DIRECTORY}/{question_id}.json"
@@ -401,21 +500,40 @@ def _question_metric_entries(question, policy):
     return errors
 
 
-def validate_simulation_question(question, *, policy, question_contract, project_id, load_reference, fingerprint_for_version):
+def validate_simulation_question(question, *, policy, question_contract, project_id, load_reference, fingerprint_for_version, question_path=None):
     """Fail closed on an immutable preregistered SimulationQuestion."""
     effective_contract, errors = _resolve_policy_question_contract(policy, question_contract, load_reference)
+    if effective_contract is None:
+        return errors
     errors.extend(_required(question, (effective_contract.get("required_fields") or {}).keys(), "question"))
     if not isinstance(question, dict):
         return errors
     extras = sorted(set(question) - QUESTION_INSTANCE_FIELDS)
     if extras:
         errors.append(f"question has unregistered top-level fields: {', '.join(extras)}")
-    if question.get("schema_version") != "3.0":
-        errors.append("question schema_version must be 3.0")
+    if question.get("schema_version") != "4.0":
+        errors.append("question schema_version must be 4.0")
     if question.get("artifact_type") != "simulation_question":
         errors.append("question artifact_type must be 'simulation_question'")
     if question.get("project_id") != project_id:
         errors.append("question project_id does not match the project")
+    try:
+        derived_question_path = canonical_question_path(question.get("question_id"))
+    except ValueError as exc:
+        derived_question_path = None
+        errors.append(str(exc))
+    if not isinstance(question_path, str) or not question_path:
+        errors.append("question source path must be a non-empty caller-supplied string")
+    if derived_question_path is not None:
+        if isinstance(question_path, str) and question_path and question_path != derived_question_path:
+            errors.append("question source path does not match the canonical path derived from question_id")
+        try:
+            canonical_question = load_reference(derived_question_path)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            errors.append(f"canonical Question does not resolve: {exc}")
+        else:
+            if canonical_question != question:
+                errors.append("supplied Question does not match the canonical Question resolved from question_id")
     if question.get("policy_id") != policy.get("policy_id") or question.get("policy_version") != policy.get("policy_version"):
         errors.append("question policy binding does not match the resolved policy")
     reference = question.get("policy_reference")
@@ -433,6 +551,7 @@ def validate_simulation_question(question, *, policy, question_contract, project
     elif len(compared) != expected_compared_count:
         errors.append(f"question compared_versions must contain exactly {expected_compared_count} DeckVersions")
     errors.extend(validate_question_role_bindings(compared))
+    errors.extend(validate_question_comparison_sides(question.get("comparison_sides"), compared))
     paths = []
     for index, item in enumerate(compared):
         if not isinstance(item, dict) or set(item) != {"deck_version_id", "path", "run_role", "deck_content_fingerprint"}:
@@ -1490,9 +1609,15 @@ def _validate_selected_metrics(selection, question):
 
 
 def validate_simulation_run(run, *, question, policy, question_contract, run_contract, project_id, load_reference, fingerprint_for_version, lifecycle_mode, lifecycle=None, lifecycle_path=None, lifecycle_contract=None):
-    errors = _required(run, (run_contract.get("required_fields") or {}).keys(), "run")
+    run_contract, errors = resolve_policy_pinned_contract(
+        policy, run_contract, reference_key="simulation_run_contract", load_reference=load_reference,
+    )
+    if run_contract is None:
+        return errors
+    errors.extend(_required(run, (run_contract.get("required_fields") or {}).keys(), "run"))
     if not isinstance(run, dict): return errors
-    errors.extend(validate_simulation_question(question, policy=policy, question_contract=question_contract, project_id=project_id, load_reference=load_reference, fingerprint_for_version=fingerprint_for_version))
+    question_path = ((run.get("semantic_dependencies") or {}).get("question") or {}).get("path")
+    errors.extend(validate_simulation_question(question, policy=policy, question_contract=question_contract, project_id=project_id, load_reference=load_reference, fingerprint_for_version=fingerprint_for_version, question_path=question_path))
     errors.extend(_unregistered_top_level_field_errors(run, run_contract, "run"))
     errors.extend(validate_recording_context(run_contract.get("recording_context"), id_field="run_id", created_at_required=False))
     if not isinstance(run.get("run_id"), str) or not run.get("run_id"):
@@ -1556,9 +1681,15 @@ def validate_simulation_run(run, *, question, policy, question_contract, run_con
 
 
 def validate_simulation_result(result, *, run, policy, question, question_contract, result_contract, taxonomy_ids, load_reference, project_id, fingerprint_for_version, lifecycle_mode, lifecycle=None, lifecycle_path=None, lifecycle_contract=None):
-    errors = _required(result, (result_contract.get("required_fields") or {}).keys(), "result")
+    result_contract, errors = resolve_policy_pinned_contract(
+        policy, result_contract, reference_key="simulation_result_contract", load_reference=load_reference,
+    )
+    if result_contract is None:
+        return errors
+    errors.extend(_required(result, (result_contract.get("required_fields") or {}).keys(), "result"))
     if not isinstance(result, dict): return errors
-    errors.extend(validate_simulation_question(question, policy=policy, question_contract=question_contract, project_id=project_id, load_reference=load_reference, fingerprint_for_version=fingerprint_for_version))
+    question_path = ((run.get("semantic_dependencies") or {}).get("question") or {}).get("path")
+    errors.extend(validate_simulation_question(question, policy=policy, question_contract=question_contract, project_id=project_id, load_reference=load_reference, fingerprint_for_version=fingerprint_for_version, question_path=question_path))
     errors.extend(_unregistered_top_level_field_errors(result, result_contract, "result"))
     errors.extend(_reserved_lifecycle_key_errors(result))
     errors.extend(validate_recording_context(result_contract.get("recording_context"), id_field="result_id", created_at_required=True))
@@ -1614,7 +1745,24 @@ def validate_simulation_result(result, *, run, policy, question, question_contra
 
 
 def validate_comparison_result(comparison, *, baseline_run, candidate_run, baseline_result, candidate_result, policy, question, question_contract, comparison_contract, run_contract, result_contract, project_id, taxonomy_ids, load_reference, fingerprint_for_version, lifecycle_mode, lifecycle=None, lifecycle_path=None, lifecycle_contract=None):
-    errors = _required(comparison, (comparison_contract.get("required_fields") or {}).keys(), "comparison")
+    errors = []
+    resolved_contracts = {}
+    for reference_key, supplied in (
+        ("comparison_result_contract", comparison_contract),
+        ("simulation_run_contract", run_contract),
+        ("simulation_result_contract", result_contract),
+    ):
+        resolved, resolution_errors = resolve_policy_pinned_contract(
+            policy, supplied, reference_key=reference_key, load_reference=load_reference,
+        )
+        errors.extend(resolution_errors)
+        resolved_contracts[reference_key] = resolved
+    if any(contract is None for contract in resolved_contracts.values()):
+        return errors
+    comparison_contract = resolved_contracts["comparison_result_contract"]
+    run_contract = resolved_contracts["simulation_run_contract"]
+    result_contract = resolved_contracts["simulation_result_contract"]
+    errors.extend(_required(comparison, (comparison_contract.get("required_fields") or {}).keys(), "comparison"))
     if not isinstance(comparison, dict): return errors
     errors.extend(_unregistered_top_level_field_errors(comparison, comparison_contract, "comparison"))
     errors.extend(_reserved_lifecycle_key_errors(comparison))
@@ -1627,6 +1775,14 @@ def validate_comparison_result(comparison, *, baseline_run, candidate_run, basel
     if comparison.get("project_id") != project_id: errors.append("comparison project_id does not match the project")
     if comparison.get("question_id") != question.get("question_id"): errors.append("comparison question_id does not match the question")
     if comparison.get("policy_version") != policy.get("policy_version"): errors.append("comparison policy_version does not match the policy")
+    comparison_sides = question.get("comparison_sides") if isinstance(question, dict) else None
+    if not isinstance(comparison_sides, dict):
+        errors.append("comparison requires Question-owned comparison_sides")
+    else:
+        if baseline_run.get("run_role") != comparison_sides.get("baseline_run_role"):
+            errors.append("comparison baseline Run role does not match Question comparison_sides")
+        if candidate_run.get("run_role") != comparison_sides.get("candidate_run_role"):
+            errors.append("comparison candidate Run role does not match Question comparison_sides")
     if comparison.get("iteration_count") != baseline_run.get("iteration_count") or comparison.get("iteration_count") != candidate_run.get("iteration_count"):
         errors.append("comparison iteration_count does not match both runs")
     for label, run in (("baseline", baseline_run), ("candidate", candidate_run)):
