@@ -13,6 +13,9 @@ from datetime import datetime
 
 from workshop.shared.identity import artifact_content_fingerprint
 from workshop.shared.simulation_determinism import (
+    RuntimeStateAuthority,
+    _condition_state_for_conditions,
+    _validate_condition_state,
     condition_is_satisfied as _condition_is_satisfied,
     derive_run_seed,
     evaluate_end_step_state_transitions,
@@ -868,7 +871,7 @@ def resolve_question_metric_target(question, reference):
     return target, []
 
 
-def project_level_two_land(record, *, condition_state, current_turn, horizon_turn, ordinal=1):
+def project_level_two_land(record, *, condition_state, current_turn, horizon_turn, runtime_authority, ordinal=1):
     """Project one registered land into the frozen Level 2 selector inputs.
 
     No Oracle text is parsed here. Generic external payments and artifact state
@@ -882,10 +885,33 @@ def project_level_two_land(record, *, condition_state, current_turn, horizon_tur
     groups = record.get("activation_groups") or []
     if len(groups) != 1:
         return None, ["Level 2 land projection requires exactly one activation group"]
-    selection_state = dict(condition_state) if isinstance(condition_state, dict) else {}
+    try:
+        _validate_condition_state(
+            condition_state,
+            allowed_keys={
+                "generic_payment_available_from_other_sources", "controller_turn_offset",
+                "artifact_controlled_count", "controlled_land_oracle_ids", "commander_colors",
+            },
+            runtime_authority=runtime_authority,
+            label="Level 2 land condition state",
+        )
+    except ValueError as error:
+        return None, [str(error)]
+    if type(runtime_authority) is not RuntimeStateAuthority or record.get("oracle_id") not in runtime_authority.canonical_land_oracle_ids:
+        return None, ["Level 2 land projection requires a canonical registered-land identity"]
+    selection_state = condition_state.copy()
     selection_state["candidate_land_oracle_id"] = record["oracle_id"]
     selection_state.setdefault("controller_turn_offset", 0)
-    profiles, errors = resolve_activation_profiles(groups[0], selection_state)
+    profile_conditions = [
+        condition
+        for profile in (groups[0].get("profiles") or []) if isinstance(profile, dict)
+        for condition in (profile.get("conditions") or [])
+    ]
+    profiles, errors = resolve_activation_profiles(
+        groups[0],
+        _condition_state_for_conditions(selection_state, profile_conditions),
+        runtime_authority=runtime_authority,
+    )
     if errors:
         return None, errors
     supported = [profile for profile in profiles if profile.get("supported")]
@@ -901,7 +927,11 @@ def project_level_two_land(record, *, condition_state, current_turn, horizon_tur
     ]
     transitions = record.get("state_transitions") or []
     transition_persists = all(
-        _condition_is_satisfied(transition.get("condition"), selection_state)
+        _condition_is_satisfied(
+            transition.get("condition"),
+            _condition_state_for_conditions(selection_state, [transition.get("condition")]),
+            runtime_authority=runtime_authority,
+        )
         for transition in transitions if isinstance(transition, dict)
     )
     if bounded:
@@ -930,6 +960,14 @@ def project_level_two_ramp(record, *, condition_state, available_generic_mana, a
     groups = record.get("activation_groups") or []
     if len(groups) != 1:
         return None, ["Level 2 ramp projection requires exactly one activation group"]
+    try:
+        _validate_condition_state(
+            condition_state,
+            allowed_keys=set(),
+            label="Level 2 ramp condition state",
+        )
+    except ValueError as error:
+        return None, [str(error)]
     cost = (record.get("deployment") or {}).get("casting_cost") or {}
     colored_cost = cost.get("colored") or []
     supplied_colors = list(available_colors) if isinstance(available_colors, list) else []
@@ -937,9 +975,17 @@ def project_level_two_ramp(record, *, condition_state, available_generic_mana, a
     can_deploy = _integer(available_generic_mana) and available_generic_mana >= cost.get("generic", 0) and can_pay_colored
     supported = []
     if can_deploy:
-        post_deployment_state = dict(condition_state) if isinstance(condition_state, dict) else {}
+        post_deployment_state = {}
         post_deployment_state["generic_payment_available_from_other_sources"] = available_generic_mana - cost.get("generic", 0)
-        profiles, errors = resolve_activation_profiles(groups[0], post_deployment_state)
+        profile_conditions = [
+            condition
+            for profile in (groups[0].get("profiles") or []) if isinstance(profile, dict)
+            for condition in (profile.get("conditions") or [])
+        ]
+        profiles, errors = resolve_activation_profiles(
+            groups[0],
+            _condition_state_for_conditions(post_deployment_state, profile_conditions),
+        )
         if errors:
             return None, errors
         supported = [profile for profile in profiles if profile.get("supported")]
@@ -1168,6 +1214,26 @@ def validate_mana_source_semantics(registry, *, policy, cards, versions):
     if seen != expected:
         errors.append("mana source semantics does not cover exactly the v1.0/v1.1 executable-source union")
     return errors
+
+
+def build_runtime_state_authority(registry, *, policy, cards, versions):
+    """Build immutable runtime identity domains only from validated project inputs."""
+    errors = validate_mana_source_semantics(registry, policy=policy, cards=cards, versions=versions)
+    if errors:
+        return None, errors
+    card_by_name = {card["name"]: card for card in cards}
+    card_by_id = {card["oracle_id"]: card for card in cards}
+    commander_names = {version["commander"]["name"] for version in versions}
+    commander = card_by_name[next(iter(commander_names))]
+    canonical_land_oracle_ids = frozenset(
+        record["oracle_id"]
+        for record in registry["records"]
+        if record["source_kind"] == "land" and "Land" in card_by_id[record["oracle_id"]].get("type_line", "")
+    )
+    return RuntimeStateAuthority(
+        canonical_land_oracle_ids=canonical_land_oracle_ids,
+        canonical_commander_colors=frozenset(commander.get("color_identity", [])),
+    ), []
 
 
 def validate_card_semantics_registry_parity(card_semantics, registry):
