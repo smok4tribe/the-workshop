@@ -3,7 +3,7 @@
   "artifact_type": "project_scoped_simulation_card_semantics",
   "artifact_id": "the-myr-singularity-simulation-card-semantics",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v6",
+  "policy_version": "sim-policy-v7",
   "generated_at": "2026-07-13T00:00:00Z",
   "generated_by": "Terra",
   "purpose": "Records project-scoped, source-aware modeled card behavior for the Simulation Policy. This artifact exists so that fixture-specific card behavior lives outside the universal Simulation Policy. The policy defines when overrides may be used, how they are validated, and how unsupported behavior is surfaced; this artifact supplies the concrete per-card modeled behavior for The Myr Singularity. It never edits canonical Card Facts and never records simulation results.",

@@ -2,7 +2,7 @@
   "schema_version": "4.0",
   "artifact_type": "simulation_policy",
   "policy_id": "the-myr-singularity-simulation-policy",
-  "policy_version": "sim-policy-v6",
+  "policy_version": "sim-policy-v7",
   "project_id": "the-myr-singularity",
   "generated_at": "2026-07-13T00:00:00Z",
   "generated_by": "Terra",
@@ -36,11 +36,11 @@
   "references": {
     "card_semantics": {
       "path": "workshop/projects/the-myr-singularity/simulation/card_semantics.json",
-      "content_fingerprint": "artifact-content-sha256-v1:56e09d11fe4404a23cc9c0e2b6a56a3f633ec73cbd42fd4bdc62f754bdabd7b6"
+      "content_fingerprint": "artifact-content-sha256-v1:4275bec64ee0fd3f770e0307b6b32ea5717490dffe1304d24716bc19fccf7d3b"
     },
     "mana_source_semantics": {
       "path": "workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json",
-      "content_fingerprint": "artifact-content-sha256-v1:bd867436cc899bf18a4a3d89550f820c8096db1e1ca5290fdda36c1a04d2c7fa"
+      "content_fingerprint": "artifact-content-sha256-v1:831f22fe529c6fdf08c5207e90e477efd4410667c297899803164610326b1180"
     },
     "canonical_card_facts": {
       "path": "workshop/card-data/cards.json",
@@ -48,23 +48,23 @@
     },
     "failure_pattern_taxonomy": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json",
-      "content_fingerprint": "artifact-content-sha256-v1:7e2413fbca56dddfea2a16491548b95138191f0badfd80c5cecb0c9bf51b8742"
+      "content_fingerprint": "artifact-content-sha256-v1:acac794cfdc18e851800ef81a640af82c71c39e6371ea555697b8b0d02afd285"
     },
     "simulation_question_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:a713465eaf2791bed90e5e0e6adfbad7bbc1ba872d8d8bcf2e5c65d5b91decef"
+      "content_fingerprint": "artifact-content-sha256-v1:fccd06686f0bb242a202a9a32b8fc4cb9415d76f3ca320b9b7a71d09af7ad6bd"
     },
     "simulation_run_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_run.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:1b370e4186d9e5c33cf733f350926f725d897aa3d8303ed0c42adbcd7a2e05ab"
+      "content_fingerprint": "artifact-content-sha256-v1:639392d0da4c35b9d25d3de89356ae530fbe9bf51a51b725c62f9158d30176c6"
     },
     "simulation_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:b2fcdf01d7b53781c62a4439060a6cb68dc772cc1ff2fe81a4cebb41c822d822"
+      "content_fingerprint": "artifact-content-sha256-v1:23da91d990527e246a937ad010c51e83d80c04ab8ecf771032254d773f00033a"
     },
     "comparison_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/comparison_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:2e6b44a65ecda17b85c5512902e563476c79c50b881acc7eb471bbc880bb7053"
+      "content_fingerprint": "artifact-content-sha256-v1:7f4f93cd6cc7082c5fbcf01fcadbc56f3a7c2a5b77c24986af01b202dbad1c65"
     }
   },
   "commander_scenario": {
@@ -963,11 +963,13 @@
   "level_2_sequencing": {
     "contract_id": "simulation-iteration-trace-v1",
     "turn_order": [
-      "untap_and_clear_floating_mana",
+      "turn_start_natural_untap_and_clear_stale_floating_mana",
       "draw",
       "advance_time_dependent_state",
+      "begin_level_2_development_phase",
       "select_and_play_one_land",
       "repeatedly_deploy_payable_registered_ramp",
+      "end_level_2_development_phase",
       "resolve_pending_time_dependent_removals",
       "record_end_of_turn_observations"
     ],
@@ -1014,6 +1016,33 @@
         "commander_color_identity",
         "bounded_controller_turn_window"
       ]
+    },
+    "floating_mana_model": {
+      "contract_id": "floating-mana-model-v1",
+      "model_scope": "bounded_level_2_development_phase_per_controller_turn",
+      "creation_event": "legal_mana_producing_activation",
+      "activation_output_production": "complete_selected_authenticated_activation_output_is_added_to_pool_before_consumption",
+      "partial_activation_output_permitted": false,
+      "representation": "exact_mana_symbol_quantity_map",
+      "symbol_domain": ["W", "U", "B", "R", "G", "C"],
+      "generic_is_cost_requirement_not_pool_symbol": true,
+      "quantity_domain": "non_negative_integers",
+      "consumption": "exact_symbols_are_consumed_from_the_pool_to_pay_registered_costs",
+      "partial_consumption": "unconsumed_produced_symbols_remain_in_the_pool",
+      "same_development_phase_retention": true,
+      "phase_boundary_clear_event": "end_level_2_development_phase",
+      "authoritative_lifetime_boundary": "end_level_2_development_phase",
+      "phase_boundary_clear_effect": "empty_floating_mana_pool",
+      "turn_start_zeroing_role": "defensive_invariant_only",
+      "turn_start_zeroing_lifetime_relation": "does_not_define_or_supersede_phase_boundary_clear_event",
+      "correct_prior_state_invariant": "correctly_executed_prior_state_has_empty_pool_after_development_phase_end",
+      "cross_phase_retention_default": false,
+      "cross_turn_retention_default": false,
+      "tapped_source_relation": "tapping_a_source_does_not_erase_mana_already_in_the_pool",
+      "rederivation_relation": "source_capability_rederivation_does_not_erase_the_pool",
+      "residual_spendability_relation": "the_pool_and_current_untapped_legal_source_outputs_are_distinct_inputs_to_residual_spendability",
+      "burst_vs_sustained_invariant": "produced_floating_mana_is_phase_scoped_and_never_becomes_persistent_source_capacity",
+      "unsupported_retention_effect_boundary": "only_an_explicitly_registered_executable_semantic_may_override_phase_boundary_clearing"
     },
     "urzas_saga_final_chapter_timing": "At controller-turn offset 2, Urza's Saga remains usable during the approved development window, then its final-chapter removal occurs before end-of-turn observation; once removed it contributes to no end-of-turn metric.",
     "unsupported_actions": "Actions without explicit complete policy registration cannot be selected or improve a metric.",
