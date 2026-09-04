@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from workshop.shared.identity import artifact_content_fingerprint
+from workshop.shared.identity import artifact_content_fingerprint, load_strict_json_bytes
 
 
 MASK64 = (1 << 64) - 1
@@ -166,35 +167,29 @@ def _freeze_json(value):
     raise ValueError("runtime semantic registry must contain only JSON values")
 
 
-def _thaw_json(value):
-    """Produce a JSON value only for deterministic fingerprint recomputation."""
-    if isinstance(value, Mapping):
-        return {key: _thaw_json(item) for key, item in value.items()}
-    if type(value) is tuple:
-        return [_thaw_json(item) for item in value]
-    return value
+def _canonical_json_bytes(value):
+    """Serialize one JSON value using artifact-content-sha256-v1 semantics."""
+    try:
+        return json.dumps(
+            value,
+            ensure_ascii=False,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    except (TypeError, ValueError) as error:
+        raise ValueError("runtime semantic registry must be canonical JSON") from error
 
 
-def _record_map_fingerprint(records_by_oracle_id):
-    return artifact_content_fingerprint({
-        "records": [
-            {"oracle_id": oracle_id, "record": _thaw_json(records_by_oracle_id[oracle_id])}
-            for oracle_id in sorted(records_by_oracle_id)
-        ],
-    })
-
-
-@dataclass(frozen=True, init=False)
+@dataclass(frozen=True, slots=True, init=False)
 class SimulationRuntimeContext:
     """Sealed canonical executable semantics for runtime helpers."""
 
+    _registry_canonical_bytes: bytes
     registry_identity: tuple[str, str, str, str, str]
     registry_content_fingerprint: str
-    record_map_content_fingerprint: str
     canonical_land_oracle_ids: frozenset[str]
     canonical_commander_colors: frozenset[str]
-    _frozen_registry: Mapping
-    _records_by_oracle_id: Mapping
     _construction_token: object
 
     def __init__(self, *args, **kwargs):
@@ -202,17 +197,23 @@ class SimulationRuntimeContext:
 
     @classmethod
     def _from_validated_registry(cls, registry):
-        frozen_registry = _freeze_json(registry)
-        records = frozen_registry.get("records") if isinstance(frozen_registry, Mapping) else None
-        if type(records) is not tuple:
-            raise ValueError("validated runtime semantic registry has no frozen records")
-        records_by_oracle_id = MappingProxyType({record["oracle_id"]: record for record in records})
+        if type(registry) is not dict:
+            raise ValueError("validated runtime semantic registry must be an exact object")
+        canonical_bytes = _canonical_json_bytes(registry)
+        canonical_registry = load_strict_json_bytes(canonical_bytes)
+        if type(canonical_registry) is not dict or type(canonical_registry.get("records")) is not list:
+            raise ValueError("validated runtime semantic registry has no canonical records")
+        records = canonical_registry["records"]
+        if any(type(record) is not dict or type(record.get("oracle_id")) is not str or not record["oracle_id"] for record in records):
+            raise ValueError("validated runtime semantic registry has invalid record identities")
+        if len({record["oracle_id"] for record in records}) != len(records):
+            raise ValueError("validated runtime semantic registry has duplicate record identities")
         instance = object.__new__(cls)
         object.__setattr__(instance, "registry_identity", tuple(
-            registry[field] for field in ("schema_version", "artifact_type", "artifact_id", "project_id", "policy_version")
+            canonical_registry[field] for field in ("schema_version", "artifact_type", "artifact_id", "project_id", "policy_version")
         ))
-        object.__setattr__(instance, "registry_content_fingerprint", artifact_content_fingerprint(registry))
-        object.__setattr__(instance, "record_map_content_fingerprint", _record_map_fingerprint(records_by_oracle_id))
+        object.__setattr__(instance, "_registry_canonical_bytes", canonical_bytes)
+        object.__setattr__(instance, "registry_content_fingerprint", artifact_content_fingerprint(canonical_registry))
         object.__setattr__(instance, "canonical_land_oracle_ids", frozenset(
             record["oracle_id"] for record in records if record.get("source_kind") == "land"
         ))
@@ -226,35 +227,78 @@ class SimulationRuntimeContext:
             for color in (condition.get("params") or {}).get("colors", ())
         }
         object.__setattr__(instance, "canonical_commander_colors", frozenset(commander_colors))
-        object.__setattr__(instance, "_frozen_registry", frozen_registry)
-        object.__setattr__(instance, "_records_by_oracle_id", records_by_oracle_id)
         object.__setattr__(instance, "_construction_token", _RUNTIME_CONTEXT_CONSTRUCTION_TOKEN)
         return instance
 
 
-def _require_runtime_context(runtime_context):
-    """Authenticate the exact approved frozen registry before execution."""
+_RUNTIME_SNAPSHOT_CONSTRUCTION_TOKEN = object()
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class AuthenticatedRuntimeSnapshot:
+    """Fresh, operation-local executable semantics derived from canonical bytes."""
+
+    _frozen_registry: Mapping
+    _records_by_oracle_id: Mapping
+    canonical_land_oracle_ids: frozenset[str]
+    canonical_commander_colors: frozenset[str]
+    registry_content_fingerprint: str
+    _construction_token: object
+
+    def __init__(self, *args, **kwargs):
+        raise TypeError("AuthenticatedRuntimeSnapshot instances are created only during authentication")
+
+
+def _require_authenticated_runtime_snapshot(snapshot):
+    if type(snapshot) is not AuthenticatedRuntimeSnapshot:
+        raise ValueError("runtime execution requires an authenticated runtime snapshot")
+    if snapshot._construction_token is not _RUNTIME_SNAPSHOT_CONSTRUCTION_TOKEN:
+        raise ValueError("runtime snapshot construction is not authenticated")
+    return snapshot
+
+
+def _authenticate_runtime_context(runtime_context):
+    """Reconstruct one fresh authenticated snapshot for a runtime operation."""
     if type(runtime_context) is not SimulationRuntimeContext:
         raise ValueError("runtime execution requires a trusted SimulationRuntimeContext")
     if runtime_context._construction_token is not _RUNTIME_CONTEXT_CONSTRUCTION_TOKEN:
         raise ValueError("runtime semantic context construction is not authenticated")
-    registry = runtime_context._frozen_registry
-    if not isinstance(registry, Mapping):
-        raise ValueError("runtime semantic context has no frozen registry")
-    thawed_registry = _thaw_json(registry)
-    fingerprint = artifact_content_fingerprint(thawed_registry)
-    identity = tuple(thawed_registry.get(field) for field in ("schema_version", "artifact_type", "artifact_id", "project_id", "policy_version"))
+    canonical_bytes = runtime_context._registry_canonical_bytes
+    if type(canonical_bytes) is not bytes:
+        raise ValueError("runtime semantic context canonical registry must be exact bytes")
+    identity_metadata = runtime_context.registry_identity
+    fingerprint_metadata = runtime_context.registry_content_fingerprint
+    land_metadata = runtime_context.canonical_land_oracle_ids
+    color_metadata = runtime_context.canonical_commander_colors
+    if (
+        type(identity_metadata) is not tuple
+        or len(identity_metadata) != 5
+        or any(type(value) is not str for value in identity_metadata)
+        or type(fingerprint_metadata) is not str
+        or type(land_metadata) is not frozenset
+        or any(type(value) is not str for value in land_metadata)
+        or type(color_metadata) is not frozenset
+        or any(type(value) is not str for value in color_metadata)
+    ):
+        raise ValueError("runtime semantic context metadata has invalid types")
+    try:
+        registry = load_strict_json_bytes(canonical_bytes)
+    except ValueError as error:
+        raise ValueError("runtime semantic context canonical registry bytes are invalid") from error
+    if type(registry) is not dict or _canonical_json_bytes(registry) != canonical_bytes:
+        raise ValueError("runtime semantic context registry bytes are not canonical")
+    fingerprint = artifact_content_fingerprint(registry)
+    identity = tuple(registry.get(field) for field in ("schema_version", "artifact_type", "artifact_id", "project_id", "policy_version"))
     records = registry.get("records")
-    if type(records) is not tuple:
-        raise ValueError("runtime semantic context registry records are not frozen")
-    expected_records = {record.get("oracle_id"): record for record in records if isinstance(record, Mapping)}
+    if type(records) is not list or any(
+        type(record) is not dict or type(record.get("oracle_id")) is not str or not record["oracle_id"]
+        for record in records
+    ) or len({record["oracle_id"] for record in records}) != len(records):
+        raise ValueError("runtime semantic context registry records are invalid")
     if (
         fingerprint != APPROVED_RUNTIME_MANA_SOURCE_SEMANTICS_FINGERPRINT
-        or runtime_context.registry_content_fingerprint != fingerprint
-        or runtime_context.registry_identity != identity
-        or set(expected_records) != set(runtime_context._records_by_oracle_id)
-        or any(runtime_context._records_by_oracle_id[oracle_id] != record for oracle_id, record in expected_records.items())
-        or runtime_context.record_map_content_fingerprint != _record_map_fingerprint(runtime_context._records_by_oracle_id)
+        or fingerprint_metadata != fingerprint
+        or identity_metadata != identity
     ):
         raise ValueError("runtime semantic context does not authenticate the approved executable registry")
     expected_lands = frozenset(record["oracle_id"] for record in records if record.get("source_kind") == "land")
@@ -267,17 +311,31 @@ def _require_runtime_context(runtime_context):
         if condition.get("condition_id") == "commander_color_identity"
         for color in (condition.get("params") or {}).get("colors", ())
     )
-    if runtime_context.canonical_land_oracle_ids != expected_lands or runtime_context.canonical_commander_colors != expected_commander_colors:
+    if land_metadata != expected_lands or color_metadata != expected_commander_colors:
         raise ValueError("runtime semantic context identity domains do not derive from the approved registry")
-    return runtime_context
+    frozen_registry = _freeze_json(registry)
+    frozen_records = frozen_registry.get("records")
+    if type(frozen_records) is not tuple:
+        raise ValueError("runtime semantic context authenticated records are not frozen")
+    snapshot = object.__new__(AuthenticatedRuntimeSnapshot)
+    object.__setattr__(snapshot, "_frozen_registry", frozen_registry)
+    object.__setattr__(snapshot, "_records_by_oracle_id", MappingProxyType({
+        record["oracle_id"]: record for record in frozen_records
+    }))
+    object.__setattr__(snapshot, "canonical_land_oracle_ids", expected_lands)
+    object.__setattr__(snapshot, "canonical_commander_colors", expected_commander_colors)
+    object.__setattr__(snapshot, "registry_content_fingerprint", fingerprint)
+    object.__setattr__(snapshot, "_construction_token", _RUNTIME_SNAPSHOT_CONSTRUCTION_TOKEN)
+    return snapshot
 
 
-def _resolve_runtime_record(runtime_context, oracle_id, *, required_source_kind=None):
-    context = _require_runtime_context(runtime_context)
+def _resolve_runtime_record(authenticated_snapshot, oracle_id, *, required_source_kind=None):
+    snapshot = _require_authenticated_runtime_snapshot(authenticated_snapshot)
     if type(oracle_id) is not str or not oracle_id:
         raise ValueError("runtime executable resolution requires a non-empty oracle_id")
-    record = context._records_by_oracle_id.get(oracle_id)
-    if record is None:
+    try:
+        record = snapshot._records_by_oracle_id[oracle_id]
+    except KeyError as error:
         raise ValueError("runtime executable resolution requires a canonical registered source oracle_id")
     if required_source_kind is not None and record.get("source_kind") not in required_source_kind:
         raise ValueError("runtime executable resolution source_kind is not permitted at this boundary")
@@ -314,7 +372,7 @@ def _condition_state_for_conditions(state, conditions):
     return {key: state[key] for key in allowed if key in state}
 
 
-def _validate_condition_state(state, *, allowed_keys, runtime_authority=None, label="condition state"):
+def _validate_condition_state(state, *, allowed_keys, runtime_snapshot=None, label="condition state"):
     """Validate one exact, closed runtime-state mapping without coercion."""
     if type(state) is not dict:
         raise ValueError(f"{label} must be an exact object")
@@ -323,10 +381,10 @@ def _validate_condition_state(state, *, allowed_keys, runtime_authority=None, la
     extras = sorted(set(state) - set(allowed_keys))
     if extras:
         raise ValueError(f"{label} has unregistered keys: {', '.join(extras)}")
-    if set(state) & _IDENTITY_STATE_KEYS and type(runtime_authority) is not SimulationRuntimeContext:
+    if set(state) & _IDENTITY_STATE_KEYS and type(runtime_snapshot) is not AuthenticatedRuntimeSnapshot:
         raise ValueError(f"{label} requires trusted runtime state authority")
     if set(state) & _IDENTITY_STATE_KEYS:
-        _require_runtime_context(runtime_authority)
+        _require_authenticated_runtime_snapshot(runtime_snapshot)
 
     for key in ("generic_payment_available_from_other_sources", "controller_turn_offset", "artifact_controlled_count"):
         if key in state and (type(state[key]) is not int or state[key] < 0):
@@ -338,14 +396,14 @@ def _validate_condition_state(state, *, allowed_keys, runtime_authority=None, la
             raise ValueError(f"{label} controlled_land_oracle_ids must be an array")
         if any(type(oracle_id) is not str or not oracle_id for oracle_id in controlled):
             raise ValueError(f"{label} controlled_land_oracle_ids must contain non-empty strings")
-        if any(oracle_id not in runtime_authority.canonical_land_oracle_ids for oracle_id in controlled):
+        if any(oracle_id not in runtime_snapshot.canonical_land_oracle_ids for oracle_id in controlled):
             raise ValueError(f"{label} controlled_land_oracle_ids must contain only canonical registered-land identities")
 
     if "candidate_land_oracle_id" in state:
         candidate = state["candidate_land_oracle_id"]
         if type(candidate) is not str or not candidate:
             raise ValueError(f"{label} candidate_land_oracle_id must be a non-empty string")
-        if candidate not in runtime_authority.canonical_land_oracle_ids:
+        if candidate not in runtime_snapshot.canonical_land_oracle_ids:
             raise ValueError(f"{label} candidate_land_oracle_id must be a canonical registered-land identity")
 
     if "commander_colors" in state:
@@ -356,18 +414,18 @@ def _validate_condition_state(state, *, allowed_keys, runtime_authority=None, la
             raise ValueError(f"{label} commander_colors must contain only registered colors")
         if len(colors) != len(set(colors)):
             raise ValueError(f"{label} commander_colors must not contain duplicates")
-        if set(colors) != set(runtime_authority.canonical_commander_colors):
+        if set(colors) != set(runtime_snapshot.canonical_commander_colors):
             raise ValueError(f"{label} commander_colors must equal the canonical Commander identity")
     return state
 
 
-def _condition_is_satisfied(condition, state, *, runtime_authority=None):
+def _condition_is_satisfied(condition, state, *, runtime_snapshot=None):
     """Resolve one registered mana-source condition against observation state."""
     allowed_keys = _condition_state_keys(condition)
     _validate_condition_state(
         state,
         allowed_keys=allowed_keys,
-        runtime_authority=runtime_authority,
+        runtime_snapshot=runtime_snapshot,
         label="condition state",
     )
     if not isinstance(condition, Mapping):
@@ -392,7 +450,7 @@ def _condition_is_satisfied(condition, state, *, runtime_authority=None):
     return False
 
 
-def _resolve_activation_profiles(group, condition_truth, *, runtime_authority=None):
+def _resolve_activation_profiles(group, condition_truth, *, runtime_snapshot=None):
     """Resolve registered activation profiles using structured predicates only."""
     profiles = group.get("profiles") if isinstance(group, Mapping) else None
     if not isinstance(profiles, (list, tuple)):
@@ -406,7 +464,7 @@ def _resolve_activation_profiles(group, condition_truth, *, runtime_authority=No
         _validate_condition_state(
             condition_truth,
             allowed_keys=_conditions_state_keys(conditions),
-            runtime_authority=runtime_authority,
+            runtime_snapshot=runtime_snapshot,
             label="activation condition state",
         )
     except ValueError as error:
@@ -419,7 +477,7 @@ def _resolve_activation_profiles(group, condition_truth, *, runtime_authority=No
             _condition_is_satisfied(
                 condition,
                 _condition_state_for_conditions(condition_truth, [condition]),
-                runtime_authority=runtime_authority,
+                runtime_snapshot=runtime_snapshot,
             )
             for condition in profile.get("conditions", [])
         ):
@@ -435,12 +493,9 @@ def _resolve_activation_profiles(group, condition_truth, *, runtime_authority=No
     return selected, []
 
 
-def evaluate_end_step_state_transitions(*, runtime_context, oracle_id, post_development_state):
-    """Resolve registered end-step removals after deterministic development."""
-    try:
-        record = _resolve_runtime_record(runtime_context, oracle_id)
-    except ValueError as error:
-        return None, [str(error)]
+def _evaluate_end_step_state_transitions(authenticated_snapshot, record, post_development_state):
+    """Resolve registered end-step removals from one authenticated snapshot."""
+    snapshot = _require_authenticated_runtime_snapshot(authenticated_snapshot)
     transitions = record.get("state_transitions") or []
     removal_transitions = [
         transition for transition in transitions
@@ -451,7 +506,7 @@ def evaluate_end_step_state_transitions(*, runtime_context, oracle_id, post_deve
         _validate_condition_state(
             post_development_state,
             allowed_keys=_conditions_state_keys(conditions),
-            runtime_authority=runtime_context,
+            runtime_snapshot=snapshot,
             label="end-step condition state",
         )
     except ValueError as error:
@@ -460,11 +515,21 @@ def evaluate_end_step_state_transitions(*, runtime_context, oracle_id, post_deve
         _condition_is_satisfied(
             transition.get("condition"),
             _condition_state_for_conditions(post_development_state, [transition.get("condition")]),
-            runtime_authority=runtime_context,
+            runtime_snapshot=snapshot,
         )
         for transition in removal_transitions
     )
     return {"remains_available": remains, "removed": not remains}, []
+
+
+def evaluate_end_step_state_transitions(*, runtime_context, oracle_id, post_development_state):
+    """Resolve registered end-step removals after deterministic development."""
+    try:
+        snapshot = _authenticate_runtime_context(runtime_context)
+        record = _resolve_runtime_record(snapshot, oracle_id)
+    except ValueError as error:
+        return None, [str(error)]
+    return _evaluate_end_step_state_transitions(snapshot, record, post_development_state)
 
 
 def _source_state(source, shared_state):
@@ -481,7 +546,7 @@ def _has_generic_payment_condition(profile):
     )
 
 
-def _resolved_profiles(record, state, *, exclude_generic_payment, runtime_authority=None):
+def _resolved_profiles(record, state, *, exclude_generic_payment, runtime_snapshot=None):
     profiles = []
     for group in record.get("activation_groups") or []:
         conditions = [
@@ -492,7 +557,7 @@ def _resolved_profiles(record, state, *, exclude_generic_payment, runtime_author
         selected, errors = _resolve_activation_profiles(
             group,
             _condition_state_for_conditions(state, conditions),
-            runtime_authority=runtime_authority,
+            runtime_snapshot=runtime_snapshot,
         )
         if errors == ["highest-priority activation group has no matching supported profile"]:
             continue
@@ -505,7 +570,7 @@ def _resolved_profiles(record, state, *, exclude_generic_payment, runtime_author
     return profiles, []
 
 
-def _expired_bounded_source(record, state, *, runtime_authority=None):
+def _expired_bounded_source(record, state, *, runtime_snapshot=None):
     supported = [
         profile
         for group in record.get("activation_groups") or []
@@ -533,7 +598,7 @@ def _expired_bounded_source(record, state, *, runtime_authority=None):
             _condition_is_satisfied(
                 condition,
                 _condition_state_for_conditions(state, [condition]),
-                runtime_authority=runtime_authority,
+                runtime_snapshot=runtime_snapshot,
             )
             for condition in profile.get("conditions", [])
         )
@@ -550,14 +615,14 @@ def observe_source_capability(*, runtime_context, source_states, candidate_sourc
     Earlier tapping is intentionally ignored for gross source capability, but
     retained for residual spendable-mana checks.
     """
-    _require_runtime_context(runtime_context)
+    snapshot = _authenticate_runtime_context(runtime_context)
     if type(source_states) is not list or type(candidate_source_id) is not str or not candidate_source_id:
         raise ValueError("source capability observation requires source states and candidate_source_id")
     shared_state = {} if condition_state is None else condition_state
     _validate_condition_state(
         shared_state,
         allowed_keys={"commander_colors", "artifact_controlled_count", "controlled_land_oracle_ids"},
-        runtime_authority=runtime_context,
+        runtime_snapshot=snapshot,
         label="source capability shared condition state",
     )
     seen_ids, surviving, candidate_state = set(), [], None
@@ -575,7 +640,7 @@ def observe_source_capability(*, runtime_context, source_states, candidate_sourc
             raise ValueError("source capability observation source_id values must be unique non-empty strings")
         seen_ids.add(source_id)
         try:
-            record = _resolve_runtime_record(runtime_context, oracle_id)
+            record = _resolve_runtime_record(snapshot, oracle_id)
         except ValueError as error:
             raise ValueError(f"source capability observation {error}") from error
         if type(source.get("online")) is not bool or type(source.get("tapped")) is not bool:
@@ -586,7 +651,7 @@ def observe_source_capability(*, runtime_context, source_states, candidate_sourc
         _validate_condition_state(
             per_source_state,
             allowed_keys={"controller_turn_offset"},
-            runtime_authority=runtime_context,
+            runtime_snapshot=snapshot,
             label="source capability per-source condition state",
         )
         local_state = _source_state({**source, "condition_state": per_source_state}, shared_state)
@@ -599,16 +664,16 @@ def observe_source_capability(*, runtime_context, source_states, candidate_sourc
             for transition in (record.get("state_transitions") or [])
             if isinstance(transition, Mapping) and transition.get("event_id") == "end_step_remove_unless_condition"
         ]
-        transition, errors = evaluate_end_step_state_transitions(
-            runtime_context=runtime_context,
-            oracle_id=oracle_id,
+        transition, errors = _evaluate_end_step_state_transitions(
+            snapshot,
+            record,
             post_development_state=_condition_state_for_conditions(local_state, transition_conditions),
         )
         if errors:
             raise ValueError(errors[0])
         if transition["removed"]:
             continue
-        if _expired_bounded_source(record, local_state, runtime_authority=runtime_context):
+        if _expired_bounded_source(record, local_state, runtime_snapshot=snapshot):
             continue
         surviving.append((source, record, local_state))
     if candidate_state is None:
@@ -620,7 +685,7 @@ def observe_source_capability(*, runtime_context, source_states, candidate_sourc
             record,
             local_state,
             exclude_generic_payment=True,
-            runtime_authority=runtime_context,
+            runtime_snapshot=snapshot,
         )
         if errors:
             raise ValueError(errors[0])
@@ -648,7 +713,7 @@ def observe_source_capability(*, runtime_context, source_states, candidate_sourc
         candidate[1],
         candidate_state,
         exclude_generic_payment=False,
-        runtime_authority=runtime_context,
+        runtime_snapshot=snapshot,
     )
     if errors:
         raise ValueError(errors[0])
@@ -663,7 +728,7 @@ def observe_source_capability(*, runtime_context, source_states, candidate_sourc
         candidate[1],
         spendable_state,
         exclude_generic_payment=False,
-        runtime_authority=runtime_context,
+        runtime_snapshot=snapshot,
     )
     if errors:
         raise ValueError(errors[0])

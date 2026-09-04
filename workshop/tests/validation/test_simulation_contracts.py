@@ -9,7 +9,10 @@ import subprocess
 import sys
 import unittest
 from collections import UserDict
+from collections.abc import Mapping
 from pathlib import Path
+from types import MappingProxyType
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
@@ -19,7 +22,7 @@ from workshop.shared.identity import (  # noqa: E402
     resolve_card_fact,
 )
 from workshop.shared.simulation_determinism import (  # noqa: E402
-    PCG32, SimulationRuntimeContext, _condition_is_satisfied, _resolve_activation_profiles, choose_payment, derive_iteration_seed, derive_run_seed,
+    PCG32, SimulationRuntimeContext, _authenticate_runtime_context, _condition_is_satisfied, _resolve_activation_profiles, choose_payment, derive_iteration_seed, derive_run_seed,
     evaluate_end_step_state_transitions as _evaluate_end_step_state_transitions,
     observe_source_capability as _observe_source_capability, select_bottom_tokens, select_land,
     select_payable_ramp,
@@ -61,8 +64,16 @@ def evaluate_end_step_state_transitions(record, *, runtime_authority=None, runti
     return _evaluate_end_step_state_transitions(runtime_context=runtime_context or runtime_authority or _ACTIVE_TEST_CONTEXT, oracle_id=record["oracle_id"], **kwargs)
 
 
-condition_is_satisfied = _condition_is_satisfied
-resolve_activation_profiles = _resolve_activation_profiles
+def condition_is_satisfied(condition, state, *, runtime_authority=None, runtime_context=None):
+    context = runtime_context or runtime_authority
+    snapshot = _authenticate_runtime_context(context) if context is not None else None
+    return _condition_is_satisfied(condition, state, runtime_snapshot=snapshot)
+
+
+def resolve_activation_profiles(group, condition_truth, *, runtime_authority=None, runtime_context=None):
+    context = runtime_context or runtime_authority
+    snapshot = _authenticate_runtime_context(context) if context is not None else None
+    return _resolve_activation_profiles(group, condition_truth, runtime_snapshot=snapshot)
 
 
 def load(path):
@@ -1478,6 +1489,7 @@ class SimulationContractV6Tests(unittest.TestCase):
         registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
         by_name = {record["card_name"]: record for record in registry["records"]}
         sol_id, island_id = by_name["Sol Ring"]["oracle_id"], by_name["Island"]["oracle_id"]
+        glimmervoid_id = by_name["Glimmervoid"]["oracle_id"]
         source = {"source_id": "source", "oracle_id": sol_id, "online": True, "tapped": False}
 
         with self.assertRaises(TypeError):
@@ -1486,8 +1498,12 @@ class SimulationContractV6Tests(unittest.TestCase):
             _project_level_two_land(runtime_context=self.runtime_authority, record=by_name["Island"], condition_state={}, current_turn=1, horizon_turn=6)
         with self.assertRaises(TypeError):
             SimulationRuntimeContext()
-        with self.assertRaises(TypeError):
-            self.runtime_authority._records_by_oracle_id[sol_id]["source_kind"] = "land"
+        self.assertFalse(hasattr(self.runtime_authority, "_frozen_registry"))
+        self.assertFalse(hasattr(self.runtime_authority, "_records_by_oracle_id"))
+        self.assertFalse(hasattr(self.runtime_authority, "record_map_content_fingerprint"))
+        for removed in ("_frozen_registry", "_records_by_oracle_id", "record_map_content_fingerprint"):
+            with self.subTest(removed=removed), self.assertRaises(AttributeError):
+                object.__setattr__(self.runtime_authority, removed, {})
 
         def assert_forged(mutator, oracle_id=sol_id):
             changed = copy.deepcopy(registry); mutator(changed["records"])
@@ -1518,11 +1534,100 @@ class SimulationContractV6Tests(unittest.TestCase):
         unknown, errors = _project_level_two_land(runtime_context=self.runtime_authority, oracle_id=non_source_id, condition_state={}, current_turn=1, horizon_turn=6)
         self.assertIsNone(unknown); self.assertTrue(errors)
 
-        for field, value in (("canonical_land_oracle_ids", frozenset()), ("canonical_commander_colors", frozenset({"U"})), ("registry_content_fingerprint", "artifact-content-sha256-v1:" + "0" * 64)):
+        changed_bytes = self.runtime_authority._registry_canonical_bytes.replace(b"Sol Ring", b"Sol Rung", 1)
+        class BytesSubclass(bytes):
+            pass
+        for field, value in (
+            ("_registry_canonical_bytes", object()),
+            ("_registry_canonical_bytes", BytesSubclass(self.runtime_authority._registry_canonical_bytes)),
+            ("_registry_canonical_bytes", b"{"),
+            ("_registry_canonical_bytes", b"{ \"records\": []}"),
+            ("_registry_canonical_bytes", changed_bytes),
+            ("registry_identity", ("forged",) * 5),
+            ("registry_content_fingerprint", "artifact-content-sha256-v1:" + "0" * 64),
+            ("canonical_land_oracle_ids", frozenset()),
+            ("canonical_land_oracle_ids", self.runtime_authority.canonical_land_oracle_ids | {"forged-land"}),
+            ("canonical_commander_colors", frozenset({"U"})),
+            ("_construction_token", object()),
+        ):
             forged = copy.copy(self.runtime_authority)
             object.__setattr__(forged, field, value)
             with self.subTest(field=field), self.assertRaises(ValueError):
                 _observe_source_capability(runtime_context=forged, source_states=[source], candidate_source_id="source")
+
+        class BehavioralMapping(Mapping):
+            """Mapping variants that would have split Task 32E auth/execution."""
+            def __init__(self, mode):
+                self.mode = mode
+                self.calls = 0
+                self.canonical = {sol_id: by_name["Sol Ring"]}
+                self.forged = {sol_id: {**by_name["Command Tower"], "oracle_id": sol_id}}
+
+            def __iter__(self):
+                return iter(self.canonical)
+
+            def __len__(self):
+                return len(self.canonical)
+
+            def __getitem__(self, key):
+                self.calls += 1
+                if self.mode in {"get-canonical-item-forged", "stateful-item", "iteration-forged", "views-forged", "equality-forged", "proxy"}:
+                    return self.forged[key]
+                return self.canonical[key]
+
+            def get(self, key, default=None):
+                self.calls += 1
+                if self.mode in {"item-canonical-get-forged", "stateful-get"}:
+                    return self.forged.get(key, default)
+                return self.canonical.get(key, default)
+
+            def items(self):
+                return self.canonical.items()
+
+            def values(self):
+                return self.canonical.values()
+
+            def keys(self):
+                return self.canonical.keys()
+
+            def __eq__(self, other):
+                return True
+
+        def assert_rejected_at_every_boundary(forged):
+            boundaries = {
+                "observe_source_capability": lambda: _observe_source_capability(
+                    runtime_context=forged, source_states=[source], candidate_source_id="source",
+                ),
+                "project_level_two_land": lambda: _project_level_two_land(
+                    runtime_context=forged, oracle_id=island_id, condition_state={}, current_turn=1, horizon_turn=6,
+                ),
+                "project_level_two_ramp": lambda: _project_level_two_ramp(
+                    runtime_context=forged, oracle_id=sol_id, condition_state={}, available_generic_mana=2, available_colors=[],
+                ),
+                "evaluate_end_step_state_transitions": lambda: _evaluate_end_step_state_transitions(
+                    runtime_context=forged, oracle_id=glimmervoid_id, post_development_state={"artifact_controlled_count": 0},
+                ),
+            }
+            for boundary, invoke in boundaries.items():
+                with self.subTest(boundary=boundary):
+                    try:
+                        result = invoke()
+                    except ValueError:
+                        continue
+                    self.assertIsNone(result[0])
+                    self.assertTrue(result[1])
+
+        for mode in (
+            "item-canonical-get-forged", "get-canonical-item-forged", "stateful-item", "stateful-get",
+            "iteration-forged", "views-forged", "equality-forged", "proxy",
+        ):
+            behavioral = BehavioralMapping(mode)
+            stored = MappingProxyType(behavioral) if mode == "proxy" else behavioral
+            forged = copy.copy(self.runtime_authority)
+            object.__setattr__(forged, "_registry_canonical_bytes", stored)
+            with self.subTest(behavioral_mapping=mode):
+                assert_rejected_at_every_boundary(forged)
+                self.assertEqual(0, behavioral.calls)
 
         changed_cards = copy.deepcopy(self.cards)
         next(card for card in changed_cards["cards"] if card["name"] == "Island")["type_line"] = "Artifact"
@@ -1530,6 +1635,44 @@ class SimulationContractV6Tests(unittest.TestCase):
             registry, policy=self.policy, card_facts=changed_cards, versions=self.versions,
         )
         self.assertIsNone(authority); self.assertTrue(errors)
+
+    def test_runtime_boundaries_authenticate_once_and_execute_snapshot_only(self):
+        import workshop.shared.simulation_determinism as determinism
+        import workshop.simulation.instance_validation as instance_validation
+
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        by_name = {record["card_name"]: record for record in registry["records"]}
+        sol_id = by_name["Sol Ring"]["oracle_id"]
+        island_id = by_name["Island"]["oracle_id"]
+        glimmervoid_id = by_name["Glimmervoid"]["oracle_id"]
+        source = {"source_id": "source", "oracle_id": sol_id, "online": True, "tapped": False}
+        calls = []
+        authenticate = determinism._authenticate_runtime_context
+
+        def counted(context):
+            calls.append(context)
+            return authenticate(context)
+
+        with patch.object(determinism, "_authenticate_runtime_context", side_effect=counted), patch.object(
+            instance_validation, "_authenticate_runtime_context", side_effect=counted,
+        ):
+            _observe_source_capability(runtime_context=self.runtime_authority, source_states=[source], candidate_source_id="source")
+            self.assertEqual(1, len(calls)); calls.clear()
+            _evaluate_end_step_state_transitions(
+                runtime_context=self.runtime_authority, oracle_id=glimmervoid_id,
+                post_development_state={"artifact_controlled_count": 0},
+            )
+            self.assertEqual(1, len(calls)); calls.clear()
+            _project_level_two_land(
+                runtime_context=self.runtime_authority, oracle_id=island_id,
+                condition_state={}, current_turn=1, horizon_turn=6,
+            )
+            self.assertEqual(1, len(calls)); calls.clear()
+            _project_level_two_ramp(
+                runtime_context=self.runtime_authority, oracle_id=sol_id,
+                condition_state={}, available_generic_mana=2, available_colors=[],
+            )
+            self.assertEqual(1, len(calls))
 
     def test_helper_owned_state_and_source_state_shape_cannot_be_injected(self):
         records = {

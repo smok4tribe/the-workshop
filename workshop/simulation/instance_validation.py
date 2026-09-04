@@ -16,6 +16,7 @@ from workshop.shared.identity import artifact_content_fingerprint, deck_content_
 from workshop.shared.simulation_determinism import (
     APPROVED_RUNTIME_MANA_SOURCE_SEMANTICS_FINGERPRINT,
     SimulationRuntimeContext,
+    _authenticate_runtime_context,
     _condition_state_for_conditions,
     _condition_is_satisfied,
     _resolve_activation_profiles,
@@ -882,7 +883,8 @@ def project_level_two_land(*, runtime_context, oracle_id, condition_state, curre
     after this land enters and bounded sources start at controller-turn offset 0.
     """
     try:
-        record = _resolve_runtime_record(runtime_context, oracle_id, required_source_kind={"land"})
+        snapshot = _authenticate_runtime_context(runtime_context)
+        record = _resolve_runtime_record(snapshot, oracle_id, required_source_kind={"land"})
     except ValueError as error:
         return None, [str(error)]
     if (record.get("deployment") or {}).get("counts_as_land_drop") is not True:
@@ -897,12 +899,12 @@ def project_level_two_land(*, runtime_context, oracle_id, condition_state, curre
                 "generic_payment_available_from_other_sources", "controller_turn_offset",
                 "artifact_controlled_count", "controlled_land_oracle_ids", "commander_colors",
             },
-            runtime_authority=runtime_context,
+            runtime_snapshot=snapshot,
             label="Level 2 land condition state",
         )
     except ValueError as error:
         return None, [str(error)]
-    if record.get("oracle_id") not in runtime_context.canonical_land_oracle_ids:
+    if record.get("oracle_id") not in snapshot.canonical_land_oracle_ids:
         return None, ["Level 2 land projection requires a canonical registered-land identity"]
     selection_state = condition_state.copy()
     selection_state["candidate_land_oracle_id"] = record["oracle_id"]
@@ -915,7 +917,7 @@ def project_level_two_land(*, runtime_context, oracle_id, condition_state, curre
     profiles, errors = _resolve_activation_profiles(
         groups[0],
         _condition_state_for_conditions(selection_state, profile_conditions),
-        runtime_authority=runtime_context,
+        runtime_snapshot=snapshot,
     )
     if errors:
         return None, errors
@@ -935,7 +937,7 @@ def project_level_two_land(*, runtime_context, oracle_id, condition_state, curre
         _condition_is_satisfied(
             transition.get("condition"),
             _condition_state_for_conditions(selection_state, [transition.get("condition")]),
-            runtime_authority=runtime_context,
+            runtime_snapshot=snapshot,
         )
         for transition in transitions if isinstance(transition, Mapping)
     )
@@ -961,7 +963,8 @@ def project_level_two_land(*, runtime_context, oracle_id, condition_state, curre
 def project_level_two_ramp(*, runtime_context, oracle_id, condition_state, available_generic_mana, available_colors, ordinal=1):
     """Project one registered nonland source into frozen ramp-selector inputs."""
     try:
-        record = _resolve_runtime_record(runtime_context, oracle_id, required_source_kind={"mana_rock", "mana_creature"})
+        snapshot = _authenticate_runtime_context(runtime_context)
+        record = _resolve_runtime_record(snapshot, oracle_id, required_source_kind={"mana_rock", "mana_creature"})
     except ValueError as error:
         return None, [str(error)]
     groups = record.get("activation_groups") or []

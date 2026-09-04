@@ -14,6 +14,7 @@ from workshop.shared.identity import (  # noqa: E402
     artifact_content_fingerprint,
     deck_content_fingerprint,
     load_strict_json,
+    load_strict_json_bytes,
 )
 from workshop.shared.simulation_determinism import derive_iteration_seed, derive_run_seed  # noqa: E402
 from workshop.simulation.instance_validation import (  # noqa: E402
@@ -159,6 +160,24 @@ def main():
     if runtime_context is None and not errors:
         errors.append("canonical runtime semantic context was not constructed")
     checks.append(("approved registry seals a canonical immutable runtime semantic context", errors))
+
+    errors = []
+    if runtime_context is not None:
+        canonical_bytes = getattr(runtime_context, "_registry_canonical_bytes", None)
+        if type(canonical_bytes) is not bytes:
+            errors.append("runtime semantic context must retain exact canonical registry bytes")
+        else:
+            try:
+                reconstructed = load_strict_json_bytes(canonical_bytes)
+            except ValueError as exc:
+                errors.append(f"runtime semantic context canonical bytes are invalid: {exc}")
+            else:
+                if artifact_content_fingerprint(reconstructed) != artifact_content_fingerprint(docs["mana_source_semantics"]):
+                    errors.append("runtime semantic context canonical bytes do not reproduce the approved registry")
+        for removed_field in ("_frozen_registry", "_records_by_oracle_id", "record_map_content_fingerprint"):
+            if hasattr(runtime_context, removed_field):
+                errors.append(f"runtime semantic context retains deprecated mapping authority {removed_field}")
+    checks.append(("runtime execution has one canonical-byte semantic root", errors))
 
     errors = []
     fp = policy.get("deck_fingerprint_policy", {})
