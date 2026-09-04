@@ -152,7 +152,7 @@ def _is_integer(value):
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-APPROVED_RUNTIME_MANA_SOURCE_SEMANTICS_FINGERPRINT = "artifact-content-sha256-v1:bd867436cc899bf18a4a3d89550f820c8096db1e1ca5290fdda36c1a04d2c7fa"
+APPROVED_RUNTIME_MANA_SOURCE_SEMANTICS_FINGERPRINT = "artifact-content-sha256-v1:831f22fe529c6fdf08c5207e90e477efd4410667c297899803164610326b1180"
 _RUNTIME_CONTEXT_CONSTRUCTION_TOKEN = object()
 
 

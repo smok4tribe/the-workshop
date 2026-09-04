@@ -126,8 +126,8 @@ POLICY_CONTRACT_REGISTRY = {
 }
 APPROVED_LIFECYCLE_CONTRACT_FINGERPRINT = "artifact-content-sha256-v1:d8e85971e266ae51a781d69a24fa8006a24d05c5096feeb1e30d47d68619f9bc"
 APPROVED_MANA_SOURCE_SEMANTICS_FINGERPRINT = APPROVED_RUNTIME_MANA_SOURCE_SEMANTICS_FINGERPRINT
-APPROVED_SIMULATION_POLICY_FINGERPRINT = "artifact-content-sha256-v1:ea26388ed56b9e8145bc70a98320227c9d04fefd51cc6ee6a3b09200a888495f"
-APPROVED_FAILURE_PATTERN_TAXONOMY_FINGERPRINT = "artifact-content-sha256-v1:7e2413fbca56dddfea2a16491548b95138191f0badfd80c5cecb0c9bf51b8742"
+APPROVED_SIMULATION_POLICY_FINGERPRINT = "artifact-content-sha256-v1:4dc991e237160ece5d79c7a54d840bf1f22c18820107d196bbbae54f67311355"
+APPROVED_FAILURE_PATTERN_TAXONOMY_FINGERPRINT = "artifact-content-sha256-v1:acac794cfdc18e851800ef81a640af82c71c39e6371ea555697b8b0d02afd285"
 RECORDING_CONTEXT_ID = "simulation-recording-context-v1"
 RECORDING_ARTIFACT_ALGORITHM = "artifact-content-sha256-v1"
 RECORDING_ARTIFACT_COVERAGE = "The complete persisted artifact, including caller-supplied recording metadata."
@@ -236,6 +236,45 @@ def validate_policy_metric_contracts(policy):
                 errors.append(f"policy metric {metric_id} {field} does not match its measurement_contract")
         if metric.get("measurement_contract") != expected:
             errors.append(f"policy metric {metric_id} measurement_contract is incomplete or does not match the preregistered semantics")
+    floating = ((policy.get("level_2_sequencing") or {}).get("floating_mana_model"))
+    expected_floating = {
+        "contract_id": "floating-mana-model-v1",
+        "model_scope": "bounded_level_2_development_phase_per_controller_turn",
+        "creation_event": "legal_mana_producing_activation",
+        "activation_output_production": "complete_selected_authenticated_activation_output_is_added_to_pool_before_consumption",
+        "partial_activation_output_permitted": False,
+        "representation": "exact_mana_symbol_quantity_map",
+        "symbol_domain": ["W", "U", "B", "R", "G", "C"],
+        "generic_is_cost_requirement_not_pool_symbol": True,
+        "quantity_domain": "non_negative_integers",
+        "consumption": "exact_symbols_are_consumed_from_the_pool_to_pay_registered_costs",
+        "partial_consumption": "unconsumed_produced_symbols_remain_in_the_pool",
+        "same_development_phase_retention": True,
+        "phase_boundary_clear_event": "end_level_2_development_phase",
+        "authoritative_lifetime_boundary": "end_level_2_development_phase",
+        "phase_boundary_clear_effect": "empty_floating_mana_pool",
+        "turn_start_zeroing_role": "defensive_invariant_only",
+        "turn_start_zeroing_lifetime_relation": "does_not_define_or_supersede_phase_boundary_clear_event",
+        "correct_prior_state_invariant": "correctly_executed_prior_state_has_empty_pool_after_development_phase_end",
+        "cross_phase_retention_default": False,
+        "cross_turn_retention_default": False,
+        "tapped_source_relation": "tapping_a_source_does_not_erase_mana_already_in_the_pool",
+        "rederivation_relation": "source_capability_rederivation_does_not_erase_the_pool",
+        "residual_spendability_relation": "the_pool_and_current_untapped_legal_source_outputs_are_distinct_inputs_to_residual_spendability",
+        "burst_vs_sustained_invariant": "produced_floating_mana_is_phase_scoped_and_never_becomes_persistent_source_capacity",
+        "unsupported_retention_effect_boundary": "only_an_explicitly_registered_executable_semantic_may_override_phase_boundary_clearing",
+    }
+    if floating != expected_floating:
+        errors.append("policy floating_mana_model must be the complete approved phase-scoped semantic")
+    order = (policy.get("level_2_sequencing") or {}).get("turn_order")
+    expected_order = [
+        "turn_start_natural_untap_and_clear_stale_floating_mana", "draw", "advance_time_dependent_state",
+        "begin_level_2_development_phase", "select_and_play_one_land", "repeatedly_deploy_payable_registered_ramp",
+        "end_level_2_development_phase", "resolve_pending_time_dependent_removals",
+        "record_end_of_turn_observations",
+    ]
+    if order != expected_order:
+        errors.append("policy turn_order must define the bounded development-phase floating-mana clear boundary")
     return errors
 
 

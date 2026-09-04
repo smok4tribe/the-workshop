@@ -1,4 +1,4 @@
-# Simulation Policy sim-policy-v6
+# Simulation Policy sim-policy-v7
 
 Policy id: `the-myr-singularity-simulation-policy` — project `the-myr-singularity`
 
@@ -574,13 +574,15 @@ Each metric below is measured only under its complete Policy-owned contract.
 
 ## Deterministic Level 2 Trace
 
-1. `untap_and_clear_floating_mana`
+1. `turn_start_natural_untap_and_clear_stale_floating_mana`
 2. `draw`
 3. `advance_time_dependent_state`
-4. `select_and_play_one_land`
-5. `repeatedly_deploy_payable_registered_ramp`
-6. `resolve_pending_time_dependent_removals`
-7. `record_end_of_turn_observations`
+4. `begin_level_2_development_phase`
+5. `select_and_play_one_land`
+6. `repeatedly_deploy_payable_registered_ramp`
+7. `end_level_2_development_phase`
+8. `resolve_pending_time_dependent_removals`
+9. `record_end_of_turn_observations`
 
 Urza's Saga timing: At controller-turn offset 2, Urza's Saga remains usable during the approved development window, then its final-chapter removal occurs before end-of-turn observation; once removed it contributes to no end-of-turn metric.
 
@@ -588,6 +590,47 @@ Source-capability projection: surviving online source color capabilities, irresp
 Spendable-mana projection: actual remaining untapped payable sources after deterministic development
 
 Unsupported actions: Actions without explicit complete policy registration cannot be selected or improve a metric.
+
+## Floating Mana Model
+
+Within the bounded Level-2 development model, this is phase-scoped resource state; it is not a complete Magic mana system.
+
+```json
+{
+  "contract_id": "floating-mana-model-v1",
+  "model_scope": "bounded_level_2_development_phase_per_controller_turn",
+  "creation_event": "legal_mana_producing_activation",
+  "activation_output_production": "complete_selected_authenticated_activation_output_is_added_to_pool_before_consumption",
+  "partial_activation_output_permitted": false,
+  "representation": "exact_mana_symbol_quantity_map",
+  "symbol_domain": [
+    "W",
+    "U",
+    "B",
+    "R",
+    "G",
+    "C"
+  ],
+  "generic_is_cost_requirement_not_pool_symbol": true,
+  "quantity_domain": "non_negative_integers",
+  "consumption": "exact_symbols_are_consumed_from_the_pool_to_pay_registered_costs",
+  "partial_consumption": "unconsumed_produced_symbols_remain_in_the_pool",
+  "same_development_phase_retention": true,
+  "phase_boundary_clear_event": "end_level_2_development_phase",
+  "authoritative_lifetime_boundary": "end_level_2_development_phase",
+  "phase_boundary_clear_effect": "empty_floating_mana_pool",
+  "turn_start_zeroing_role": "defensive_invariant_only",
+  "turn_start_zeroing_lifetime_relation": "does_not_define_or_supersede_phase_boundary_clear_event",
+  "correct_prior_state_invariant": "correctly_executed_prior_state_has_empty_pool_after_development_phase_end",
+  "cross_phase_retention_default": false,
+  "cross_turn_retention_default": false,
+  "tapped_source_relation": "tapping_a_source_does_not_erase_mana_already_in_the_pool",
+  "rederivation_relation": "source_capability_rederivation_does_not_erase_the_pool",
+  "residual_spendability_relation": "the_pool_and_current_untapped_legal_source_outputs_are_distinct_inputs_to_residual_spendability",
+  "burst_vs_sustained_invariant": "produced_floating_mana_is_phase_scoped_and_never_becomes_persistent_source_capacity",
+  "unsupported_retention_effect_boundary": "only_an_explicitly_registered_executable_semantic_may_override_phase_boundary_clearing"
+}
+```
 
 ## Executable Mana Source Boundary
 

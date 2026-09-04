@@ -1,4 +1,4 @@
-"""Positive and adversarial coverage for the active simulation-policy-v6 contract."""
+"""Positive and adversarial coverage for the active simulation-policy-v7 contract."""
 
 from __future__ import annotations
 
@@ -110,7 +110,7 @@ class IndependentPCG32:
         return result
 
 
-class SimulationContractV6Tests(unittest.TestCase):
+class SimulationContractV7Tests(unittest.TestCase):
     def setUp(self):
         self.policy = load(SIM / "simulation_policy.json")
         self.question = load(SIM / "questions" / "question-001-mana-color.json")
@@ -201,7 +201,7 @@ class SimulationContractV6Tests(unittest.TestCase):
         result = subprocess.run([sys.executable, "workshop/tests/validation/validate_simulation_contracts.py"], cwd=REPO_ROOT, text=True, capture_output=True, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_valid_v6_fixtures_validate(self):
+    def test_valid_v7_fixtures_validate(self):
         self.assertEqual([], self.check_run())
         self.assertEqual([], self.check_result())
         self.assertEqual([], self.check_comparison())
@@ -902,11 +902,11 @@ class SimulationContractV6Tests(unittest.TestCase):
                 self.assertTrue(any("content fingerprint" in error or "expected artifact" in error for error in self.check_run()))
                 self.documents[path] = original
 
-    def test_v6_seed_and_iteration_vectors(self):
+    def test_v7_seed_and_iteration_vectors(self):
         seed = derive_run_seed(self.run["semantic_dependencies"]["question"]["content_fingerprint"], self.run["semantic_dependencies"]["policy"]["content_fingerprint"], self.run["deck_content_fingerprint"], self.run["run_role"])
         self.assertEqual(seed, self.run["seed"])
-        self.assertEqual(derive_iteration_seed(seed, 1), 18286694482864418478)
-        self.assertEqual(derive_iteration_seed(seed, 2), 9245378503593541660)
+        self.assertEqual(derive_iteration_seed(seed, 1), 15617334600725155670)
+        self.assertEqual(derive_iteration_seed(seed, 2), 11388546552586038854)
 
     def test_trace_kat_freezes_canonical_expansion_and_opening_shuffle(self):
         kat = load(REPO_ROOT / "workshop" / "tests" / "fixtures" / "simulation" / "simulation_iteration_trace.v1.json")
@@ -999,6 +999,80 @@ class SimulationContractV6Tests(unittest.TestCase):
         order = self.policy["level_2_sequencing"]["turn_order"]
         self.assertLess(order.index("resolve_pending_time_dependent_removals"), order.index("record_end_of_turn_observations"))
         self.assertIn("cannot be selected", self.policy["level_2_sequencing"]["unsupported_actions"])
+
+    def test_floating_mana_policy_kats_and_fail_closed_boundaries(self):
+        """Policy KATs specify the future ledger without implementing it here."""
+        level_two = self.policy["level_2_sequencing"]
+        model = level_two["floating_mana_model"]
+        self.assertEqual([], validate_policy_metric_contracts(self.policy))
+        self.assertEqual(model["representation"], "exact_mana_symbol_quantity_map")
+        self.assertEqual(model["symbol_domain"], ["W", "U", "B", "R", "G", "C"])
+        self.assertEqual(model["quantity_domain"], "non_negative_integers")
+        self.assertEqual(model["activation_output_production"], "complete_selected_authenticated_activation_output_is_added_to_pool_before_consumption")
+        self.assertFalse(model["partial_activation_output_permitted"])
+        self.assertTrue(model["generic_is_cost_requirement_not_pool_symbol"])
+        self.assertTrue(model["same_development_phase_retention"])
+        self.assertEqual(model["phase_boundary_clear_event"], "end_level_2_development_phase")
+        self.assertEqual(model["authoritative_lifetime_boundary"], "end_level_2_development_phase")
+        self.assertEqual(model["phase_boundary_clear_effect"], "empty_floating_mana_pool")
+        self.assertEqual(model["turn_start_zeroing_role"], "defensive_invariant_only")
+        self.assertEqual(model["turn_start_zeroing_lifetime_relation"], "does_not_define_or_supersede_phase_boundary_clear_event")
+        self.assertEqual(model["correct_prior_state_invariant"], "correctly_executed_prior_state_has_empty_pool_after_development_phase_end")
+        self.assertIn(model["phase_boundary_clear_event"], level_two["turn_order"])
+        self.assertEqual(level_two["turn_order"].count(model["phase_boundary_clear_event"]), 1)
+        self.assertFalse(model["cross_phase_retention_default"])
+        self.assertFalse(model["cross_turn_retention_default"])
+
+        # A test-only known-answer trace: production of registry-owned output,
+        # pool addition, payment consumption, and phase-end clearing are distinct.
+        registered_sol_ring_output = ("C", "C")
+        pool = {symbol: registered_sol_ring_output.count(symbol) for symbol in model["symbol_domain"] if registered_sol_ring_output.count(symbol)}
+        source_capacity = {"sol-ring": {"C": 2, "tapped": False}}
+        self.assertEqual(pool, {"C": 2})
+        self.assertNotIn("generic", pool)
+        source_capacity["sol-ring"]["tapped"] = True
+        pool["C"] -= 1  # A legal generic cost consumes one already-produced C.
+        self.assertEqual(pool, {"C": 1})
+        self.assertTrue(source_capacity["sol-ring"]["tapped"])
+        self.assertEqual(source_capacity["sol-ring"], {"C": 2, "tapped": True})
+        pool["C"] -= 1  # A second same-development-phase generic payment uses the remainder.
+        if pool["C"] == 0:
+            del pool["C"]
+        self.assertEqual(pool, {})
+        self.assertEqual(source_capacity["sol-ring"], {"C": 2, "tapped": True})
+        pool = {"C": 1}
+        pool.clear()  # end_level_2_development_phase
+        self.assertEqual(pool, {})
+
+        commander = next(metric for metric in self.policy["metric_catalog"]["metrics"] if metric["metric_id"] == "commander_castability_by_turn")
+        self.assertEqual(commander["measurement_contract"]["event"]["resources"], "remaining_untapped_after_development")
+        self.assertFalse(commander["measurement_contract"]["event"]["commander_actually_cast"])
+
+        mutations = (
+            ("unknown clear event", lambda floating: floating.__setitem__("phase_boundary_clear_event", "turn_end")),
+            ("clear-event alias", lambda floating: floating.__setitem__("phase_boundary_clear_event", "end_level_2_development_phase_and_clear_floating_mana")),
+            ("clear-event prefix", lambda floating: floating.__setitem__("phase_boundary_clear_event", "end_level_2_development")),
+            ("turn-start lifetime authority", lambda floating: floating.__setitem__("authoritative_lifetime_boundary", "turn_start_natural_untap_and_clear_stale_floating_mana")),
+            ("second lifetime authority", lambda floating: floating.__setitem__("second_authoritative_lifetime_boundary", "turn_start_natural_untap_and_clear_stale_floating_mana")),
+            ("cross-phase retention", lambda floating: floating.__setitem__("cross_phase_retention_default", True)),
+            ("partial activation output", lambda floating: floating.__setitem__("partial_activation_output_permitted", True)),
+            ("missing activation output rule", lambda floating: floating.pop("activation_output_production")),
+            ("immediate-cost activation output", lambda floating: floating.__setitem__("activation_output_production", "immediate_cost_amount_is_added_to_pool")),
+            ("consumption before full output", lambda floating: floating.__setitem__("activation_output_production", "consumption_precedes_complete_selected_activation_output")),
+            ("negative amount semantics", lambda floating: floating.__setitem__("quantity_domain", "negative_integers")),
+            ("bool amount semantics", lambda floating: floating.__setitem__("quantity_domain", "boolean")),
+            ("unknown mana symbol", lambda floating: floating.__setitem__("symbol_domain", ["W", "U", "B", "R", "G", "C", "generic"])),
+            ("missing clear boundary", lambda floating: floating.pop("phase_boundary_clear_event")),
+            ("conflicting clear events", lambda floating: floating.__setitem__("additional_clear_event", "turn_start")),
+            ("source-capability equivalence", lambda floating: floating.__setitem__("residual_spendability_relation", "floating_mana_is_source_capability")),
+            ("persistent board state", lambda floating: floating.__setitem__("burst_vs_sustained_invariant", "floating_mana_is_persistent_board_state")),
+            ("free-form retention rule", lambda floating: floating.__setitem__("retention_rule", "retain_when_convenient")),
+        )
+        for label, mutate in mutations:
+            with self.subTest(label=label):
+                policy = copy.deepcopy(self.policy)
+                mutate(policy["level_2_sequencing"]["floating_mana_model"])
+                self.assertIn("policy floating_mana_model must be the complete approved phase-scoped semantic", validate_policy_metric_contracts(policy))
 
     def test_independent_level_two_hand_auditable_kats(self):
         # Category A: hand-written scenario inputs and actions; no second simulation engine is introduced.

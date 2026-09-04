@@ -5,7 +5,7 @@
   "run_id": "fixture-run-candidate-v1.1",
   "deck_version_id": "v1.1",
   "deck_content_fingerprint": "deck-content-sha256-canonical-v2:510ba8e90025aec8d289edbf895405b7ddde6614161502a3ec47d4beaa56b120",
-  "policy_version": "sim-policy-v6",
+  "policy_version": "sim-policy-v7",
   "iteration_count": 100000,
   "readable_summary": "metric_estimate:keepable_opening_hand_rate@0 | metric_estimate:zero_land_hand_rate@0 | metric_estimate:one_land_hand_rate@0 | metric_estimate:excessive_land_hand_rate@0 | metric_estimate:land_drop_success_by_turn@6 | metric_estimate:ramp_access_by_turn@3 | metric_estimate:distinct_commander_colors_by_turn@6 | metric_estimate:five_color_availability_by_turn@6",
   "metrics": [
@@ -207,7 +207,7 @@
   "source_references": {
     "run": {
       "path": "workshop/tests/fixtures/simulation/valid/simulation_run.valid.json",
-      "content_fingerprint": "artifact-content-sha256-v1:9989ca594cafb9a0c508e3d01fd060d9b9e7d64a06e64e0eade2f032fcec69fb"
+      "content_fingerprint": "artifact-content-sha256-v1:fa4d01f73933345a8c40e871fb37530f3eba71384be23e4ae80c72705e484a63"
     }
   },
   "explicit_boundary": {
@@ -398,19 +398,19 @@
   "semantic_dependencies": {
     "policy": {
       "path": "workshop/projects/the-myr-singularity/simulation/simulation_policy.json",
-      "content_fingerprint": "artifact-content-sha256-v1:ea26388ed56b9e8145bc70a98320227c9d04fefd51cc6ee6a3b09200a888495f"
+      "content_fingerprint": "artifact-content-sha256-v1:4dc991e237160ece5d79c7a54d840bf1f22c18820107d196bbbae54f67311355"
     },
     "question": {
       "path": "workshop/projects/the-myr-singularity/simulation/questions/question-001-mana-color.json",
-      "content_fingerprint": "artifact-content-sha256-v1:4a595ce2ccea7c935c0f9ad3d2a473eab488757376dcbd5275cd36eb59216544"
+      "content_fingerprint": "artifact-content-sha256-v1:af5b6c9ce8193b4413f5fc212f82a29553f7498004c450f7c2c31e4e258c2677"
     },
     "card_semantics": {
       "path": "workshop/projects/the-myr-singularity/simulation/card_semantics.json",
-      "content_fingerprint": "artifact-content-sha256-v1:56e09d11fe4404a23cc9c0e2b6a56a3f633ec73cbd42fd4bdc62f754bdabd7b6"
+      "content_fingerprint": "artifact-content-sha256-v1:4275bec64ee0fd3f770e0307b6b32ea5717490dffe1304d24716bc19fccf7d3b"
     },
     "mana_source_semantics": {
       "path": "workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json",
-      "content_fingerprint": "artifact-content-sha256-v1:bd867436cc899bf18a4a3d89550f820c8096db1e1ca5290fdda36c1a04d2c7fa"
+      "content_fingerprint": "artifact-content-sha256-v1:831f22fe529c6fdf08c5207e90e477efd4410667c297899803164610326b1180"
     },
     "canonical_card_facts": {
       "path": "workshop/card-data/cards.json",
@@ -418,23 +418,23 @@
     },
     "failure_pattern_taxonomy": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json",
-      "content_fingerprint": "artifact-content-sha256-v1:7e2413fbca56dddfea2a16491548b95138191f0badfd80c5cecb0c9bf51b8742"
+      "content_fingerprint": "artifact-content-sha256-v1:acac794cfdc18e851800ef81a640af82c71c39e6371ea555697b8b0d02afd285"
     },
     "simulation_question_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:a713465eaf2791bed90e5e0e6adfbad7bbc1ba872d8d8bcf2e5c65d5b91decef"
+      "content_fingerprint": "artifact-content-sha256-v1:fccd06686f0bb242a202a9a32b8fc4cb9415d76f3ca320b9b7a71d09af7ad6bd"
     },
     "simulation_run_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_run.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:1b370e4186d9e5c33cf733f350926f725d897aa3d8303ed0c42adbcd7a2e05ab"
+      "content_fingerprint": "artifact-content-sha256-v1:639392d0da4c35b9d25d3de89356ae530fbe9bf51a51b725c62f9158d30176c6"
     },
     "simulation_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:b2fcdf01d7b53781c62a4439060a6cb68dc772cc1ff2fe81a4cebb41c822d822"
+      "content_fingerprint": "artifact-content-sha256-v1:23da91d990527e246a937ad010c51e83d80c04ab8ecf771032254d773f00033a"
     },
     "comparison_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/comparison_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:2e6b44a65ecda17b85c5512902e563476c79c50b881acc7eb471bbc880bb7053"
+      "content_fingerprint": "artifact-content-sha256-v1:7f4f93cd6cc7082c5fbcf01fcadbc56f3a7c2a5b77c24986af01b202dbad1c65"
     },
     "deck_version": {
       "path": "workshop/projects/the-myr-singularity/versions/v1.1.json",

@@ -3,7 +3,7 @@
   "artifact_type": "project_scoped_mana_source_semantics",
   "artifact_id": "the-myr-singularity-mana-source-semantics-v1",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v6",
+  "policy_version": "sim-policy-v7",
   "condition_vocabulary": {
     "artifact_controlled": {
       "required_params": [

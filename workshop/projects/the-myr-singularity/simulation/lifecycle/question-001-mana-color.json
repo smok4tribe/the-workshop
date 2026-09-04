@@ -5,7 +5,7 @@
   "project_id": "the-myr-singularity",
   "question_id": "question-001-mana-color",
   "question_path": "workshop/projects/the-myr-singularity/simulation/questions/question-001-mana-color.json",
-  "question_content_fingerprint": "artifact-content-sha256-v1:4a595ce2ccea7c935c0f9ad3d2a473eab488757376dcbd5275cd36eb59216544",
+  "question_content_fingerprint": "artifact-content-sha256-v1:af5b6c9ce8193b4413f5fc212f82a29553f7498004c450f7c2c31e4e258c2677",
   "state": "preregistered",
   "recorded_evidence": {
     "runs": [],

@@ -3,7 +3,7 @@
   "artifact_type": "comparison_result_contract",
   "contract_id": "comparison-result-contract-v5",
   "project_id": "the-myr-singularity",
-  "policy_version": "sim-policy-v6",
+  "policy_version": "sim-policy-v7",
   "generated_at": "2026-07-13T00:00:00Z",
   "purpose": "Defines the data contract for a ComparisonResult. A ComparisonResult compares two resolved SimulationResults under computed semantic parity: policy, question, iteration count, configuration, metric definitions, scenario, and RNG strategy. Identity consequences of distinct DeckVersions may differ. It records full side estimates and absolute and optional relative deltas, but no delta confidence interval. It carries no reasoning interpretation and no Product Owner decision. Task 30 defines this contract but creates no ComparisonResult instance.",
   "scope": {
