@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the active Sprint 2 simulation-policy-v7 contract layer."""
+"""Validate the active Sprint 2 simulation-policy-v8 contract layer."""
 
 from __future__ import annotations
 
@@ -103,13 +103,13 @@ def main():
             docs[name] = load_json(path)
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             errors.append(f"{name} does not strictly parse: {exc}")
-    checks = [("all v7 executable-semantics artifacts exist and strictly parse", errors)]
+    checks = [("all v8 executable-semantics artifacts exist and strictly parse", errors)]
     if errors:
         return report(checks)
     policy, semantics, question, taxonomy = (docs[k] for k in ("policy", "semantics", "question", "taxonomy"))
 
     errors = _required(policy, ("policy_id", "policy_version", "references", "randomness_policy", "deck_fingerprint_policy", "metric_catalog", "level_2_sequencing"), "policy")
-    if policy.get("policy_version") != "sim-policy-v7": errors.append("policy_version must be sim-policy-v7")
+    if policy.get("policy_version") != "sim-policy-v8": errors.append("policy_version must be sim-policy-v8")
     if policy.get("bottoming_rule", {}).get("rule_id") != "deterministic-bottoming-v2": errors.append("policy must use deterministic-bottoming-v2")
     transition = policy.get("mulligan_policy", {}).get("executable_state_transition", {})
     expected_transition = {
@@ -131,7 +131,7 @@ def main():
     }
     if transition != expected_transition:
         errors.append("policy executable mulligan transition is incomplete")
-    checks.append(("policy has versioned v7 executable ownership", errors))
+    checks.append(("policy has versioned v8 executable ownership", errors))
 
     errors = []
     expected_refs = {
@@ -205,7 +205,7 @@ def main():
     checks.append(("metric registry has complete v3 measurement contracts", errors))
 
     errors = []
-    if semantics.get("policy_version") != "sim-policy-v7": errors.append("card semantics must bind sim-policy-v7")
+    if semantics.get("policy_version") != "sim-policy-v8": errors.append("card semantics must bind sim-policy-v8")
     saga = next((e for e in semantics.get("entries", []) if e.get("card_identity", {}).get("name") == "Urza's Saga"), {})
     if saga.get("source", {}).get("oracle_basis") != "Saga land with a Chapter I {T}: Add {C} ability and a Chapter III ability.": errors.append("Urza's Saga must use the approved narrow oracle basis")
     if "upkeep" in saga.get("source", {}).get("oracle_basis", "").casefold(): errors.append("Urza's Saga source basis must not contain upkeep")

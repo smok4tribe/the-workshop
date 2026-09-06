@@ -12,7 +12,11 @@ import re
 from collections.abc import Mapping
 from datetime import datetime
 
-from workshop.shared.identity import artifact_content_fingerprint, deck_content_fingerprint
+from workshop.shared.identity import (
+    artifact_content_fingerprint,
+    deck_content_fingerprint,
+    load_strict_json_bytes,
+)
 from workshop.shared.simulation_determinism import (
     APPROVED_RUNTIME_MANA_SOURCE_SEMANTICS_FINGERPRINT,
     SimulationRuntimeContext,
@@ -126,8 +130,9 @@ POLICY_CONTRACT_REGISTRY = {
 }
 APPROVED_LIFECYCLE_CONTRACT_FINGERPRINT = "artifact-content-sha256-v1:d8e85971e266ae51a781d69a24fa8006a24d05c5096feeb1e30d47d68619f9bc"
 APPROVED_MANA_SOURCE_SEMANTICS_FINGERPRINT = APPROVED_RUNTIME_MANA_SOURCE_SEMANTICS_FINGERPRINT
-APPROVED_SIMULATION_POLICY_FINGERPRINT = "artifact-content-sha256-v1:4dc991e237160ece5d79c7a54d840bf1f22c18820107d196bbbae54f67311355"
-APPROVED_FAILURE_PATTERN_TAXONOMY_FINGERPRINT = "artifact-content-sha256-v1:acac794cfdc18e851800ef81a640af82c71c39e6371ea555697b8b0d02afd285"
+APPROVED_SIMULATION_POLICY_FINGERPRINT = "artifact-content-sha256-v1:1b1ab060d9d53f42f1d4757a377546441e3184081123fee2aba4d264f35d293c"
+APPROVED_SIMULATION_POLICY_DIAGNOSTIC = "validation requires the approved SimulationPolicy"
+APPROVED_FAILURE_PATTERN_TAXONOMY_FINGERPRINT = "artifact-content-sha256-v1:0fbeb7c8d3a232f9ecdbbe244b1d11a56e9b8feb0ba3fd7b774a2a4c2910ea77"
 RECORDING_CONTEXT_ID = "simulation-recording-context-v1"
 RECORDING_ARTIFACT_ALGORITHM = "artifact-content-sha256-v1"
 RECORDING_ARTIFACT_COVERAGE = "The complete persisted artifact, including caller-supplied recording metadata."
@@ -218,9 +223,109 @@ METRIC_MEASUREMENT_CONTRACTS = {
     ),
 }
 
+PAYMENT_PRIORITY_SEMANTICS_V1 = {
+    "contract_id": "payment-priority-semantics-v1",
+    "priority_order": [
+        "flexible_source_mana_spent_on_generic_asc",
+        "tapped_source_count_asc",
+        "oracle_id_ordinal_output_lexicographic",
+    ],
+    "source_flexibility": {
+        "evaluation_point": "physical_source_instance_activation_decision",
+        "alternative_domain": "distinct_exact_legal_mana_output_alternatives_across_currently_legal_supported_activation_profiles",
+        "flexible_when_distinct_alternative_count": "greater_than_one",
+        "non_flexible_when_distinct_alternative_count": [0, 1],
+        "classification_must_not_use": ["produced_mana_symbol", "output_capabilities_cardinality", "card_name", "source_kind"],
+    },
+    "flexible_source_mana_spent_on_generic": {
+        "counted_entity": "mana_units",
+        "production_scope": "units_produced_by_selected_source_activations_during_current_payment_allocation",
+        "consumption_scope": "generic_cost_requirements_only",
+        "exact_colored_cost_contribution": 0,
+        "pre_existing_floating_mana_contribution": 0,
+        "requires_ephemeral_current_allocation_provenance": True,
+        "forbids_persistent_floating_mana_provenance": True,
+    },
+    "same_symbol_provenance": "same_symbol_units_with_distinct_ephemeral_provenance_remain_distinct_when_their_consumption_can_affect_legality_or_frozen_payment_ranking",
+    "generic_payment_alternative_preservation": {
+        "generic_cost_requirement": "may_be_satisfied_by_any_currently_legal_mana_resources",
+        "distinct_choices_retained_when": ["subsequent_activation_legality", "final_target_cost_legality", "frozen_payment_ranking"],
+        "legality_precedes_payment_ranking": True,
+        "forbidden_shortcut": "deterministic_single_symbol_or_fixed_order_generic_consumption_that_erases_an_otherwise_legal_allocation",
+        "choose_payment_role": "rank_only_over_legal_allocations",
+        "equivalent_choices_may_be_collapsed_only_when": "provably_equivalent_for_downstream_legality_and_every_frozen_ranking_key",
+        "known_answer_test": {"source": "The Mycosynth Gardens", "entry_floating_mana": {"W": 1, "U": 1}, "target_cost": {"generic": 0, "colored": ["W", "R"]}, "legal_path": ["consume_U_for_generic_activation_cost", "produce_R", "retain_W", "pay_W_and_R_target"]},
+    },
+    "complete_tie_resolution": {
+        "trigger": "all_three_frozen_priority_keys_equal",
+        "caller_order_dependence": "forbidden",
+        "search_enumeration_order_dependence": "forbidden",
+        "hash_iteration_order_dependence": "forbidden",
+        "lookahead": "forbidden",
+        "comparison": "canonical_lexicographic_ascending",
+        "compared_value": "canonical_json_serialization_of_allocation_effect_projection",
+        "allocation_effect_field_order": ["floating_mana_after", "tapped_source_instance_ids", "activated_sources", "consumed_mana", "external_payment_requirements", "life_payment"],
+        "unordered_mapping_key_order": "unicode_codepoint_ascending",
+        "allocation_effect_projection": {
+            "floating_mana_after": {"representation": "exact_full_mana_symbol_quantity_map", "symbol_order": ["W", "U", "B", "R", "G", "C"]},
+            "tapped_source_instance_ids": {"representation": "canonical_sorted_physical_instance_id_array"},
+            "activated_sources": {"canonicalization": "physical_instance_id_unicode_codepoint_ascending", "fields": ["instance_id", "oracle_id", "ordinal", "profile_id", "produced_symbols"], "produced_symbols": {"representation": "exact_selected_activation_output_symbol_sequence", "symbol_order": ["W", "U", "B", "R", "G", "C"]}},
+            "consumed_mana": {"representation": "exact_full_mana_symbol_quantity_map", "symbol_order": ["W", "U", "B", "R", "G", "C"]},
+            "external_payment_requirements": {"representation": "canonicalized_exact_registered_payment_requirements", "array_order": "canonical_json_item_lexicographic_ascending", "item_unordered_mapping_key_order": "unicode_codepoint_ascending"},
+            "life_payment": {"representation": "canonicalized_exact_registered_life_payment_effects", "array_order": "canonical_json_item_lexicographic_ascending", "item_unordered_mapping_key_order": "unicode_codepoint_ascending"},
+        },
+        "equivalence": "byte_identical_canonical_allocation_effect_projections_are_equivalent_for_this_bounded_model",
+    },
+    "generic_cost_boundary": "generic_is_a_cost_requirement_and_never_a_produced_mana_pool_symbol",
+}
+
+
+def _exact_json_equal(actual, expected):
+    """Compare exact JSON values without recursion or Python type aliases."""
+    stack = [(actual, expected)]
+    scalar_types = {type(None), str, int, bool, float}
+    while stack:
+        left, right = stack.pop()
+        left_type = type(left)
+        if left_type is not type(right):
+            return False
+        if left_type is dict:
+            if len(left) != len(right) or set(left) != set(right):
+                return False
+            stack.extend((left[key], right[key]) for key in left)
+        elif left_type is list:
+            if len(left) != len(right):
+                return False
+            stack.extend(zip(left, right))
+        elif left_type not in scalar_types or left != right:
+            return False
+    return True
+
+
+def validate_policy_payment_priority_semantics(policy):
+    """Fail closed on the sole v8 authority for the frozen payment tie-break."""
+    policy = _detach_exact_plain_json(policy)
+    if policy is None:
+        return ["policy must be exact plain JSON"]
+    level2 = policy.get("level_2_sequencing") if type(policy) is dict else None
+    if type(level2) is not dict:
+        return ["policy Level 2 sequencing is missing payment-priority semantics"]
+    errors = []
+    expected_fields = {"contract_id", "turn_order", "land_selection_priority", "ramp_deployment_priority", "payment_priority", "payment_priority_semantics", "observation_projections", "mana_source_resolution", "floating_mana_model", "urzas_saga_final_chapter_timing", "unsupported_actions", "mana_source_projection"}
+    if set(level2) != expected_fields:
+        errors.append("policy Level 2 sequencing has unregistered or missing semantic authority fields")
+    if not _exact_json_equal(level2.get("payment_priority"), PAYMENT_PRIORITY_SEMANTICS_V1["priority_order"]):
+        errors.append("policy payment_priority order does not match payment-priority-semantics-v1")
+    if not _exact_json_equal(level2.get("payment_priority_semantics"), PAYMENT_PRIORITY_SEMANTICS_V1):
+        errors.append("policy payment_priority_semantics is not the complete approved v1 contract")
+    return errors
+
 
 def validate_policy_metric_contracts(policy):
     """Validate that the resolved Policy completely owns all metric semantics."""
+    policy = _detach_exact_plain_json(policy)
+    if policy is None:
+        return ["policy must be exact plain JSON"]
     metrics = (policy.get("metric_catalog") or {}).get("metrics")
     if not isinstance(metrics, list):
         return ["policy metric_catalog.metrics must be an array"]
@@ -266,6 +371,7 @@ def validate_policy_metric_contracts(policy):
     }
     if floating != expected_floating:
         errors.append("policy floating_mana_model must be the complete approved phase-scoped semantic")
+    errors.extend(validate_policy_payment_priority_semantics(policy))
     order = (policy.get("level_2_sequencing") or {}).get("turn_order")
     expected_order = [
         "turn_start_natural_untap_and_clear_stale_floating_mana", "draw", "advance_time_dependent_state",
@@ -275,6 +381,131 @@ def validate_policy_metric_contracts(policy):
     ]
     if order != expected_order:
         errors.append("policy turn_order must define the bounded development-phase floating-mana clear boundary")
+    return errors
+
+
+def _detach_exact_plain_json(value):
+    """Return a cycle-safe, detached exact-JSON snapshot or ``None``.
+
+    This is the trust boundary for caller-owned JSON-shaped Python objects.
+    It intentionally accepts only exact built-in JSON types, so no mapping,
+    scalar, iterator, or equality callback can participate after detachment.
+    """
+    active_containers = set()
+
+    def detach(item):
+        item_type = type(item)
+        if item_type is dict:
+            identity = id(item)
+            if identity in active_containers:
+                return None, False
+            active_containers.add(identity)
+            copied = {}
+            try:
+                for key, child in item.items():
+                    if type(key) is not str:
+                        return None, False
+                    copied_child, valid = detach(child)
+                    if not valid:
+                        return None, False
+                    copied[key] = copied_child
+            finally:
+                active_containers.remove(identity)
+            return copied, True
+        if item_type is list:
+            identity = id(item)
+            if identity in active_containers:
+                return None, False
+            active_containers.add(identity)
+            copied = []
+            try:
+                for child in item:
+                    copied_child, valid = detach(child)
+                    if not valid:
+                        return None, False
+                    copied.append(copied_child)
+            finally:
+                active_containers.remove(identity)
+            return copied, True
+        if item_type is float:
+            return (item, math.isfinite(item))
+        if item is None or item_type in {str, int, bool}:
+            return item, True
+        return None, False
+
+    try:
+        copied, valid = detach(value)
+    except RecursionError:
+        return None
+    if not valid:
+        return None
+    try:
+        canonical_bytes = json.dumps(
+            copied,
+            ensure_ascii=False,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return load_strict_json_bytes(canonical_bytes)
+    except (RecursionError, TypeError, ValueError, UnicodeError):
+        return None
+
+
+def _is_exact_plain_json(value):
+    """Compatibility predicate for callers that need only boundary status."""
+    return _detach_exact_plain_json(value) is not None
+
+
+def _detach_public_artifact(value, label):
+    """Detach one public JSON artifact before any semantic reads occur."""
+    snapshot = _detach_exact_plain_json(value)
+    if snapshot is None:
+        return None, [f"{label} must be exact plain JSON"]
+    return snapshot, []
+
+
+def _load_detached_reference(path, label, errors, load_reference):
+    """Load a caller callback result and immediately establish its snapshot."""
+    try:
+        loaded = load_reference(path)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        errors.append(f"{label} does not resolve: {exc}")
+        return None
+    snapshot = _detach_exact_plain_json(loaded)
+    if snapshot is None:
+        errors.append(f"{label} does not resolve to an exact plain-JSON artifact")
+        return None
+    return snapshot
+
+
+def _fingerprint_detached_version(version, fingerprint_for_version):
+    """Give injected fingerprint callbacks a disposable snapshot, never authority."""
+    disposable = _detach_exact_plain_json(version)
+    if disposable is None:
+        raise ValueError("DeckVersion must be exact plain JSON")
+    return fingerprint_for_version(disposable)
+
+
+def _resolve_approved_simulation_policy(policy):
+    """Authenticate canonical Policy bytes and return a detached plain-JSON snapshot."""
+    snapshot = _detach_exact_plain_json(policy)
+    if snapshot is None:
+        return None, [APPROVED_SIMULATION_POLICY_DIAGNOSTIC]
+    try:
+        fingerprint = artifact_content_fingerprint(snapshot)
+    except (TypeError, ValueError, UnicodeError):
+        return None, [APPROVED_SIMULATION_POLICY_DIAGNOSTIC]
+    if fingerprint != APPROVED_SIMULATION_POLICY_FINGERPRINT:
+        return None, [APPROVED_SIMULATION_POLICY_DIAGNOSTIC]
+    if validate_policy_metric_contracts(snapshot):
+        return None, [APPROVED_SIMULATION_POLICY_DIAGNOSTIC]
+    return snapshot, []
+
+
+def validate_approved_simulation_policy(policy):
+    """Preserve the public diagnostic-only Policy authentication API."""
+    _, errors = _resolve_approved_simulation_policy(policy)
     return errors
 
 
@@ -343,7 +574,8 @@ def render_evidence_claims(claims):
 
 
 def _resolve_reference(reference, label, errors, load_reference, expected=None):
-    if not isinstance(reference, dict):
+    reference = _detach_exact_plain_json(reference)
+    if reference is None:
         errors.append(f"{label} must be an immutable reference object")
         return None
     path = reference.get("path")
@@ -351,14 +583,12 @@ def _resolve_reference(reference, label, errors, load_reference, expected=None):
     if not isinstance(path, str) or not path:
         errors.append(f"{label}.path must be a non-empty repo-relative path")
         return None
-    try:
-        resolved = load_reference(path)
-    except (OSError, ValueError, KeyError, TypeError) as exc:
-        errors.append(f"{label} does not resolve: {exc}")
+    resolved = _load_detached_reference(path, label, errors, load_reference)
+    if resolved is None:
         return None
     if artifact_content_fingerprint(resolved) != fingerprint:
         errors.append(f"{label} content fingerprint does not match resolved artifact")
-    if expected is not None and resolved != expected:
+    if expected is not None and not _exact_json_equal(resolved, expected):
         errors.append(f"{label} does not resolve to the expected artifact")
     return resolved
 
@@ -388,7 +618,8 @@ def resolve_policy_pinned_contract(policy, supplied_contract, *, reference_key, 
         errors.append(f"policy {reference_key} does not resolve to the trusted schema_version")
     if resolved.get("policy_version") != policy.get("policy_version"):
         errors.append(f"policy {reference_key} contract policy_version does not match the Policy")
-    if supplied_contract != resolved:
+    supplied_contract = _detach_exact_plain_json(supplied_contract)
+    if supplied_contract is None or not _exact_json_equal(supplied_contract, resolved):
         errors.append(
             f"supplied {trusted['argument_name']} does not match the Policy-resolved immutable "
             f"{trusted['artifact_type'].replace('_', ' ')}"
@@ -409,13 +640,18 @@ def _resolve_policy_question_contract(policy, supplied_contract, load_reference)
 def _resolve_canonical_lifecycle_contract(supplied_contract, load_reference):
     """Resolve and freeze the v1 lifecycle contract before validating evidence."""
     errors = []
+    supplied_contract = _detach_exact_plain_json(supplied_contract)
+    if supplied_contract is None:
+        return None, ["supplied lifecycle_contract must be exact plain JSON"]
     try:
-        canonical = load_reference(CANONICAL_LIFECYCLE_CONTRACT_PATH)
+        canonical = _detach_exact_plain_json(load_reference(CANONICAL_LIFECYCLE_CONTRACT_PATH))
     except (OSError, ValueError, KeyError, TypeError) as exc:
-        return supplied_contract, [f"canonical lifecycle contract does not resolve: {exc}"]
+        return None, [f"canonical lifecycle contract does not resolve: {exc}"]
+    if canonical is None:
+        return None, ["canonical lifecycle contract does not resolve to an exact plain-JSON artifact"]
     if artifact_content_fingerprint(canonical) != APPROVED_LIFECYCLE_CONTRACT_FINGERPRINT:
         errors.append("canonical lifecycle contract does not match the approved v1 identity")
-    if supplied_contract != canonical:
+    if not _exact_json_equal(supplied_contract, canonical):
         errors.append("supplied lifecycle_contract does not match the canonical v1 lifecycle contract")
     required_fields = canonical.get("required_fields") if isinstance(canonical, dict) else None
     expected_top_level = {
@@ -433,7 +669,7 @@ def _resolve_canonical_lifecycle_contract(supplied_contract, load_reference):
         or set(required_fields) != QUESTION_LIFECYCLE_FIELDS
     ):
         errors.append("canonical lifecycle contract has invalid v1 structural requirements")
-    return canonical if isinstance(canonical, dict) else supplied_contract, errors
+    return canonical, errors
 
 
 def validate_question_role_bindings(compared_versions):
@@ -548,6 +784,12 @@ def _question_metric_entries(question, policy):
 
 def validate_simulation_question(question, *, policy, question_contract, project_id, load_reference, fingerprint_for_version, question_path=None):
     """Fail closed on an immutable preregistered SimulationQuestion."""
+    question, errors = _detach_public_artifact(question, "question")
+    if errors:
+        return errors
+    policy, errors = _resolve_approved_simulation_policy(policy)
+    if errors:
+        return errors
     effective_contract, errors = _resolve_policy_question_contract(policy, question_contract, load_reference)
     if effective_contract is None:
         return errors
@@ -573,13 +815,11 @@ def validate_simulation_question(question, *, policy, question_contract, project
     if derived_question_path is not None:
         if isinstance(question_path, str) and question_path and question_path != derived_question_path:
             errors.append("question source path does not match the canonical path derived from question_id")
-        try:
-            canonical_question = load_reference(derived_question_path)
-        except (OSError, ValueError, KeyError, TypeError) as exc:
-            errors.append(f"canonical Question does not resolve: {exc}")
-        else:
-            if canonical_question != question:
-                errors.append("supplied Question does not match the canonical Question resolved from question_id")
+        canonical_question = _load_detached_reference(
+            derived_question_path, "canonical Question", errors, load_reference,
+        )
+        if canonical_question is not None and not _exact_json_equal(canonical_question, question):
+            errors.append("supplied Question does not match the canonical Question resolved from question_id")
     if question.get("policy_id") != policy.get("policy_id") or question.get("policy_version") != policy.get("policy_version"):
         errors.append("question policy binding does not match the resolved policy")
     reference = question.get("policy_reference")
@@ -605,14 +845,14 @@ def validate_simulation_question(question, *, policy, question_contract, project
             continue
         path = item.get("path")
         paths.append(path)
-        try:
-            version = load_reference(path)
-        except (OSError, ValueError, KeyError, TypeError) as exc:
-            errors.append(f"question compared_versions[{index}] DeckVersion does not resolve: {exc}")
+        version = _load_detached_reference(
+            path, f"question compared_versions[{index}] DeckVersion", errors, load_reference,
+        )
+        if version is None:
             continue
         if item.get("deck_version_id") != version.get("version_id"):
             errors.append(f"question compared_versions[{index}] deck_version_id does not match DeckVersion")
-        if item.get("deck_content_fingerprint") != fingerprint_for_version(version):
+        if item.get("deck_content_fingerprint") != _fingerprint_detached_version(version, fingerprint_for_version):
             errors.append(f"question compared_versions[{index}] fingerprint does not match DeckVersion")
     if len(paths) != len(set(paths)):
         errors.append("question compared_versions must contain distinct DeckVersion paths")
@@ -653,7 +893,19 @@ def validate_simulation_question_lifecycle(
     policy=None, question_contract=None, fingerprint_for_version=None,
 ):
     """Validate the canonical persisted lifecycle without making it semantic RNG input."""
+    lifecycle, errors = _detach_public_artifact(lifecycle, "lifecycle")
+    if errors:
+        return errors
+    question, errors = _detach_public_artifact(question, "question")
+    if errors:
+        return errors
+    if policy is not None:
+        policy, errors = _resolve_approved_simulation_policy(policy)
+        if errors:
+            return errors
     effective_contract, errors = _resolve_canonical_lifecycle_contract(lifecycle_contract, load_reference)
+    if effective_contract is None:
+        return errors
     errors.extend(_required(lifecycle, (effective_contract.get("required_fields") or {}).keys(), "lifecycle"))
     if not isinstance(lifecycle, dict):
         return errors
@@ -770,14 +1022,22 @@ def validate_simulation_question_lifecycle(
         if policy is None or question_contract is None or fingerprint_for_version is None:
             errors.append("lifecycle evidence validation requires policy, Question contract, and DeckVersion fingerprint dependencies")
             return errors
+        references = policy.get("references") or {}
         try:
-            references = policy.get("references") or {}
-            run_contract = load_reference(references["simulation_run_contract"]["path"])
-            result_contract = load_reference(references["simulation_result_contract"]["path"])
-            comparison_contract = load_reference(references["comparison_result_contract"]["path"])
-            taxonomy = load_reference(references["failure_pattern_taxonomy"]["path"])
-        except (KeyError, OSError, ValueError, TypeError) as exc:
-            errors.append(f"lifecycle evidence validation cannot resolve required contracts: {exc}")
+            contract_paths = {
+                "run": references["simulation_run_contract"]["path"],
+                "result": references["simulation_result_contract"]["path"],
+                "comparison": references["comparison_result_contract"]["path"],
+                "taxonomy": references["failure_pattern_taxonomy"]["path"],
+            }
+        except (KeyError, TypeError):
+            errors.append("lifecycle evidence validation cannot resolve required contracts")
+            return errors
+        run_contract = _load_detached_reference(contract_paths["run"], "lifecycle Run contract", errors, load_reference)
+        result_contract = _load_detached_reference(contract_paths["result"], "lifecycle Result contract", errors, load_reference)
+        comparison_contract = _load_detached_reference(contract_paths["comparison"], "lifecycle Comparison contract", errors, load_reference)
+        taxonomy = _load_detached_reference(contract_paths["taxonomy"], "lifecycle failure taxonomy", errors, load_reference)
+        if any(value is None for value in (run_contract, result_contract, comparison_contract, taxonomy)):
             return errors
         for document in resolved_runs:
             for error in validate_simulation_run(
@@ -827,9 +1087,15 @@ def validate_simulation_question_lifecycle_transition(
     policy=None, question_contract=None, fingerprint_for_version=None,
 ):
     """Validate one caller-owned atomic transition and immutable evidence prefix."""
-    if not isinstance(previous, dict) or not isinstance(current, dict):
+    previous, errors = _detach_public_artifact(previous, "previous lifecycle")
+    if errors:
         return ["lifecycle transition requires previous and current lifecycle objects"]
-    errors = []
+    current, errors = _detach_public_artifact(current, "current lifecycle")
+    if errors:
+        return ["lifecycle transition requires previous and current lifecycle objects"]
+    question, errors = _detach_public_artifact(question, "question")
+    if errors:
+        return errors
     for label, lifecycle in (("previous", previous), ("current", current)):
         for error in validate_simulation_question_lifecycle(
             lifecycle, question=question, lifecycle_contract=lifecycle_contract,
@@ -1101,6 +1367,18 @@ def _validate_registry_condition(condition, *, expected_commander_colors, expect
 
 def validate_mana_source_semantics(registry, *, policy, cards, versions):
     """Validate the complete, machine-executable project source registry."""
+    registry, errors = _detach_public_artifact(registry, "mana source semantics")
+    if errors:
+        return errors
+    cards, errors = _detach_public_artifact(cards, "canonical Card Facts cards")
+    if errors:
+        return errors
+    versions, errors = _detach_public_artifact(versions, "DeckVersions")
+    if errors:
+        return errors
+    policy, errors = _resolve_approved_simulation_policy(policy)
+    if errors:
+        return errors
     errors = _required(registry, ("schema_version", "artifact_type", "artifact_id", "project_id", "policy_version", "condition_vocabulary", "unsupported_reason_ids", "records"), "mana source semantics")
     if not isinstance(registry, dict):
         return errors
@@ -1267,10 +1545,15 @@ def validate_mana_source_semantics(registry, *, policy, cards, versions):
 
 def build_simulation_runtime_context(registry, *, policy, card_facts, versions):
     """Seal the approved executable registry after canonical-input validation."""
-    errors = []
-    if artifact_content_fingerprint(policy) != APPROVED_SIMULATION_POLICY_FINGERPRINT:
-        errors.append("runtime context requires the approved active SimulationPolicy")
-    if not isinstance(card_facts, dict) or artifact_content_fingerprint(card_facts) != (policy.get("references") or {}).get("canonical_card_facts", {}).get("content_fingerprint"):
+    policy, errors = _resolve_approved_simulation_policy(policy)
+    if errors:
+        return None, errors
+    registry = _detach_exact_plain_json(registry)
+    card_facts = _detach_exact_plain_json(card_facts)
+    versions = _detach_exact_plain_json(versions)
+    if registry is None:
+        errors.append("runtime context requires exact plain-JSON mana source semantics")
+    if card_facts is None or artifact_content_fingerprint(card_facts) != (policy.get("references") or {}).get("canonical_card_facts", {}).get("content_fingerprint"):
         errors.append("runtime context requires Policy-pinned canonical Card Facts")
         cards = []
     else:
@@ -1289,7 +1572,8 @@ def build_simulation_runtime_context(registry, *, policy, card_facts, versions):
         else:
             if not version_fingerprints_match:
                 errors.append("runtime context DeckVersions do not match Policy-pinned canonical fingerprints")
-    errors.extend(validate_mana_source_semantics(registry, policy=policy, cards=cards, versions=versions))
+    if registry is not None:
+        errors.extend(validate_mana_source_semantics(registry, policy=policy, cards=cards, versions=versions))
     if errors:
         return None, errors
     return SimulationRuntimeContext._from_validated_registry(registry), []
@@ -1297,6 +1581,10 @@ def build_simulation_runtime_context(registry, *, policy, card_facts, versions):
 
 def validate_card_semantics_registry_parity(card_semantics, registry):
     """Require one result-changing interpretation for shared special mana sources."""
+    card_semantics, card_errors = _detach_public_artifact(card_semantics, "card semantics")
+    registry, registry_errors = _detach_public_artifact(registry, "mana source semantics")
+    if card_errors or registry_errors:
+        return [*card_errors, *registry_errors]
     entries = {
         item.get("card_identity", {}).get("name"): item
         for item in (card_semantics.get("entries") or []) if isinstance(item, dict)
@@ -1356,8 +1644,8 @@ def validate_card_semantics_registry_parity(card_semantics, registry):
     return errors
 
 
-def validate_failure_pattern_taxonomy(taxonomy, *, policy, question):
-    """Fail closed on the complete approved v3 taxonomy, not merely its IDs."""
+def _validate_failure_pattern_taxonomy_with_policy(taxonomy, *, policy, question):
+    """Validate taxonomy content against an already-resolved Policy snapshot."""
     if not isinstance(taxonomy, dict):
         return ["failure taxonomy must be the resolved taxonomy artifact"]
     errors = []
@@ -1386,6 +1674,30 @@ def validate_failure_pattern_taxonomy(taxonomy, *, policy, question):
                 errors.extend(target_errors)
         elif not isinstance(metadata.get("non_emitting_reason_id"), str):
             errors.append(f"failure taxonomy {category_id} non-emitting metadata is incomplete")
+    return errors
+
+
+def _resolve_failure_pattern_taxonomy(taxonomy, *, policy, question):
+    """Authenticate one detached taxonomy snapshot for all later consumption."""
+    taxonomy = _detach_exact_plain_json(taxonomy)
+    if taxonomy is None:
+        return None, ["failure taxonomy must be the resolved taxonomy artifact"]
+    errors = _validate_failure_pattern_taxonomy_with_policy(taxonomy, policy=policy, question=question)
+    return (None, errors) if errors else (taxonomy, [])
+
+
+def validate_failure_pattern_taxonomy(taxonomy, *, policy, question):
+    """Fail closed on the complete approved v3 taxonomy, not merely its IDs."""
+    taxonomy, errors = _detach_public_artifact(taxonomy, "failure taxonomy")
+    if errors:
+        return ["failure taxonomy must be the resolved taxonomy artifact"]
+    question, errors = _detach_public_artifact(question, "question")
+    if errors:
+        return errors
+    policy, errors = _resolve_approved_simulation_policy(policy)
+    if errors:
+        return errors
+    _, errors = _resolve_failure_pattern_taxonomy(taxonomy, policy=policy, question=question)
     return errors
 
 
@@ -1419,7 +1731,7 @@ def _validate_bundle(bundle, *, policy, question, deck_path, deck_fingerprint, l
     for key in DEPENDENCY_KEYS:
         resolved = _resolve_reference(bundle.get(key), f"semantic_dependencies.{key}", errors, load_reference, expected.get(key))
         policy_reference = policy_refs.get(map_names.get(key, ""))
-        if key not in ("policy", "question") and bundle.get(key) != policy_reference:
+        if key not in ("policy", "question") and not _exact_json_equal(bundle.get(key), policy_reference):
             errors.append(f"semantic_dependencies.{key} does not match the policy dependency")
     if include_deck:
         deck = bundle.get("deck_version")
@@ -1444,11 +1756,13 @@ def validate_failure_pattern(pattern, run_iteration_count, taxonomy_ids):
     return errors
 
 
-def validate_result_failure_patterns(patterns, run_iteration_count, taxonomy, question):
-    """Enforce the v3 emitting/non-emitting taxonomy boundary."""
-    if not isinstance(taxonomy, dict):
-        return ["failure patterns require the resolved failure taxonomy artifact"]
-    taxonomy_errors = validate_failure_pattern_taxonomy(taxonomy, policy={"policy_version": taxonomy.get("policy_version")}, question=question)
+def _validate_result_failure_patterns_from_taxonomy(patterns, run_iteration_count, taxonomy, question):
+    """Consume an already-detached and authenticated taxonomy snapshot."""
+    taxonomy_errors = _validate_failure_pattern_taxonomy_with_policy(
+        taxonomy,
+        policy={"policy_version": taxonomy.get("policy_version")},
+        question=question,
+    )
     if taxonomy_errors:
         return ["failure patterns require a valid resolved failure taxonomy artifact", *taxonomy_errors]
     contract = taxonomy.get("emission_contract") or {}
@@ -1467,6 +1781,20 @@ def validate_result_failure_patterns(patterns, run_iteration_count, taxonomy, qu
     for pattern in patterns if isinstance(patterns, list) else []:
         errors.extend(validate_failure_pattern(pattern, run_iteration_count, set(categories)))
     return errors
+
+
+def validate_result_failure_patterns(patterns, run_iteration_count, taxonomy, question):
+    """Enforce the v3 emitting/non-emitting taxonomy boundary."""
+    patterns, errors = _detach_public_artifact(patterns, "failure_patterns")
+    if errors:
+        return errors
+    taxonomy, errors = _detach_public_artifact(taxonomy, "failure taxonomy")
+    if errors:
+        return ["failure patterns require the resolved failure taxonomy artifact"]
+    question, errors = _detach_public_artifact(question, "question")
+    if errors:
+        return errors
+    return _validate_result_failure_patterns_from_taxonomy(patterns, run_iteration_count, taxonomy, question)
 
 
 def validate_failure_pattern_aggregate_consistency(metrics, patterns, iteration_count):
@@ -1534,7 +1862,10 @@ def validate_failure_pattern_aggregate_consistency(metrics, patterns, iteration_
         if five_color_success != bin_counts[5]:
             errors.append("five_color_availability_by_turn raw_count must equal distinct_commander_colors_by_turn bin 5")
         five_probability = metric_by_id["five_color_availability_by_turn"].get("probability")
-        color_proportion = next((item.get("proportion") for item in bins if item.get("value") == 5), None)
+        color_proportion = next((
+            item.get("proportion") for item in bins
+            if type(item.get("value")) is int and item.get("value") == 5
+        ), None)
         if _number(five_probability) and _number(color_proportion) and not math.isclose(five_probability, color_proportion, abs_tol=1e-12):
             errors.append("five_color_availability_by_turn probability must equal distinct_commander_colors_by_turn bin 5 proportion")
     zero_land = bernoulli_count("zero_land_hand_rate")
@@ -1592,7 +1923,11 @@ def _validate_categorical(metric, iteration_count, errors):
     if "confidence_interval" in metric: errors.append("categorical metric must not define a Wilson interval")
     if metric.get("sample_size") != iteration_count: errors.append("categorical metric sample_size does not match run iteration_count")
     bins = metric.get("bins")
-    if not isinstance(bins, list) or [item.get("value") for item in bins if isinstance(item, dict)] != list(range(6)):
+    if (
+        not isinstance(bins, list)
+        or [item.get("value") for item in bins if isinstance(item, dict)] != list(range(6))
+        or any(type(item.get("value")) is not int for item in bins if isinstance(item, dict))
+    ):
         errors.append("categorical metric bins must contain values 0..5 exactly once")
         return
     total = sum(item.get("raw_count", -1) for item in bins if _integer(item.get("raw_count")))
@@ -1604,7 +1939,7 @@ def _validate_categorical(metric, iteration_count, errors):
         if not _integer(raw) or raw < 0: errors.append("categorical metric bin raw_count must be non-negative integer")
         elif not _number(proportion) or not math.isclose(proportion, raw / iteration_count, abs_tol=1e-12): errors.append("categorical metric bin proportion does not equal raw_count/sample_size")
         proportions += proportion if _number(proportion) else 0
-        weighted += item["value"] * raw if _integer(raw) else 0
+        weighted += item["value"] * raw if _integer(raw) and type(item.get("value")) is int else 0
     if not math.isclose(proportions, 1.0, abs_tol=1e-12): errors.append("categorical metric bin proportions must sum to one")
     if not _number(metric.get("mean")) or not math.isclose(metric["mean"], weighted / iteration_count, abs_tol=1e-12): errors.append("categorical metric mean does not match bins")
 
@@ -1680,10 +2015,14 @@ def _required_unsupported_limitation_ids(run, *, load_reference):
     """Derive limitation identifiers from unsupported executable profiles in deck."""
     dependencies = run.get("semantic_dependencies") if isinstance(run, dict) else None
     registry_reference = dependencies.get("mana_source_semantics") if isinstance(dependencies, dict) else None
-    try:
-        registry = load_reference((registry_reference or {}).get("path"))
-        version = load_reference(run.get("deck_version_path"))
-    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+    errors = []
+    registry = _load_detached_reference(
+        (registry_reference or {}).get("path"), "unsupported-limitation mana source semantics", errors, load_reference,
+    )
+    version = _load_detached_reference(
+        run.get("deck_version_path"), "unsupported-limitation DeckVersion", errors, load_reference,
+    )
+    if errors:
         return set(), ["unable to resolve evidence for unsupported-behavior limitations"]
     records = {record.get("card_name"): record for record in registry.get("records", []) if isinstance(record, dict)}
     cards = [version.get("commander")] + list(version.get("main_deck") or []) if isinstance(version, dict) else []
@@ -1734,6 +2073,19 @@ def _validate_selected_metrics(selection, question):
 
 
 def validate_simulation_run(run, *, question, policy, question_contract, run_contract, project_id, load_reference, fingerprint_for_version, lifecycle_mode, lifecycle=None, lifecycle_path=None, lifecycle_contract=None):
+    run, errors = _detach_public_artifact(run, "run")
+    if errors:
+        return errors
+    question, errors = _detach_public_artifact(question, "question")
+    if errors:
+        return errors
+    if lifecycle is not None:
+        lifecycle, errors = _detach_public_artifact(lifecycle, "lifecycle")
+        if errors:
+            return errors
+    policy, errors = _resolve_approved_simulation_policy(policy)
+    if errors:
+        return errors
     run_contract, errors = resolve_policy_pinned_contract(
         policy, run_contract, reference_key="simulation_run_contract", load_reference=load_reference,
     )
@@ -1752,11 +2104,10 @@ def validate_simulation_run(run, *, question, policy, question_contract, run_con
     if run.get("policy_id") != policy.get("policy_id") or run.get("policy_version") != policy.get("policy_version"): errors.append("run policy binding does not match policy")
     errors.extend(validate_run_role_binding(run, question))
     path = run.get("deck_version_path")
-    try: version = load_reference(path)
-    except (OSError, ValueError, KeyError, TypeError) as exc: version = None; errors.append(f"run deck_version_path does not resolve: {exc}")
+    version = _load_detached_reference(path, "run deck_version_path", errors, load_reference)
     if isinstance(version, dict):
         if run.get("deck_version_id") != version.get("version_id"): errors.append("run deck_version_id does not match DeckVersion")
-        if run.get("deck_content_fingerprint") != fingerprint_for_version(version): errors.append("run fingerprint does not match DeckVersion")
+        if run.get("deck_content_fingerprint") != _fingerprint_detached_version(version, fingerprint_for_version): errors.append("run fingerprint does not match DeckVersion")
     errors.extend(_validate_bundle(run.get("semantic_dependencies"), policy=policy, question=question, deck_path=path, deck_fingerprint=run.get("deck_content_fingerprint"), load_reference=load_reference))
     seed = run.get("seed")
     if not _integer(seed) or not 0 <= seed < 2 ** 64: errors.append("run seed must be unsigned 64-bit integer")
@@ -1806,6 +2157,25 @@ def validate_simulation_run(run, *, question, policy, question_contract, run_con
 
 
 def validate_simulation_result(result, *, run, policy, question, question_contract, result_contract, taxonomy_ids, load_reference, project_id, fingerprint_for_version, lifecycle_mode, lifecycle=None, lifecycle_path=None, lifecycle_contract=None):
+    result, errors = _detach_public_artifact(result, "result")
+    if errors:
+        return errors
+    run, errors = _detach_public_artifact(run, "run")
+    if errors:
+        return errors
+    question, errors = _detach_public_artifact(question, "question")
+    if errors:
+        return errors
+    taxonomy_ids, errors = _detach_public_artifact(taxonomy_ids, "failure taxonomy")
+    if errors:
+        return ["result validation requires the resolved failure taxonomy artifact"]
+    if lifecycle is not None:
+        lifecycle, errors = _detach_public_artifact(lifecycle, "lifecycle")
+        if errors:
+            return errors
+    policy, errors = _resolve_approved_simulation_policy(policy)
+    if errors:
+        return errors
     result_contract, errors = resolve_policy_pinned_contract(
         policy, result_contract, reference_key="simulation_result_contract", load_reference=load_reference,
     )
@@ -1849,8 +2219,15 @@ def validate_simulation_result(result, *, run, policy, question, question_contra
     if not isinstance(taxonomy_ids, dict):
         errors.append("result validation requires the resolved failure taxonomy artifact")
     else:
-        errors.extend(validate_failure_pattern_taxonomy(taxonomy_ids, policy=policy, question=question))
-        errors.extend(validate_result_failure_patterns(result.get("failure_patterns"), run.get("iteration_count"), taxonomy_ids, question))
+        taxonomy, taxonomy_errors = _resolve_failure_pattern_taxonomy(
+            taxonomy_ids, policy=policy, question=question,
+        )
+        if taxonomy is None:
+            errors.extend(taxonomy_errors)
+        else:
+            errors.extend(_validate_result_failure_patterns_from_taxonomy(
+                result.get("failure_patterns"), run.get("iteration_count"), taxonomy, question,
+            ))
     errors.extend(validate_failure_pattern_aggregate_consistency(metrics, result.get("failure_patterns"), run.get("iteration_count")))
     required_limitations, limitation_errors = _required_unsupported_limitation_ids(run, load_reference=load_reference)
     errors.extend(limitation_errors)
@@ -1870,7 +2247,34 @@ def validate_simulation_result(result, *, run, policy, question, question_contra
 
 
 def validate_comparison_result(comparison, *, baseline_run, candidate_run, baseline_result, candidate_result, policy, question, question_contract, comparison_contract, run_contract, result_contract, project_id, taxonomy_ids, load_reference, fingerprint_for_version, lifecycle_mode, lifecycle=None, lifecycle_path=None, lifecycle_contract=None):
-    errors = []
+    comparison, errors = _detach_public_artifact(comparison, "comparison")
+    if errors:
+        return errors
+    baseline_run, errors = _detach_public_artifact(baseline_run, "baseline run")
+    if errors:
+        return errors
+    candidate_run, errors = _detach_public_artifact(candidate_run, "candidate run")
+    if errors:
+        return errors
+    baseline_result, errors = _detach_public_artifact(baseline_result, "baseline result")
+    if errors:
+        return errors
+    candidate_result, errors = _detach_public_artifact(candidate_result, "candidate result")
+    if errors:
+        return errors
+    question, errors = _detach_public_artifact(question, "question")
+    if errors:
+        return errors
+    taxonomy_ids, errors = _detach_public_artifact(taxonomy_ids, "failure taxonomy")
+    if errors:
+        return ["comparison requires the resolved failure taxonomy artifact"]
+    if lifecycle is not None:
+        lifecycle, errors = _detach_public_artifact(lifecycle, "lifecycle")
+        if errors:
+            return errors
+    policy, errors = _resolve_approved_simulation_policy(policy)
+    if errors:
+        return errors
     resolved_contracts = {}
     for reference_key, supplied in (
         ("comparison_result_contract", comparison_contract),
@@ -1963,7 +2367,11 @@ def validate_comparison_result(comparison, *, baseline_run, candidate_run, basel
         if "bins" in bm:
             if not math.isclose(delta.get("mean_absolute_delta", float("nan")), cm["mean"]-bm["mean"], abs_tol=1e-12): errors.append("comparison categorical mean delta is invalid")
             bins=delta.get("bin_proportion_deltas")
-            if not isinstance(bins,list) or [item.get("value") for item in bins if isinstance(item, dict)] != list(range(6)):
+            if (
+                not isinstance(bins, list)
+                or [item.get("value") for item in bins if isinstance(item, dict)] != list(range(6))
+                or any(type(item.get("value")) is not int for item in bins if isinstance(item, dict))
+            ):
                 errors.append("comparison categorical metric requires exactly six ordered bin deltas")
             else:
                 for item, baseline_bin, candidate_bin in zip(bins, bm["bins"], cm["bins"]):

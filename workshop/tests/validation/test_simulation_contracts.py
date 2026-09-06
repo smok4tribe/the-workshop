@@ -1,4 +1,4 @@
-"""Positive and adversarial coverage for the active simulation-policy-v7 contract."""
+"""Positive and adversarial coverage for the active simulation-policy-v8 contract."""
 
 from __future__ import annotations
 
@@ -29,11 +29,13 @@ from workshop.shared.simulation_determinism import (  # noqa: E402
 )
 from workshop.simulation.instance_validation import (  # noqa: E402
     METRIC_MEASUREMENT_CONTRACTS, build_simulation_runtime_context, canonical_question_path, validate_comparison_result,
+    _detach_exact_plain_json, _exact_json_equal,
     project_level_two_land as _project_level_two_land, project_level_two_ramp as _project_level_two_ramp,
     resolve_question_metric_target,
     validate_card_semantics_registry_parity, validate_failure_pattern_taxonomy,
     validate_mana_source_semantics,
-    validate_policy_metric_contracts, validate_recording_context,
+    validate_approved_simulation_policy, validate_policy_metric_contracts,
+    validate_policy_payment_priority_semantics, validate_recording_context,
     validate_result_failure_patterns, validate_simulation_question,
     validate_simulation_question_lifecycle, validate_simulation_question_lifecycle_transition,
     validate_simulation_result, validate_simulation_run,
@@ -110,7 +112,7 @@ class IndependentPCG32:
         return result
 
 
-class SimulationContractV7Tests(unittest.TestCase):
+class SimulationContractV8Tests(unittest.TestCase):
     def setUp(self):
         self.policy = load(SIM / "simulation_policy.json")
         self.question = load(SIM / "questions" / "question-001-mana-color.json")
@@ -201,10 +203,662 @@ class SimulationContractV7Tests(unittest.TestCase):
         result = subprocess.run([sys.executable, "workshop/tests/validation/validate_simulation_contracts.py"], cwd=REPO_ROOT, text=True, capture_output=True, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_valid_v7_fixtures_validate(self):
+    def test_valid_v8_fixtures_validate(self):
         self.assertEqual([], self.check_run())
         self.assertEqual([], self.check_result())
         self.assertEqual([], self.check_comparison())
+
+    def test_v8_payment_priority_semantics_are_closed_and_machine_bound(self):
+        level2 = self.policy["level_2_sequencing"]
+        semantics = level2["payment_priority_semantics"]
+        self.assertEqual(
+            ["flexible_source_mana_spent_on_generic_asc", "tapped_source_count_asc", "oracle_id_ordinal_output_lexicographic"],
+            level2["payment_priority"],
+        )
+        self.assertEqual("mana_units", semantics["flexible_source_mana_spent_on_generic"]["counted_entity"])
+        self.assertEqual("generic_cost_requirements_only", semantics["flexible_source_mana_spent_on_generic"]["consumption_scope"])
+        self.assertEqual(0, semantics["flexible_source_mana_spent_on_generic"]["exact_colored_cost_contribution"])
+        self.assertEqual(0, semantics["flexible_source_mana_spent_on_generic"]["pre_existing_floating_mana_contribution"])
+        self.assertTrue(semantics["flexible_source_mana_spent_on_generic"]["requires_ephemeral_current_allocation_provenance"])
+        self.assertTrue(semantics["flexible_source_mana_spent_on_generic"]["forbids_persistent_floating_mana_provenance"])
+        self.assertEqual("greater_than_one", semantics["source_flexibility"]["flexible_when_distinct_alternative_count"])
+        self.assertIn("produced_mana_symbol", semantics["source_flexibility"]["classification_must_not_use"])
+        self.assertEqual("all_three_frozen_priority_keys_equal", semantics["complete_tie_resolution"]["trigger"])
+        self.assertEqual("canonical_lexicographic_ascending", semantics["complete_tie_resolution"]["comparison"])
+        self.assertEqual(
+            ["floating_mana_after", "tapped_source_instance_ids", "activated_sources", "consumed_mana", "external_payment_requirements", "life_payment"],
+            semantics["complete_tie_resolution"]["allocation_effect_field_order"],
+        )
+        # KAT 1: rank-only selection prefers the fixed Plains allocation.
+        self.assertEqual("plains", choose_payment([
+            {"allocation": "tower", "flexible_generic_spend": 1, "tapped_source_count": 1, "source_outputs": [("tower", 1, "W")]},
+            {"allocation": "plains", "flexible_generic_spend": 0, "tapped_source_count": 1, "source_outputs": [("plains", 1, "W")]},
+        ])["allocation"])
+        mutations = (
+            lambda value: value["level_2_sequencing"].__setitem__("payment_priority", list(reversed(value["level_2_sequencing"]["payment_priority"]))),
+            lambda value: value["level_2_sequencing"]["payment_priority_semantics"]["source_flexibility"].__setitem__("alternative_domain", "produced_mana_symbol"),
+            lambda value: value["level_2_sequencing"]["payment_priority_semantics"]["flexible_source_mana_spent_on_generic"].__setitem__("pre_existing_floating_mana_contribution", 1),
+            lambda value: value["level_2_sequencing"]["payment_priority_semantics"]["flexible_source_mana_spent_on_generic"].__setitem__("exact_colored_cost_contribution", 1),
+            lambda value: value["level_2_sequencing"]["payment_priority_semantics"]["complete_tie_resolution"].__setitem__("allocation_effect_field_order", list(reversed(value["level_2_sequencing"]["payment_priority_semantics"]["complete_tie_resolution"]["allocation_effect_field_order"]))),
+            lambda value: value["level_2_sequencing"].__setitem__("floating_mana_model", {**value["level_2_sequencing"]["floating_mana_model"], "representation": "symbol_quantity_with_source_provenance"}),
+        )
+        for mutate in mutations:
+            policy = copy.deepcopy(self.policy); mutate(policy)
+            self.assertTrue(any("payment_priority" in error or "floating_mana" in error for error in validate_policy_metric_contracts(policy)))
+
+    def test_payment_priority_semantics_use_exact_json_types(self):
+        mutations = (
+            lambda value: value["level_2_sequencing"]["payment_priority_semantics"]["flexible_source_mana_spent_on_generic"].__setitem__("exact_colored_cost_contribution", False),
+            lambda value: value["level_2_sequencing"]["payment_priority_semantics"]["flexible_source_mana_spent_on_generic"].__setitem__("exact_colored_cost_contribution", 0.0),
+            lambda value: value["level_2_sequencing"]["payment_priority_semantics"]["flexible_source_mana_spent_on_generic"].__setitem__("requires_ephemeral_current_allocation_provenance", 1),
+        )
+        for mutate in mutations:
+            policy = copy.deepcopy(self.policy)
+            mutate(policy)
+            self.assertIn(
+                "policy payment_priority_semantics is not the complete approved v1 contract",
+                validate_policy_payment_priority_semantics(policy),
+            )
+
+    def _coherently_rebound_forged_policy_context(self):
+        policy = copy.deepcopy(self.policy)
+        policy["level_2_sequencing"]["payment_priority_semantics"]["flexible_source_mana_spent_on_generic"]["counted_entity"] = "activations"
+        policy_fingerprint = artifact_content_fingerprint(policy)
+        question = copy.deepcopy(self.question)
+        question["policy_reference"]["content_fingerprint"] = policy_fingerprint
+        question_fingerprint = artifact_content_fingerprint(question)
+        runs = [copy.deepcopy(self.baseline_run), copy.deepcopy(self.run)]
+        for run in runs:
+            run["semantic_dependencies"]["policy"]["content_fingerprint"] = policy_fingerprint
+            run["semantic_dependencies"]["question"]["content_fingerprint"] = question_fingerprint
+            run["seed"] = derive_run_seed(question_fingerprint, policy_fingerprint, run["deck_content_fingerprint"], run["run_role"])
+        results = [copy.deepcopy(self.baseline_result), copy.deepcopy(self.result)]
+        for result, run in zip(results, runs):
+            result["semantic_dependencies"] = copy.deepcopy(run["semantic_dependencies"])
+        comparison = copy.deepcopy(self.comparison)
+        comparison["semantic_dependencies"] = {
+            key: copy.deepcopy(value)
+            for key, value in runs[0]["semantic_dependencies"].items()
+            if key != "deck_version"
+        }
+        documents = copy.deepcopy(self.documents)
+        documents["workshop/projects/the-myr-singularity/simulation/simulation_policy.json"] = policy
+        documents["workshop/projects/the-myr-singularity/simulation/questions/question-001-mana-color.json"] = question
+        return policy, question, runs, results, comparison, documents.__getitem__
+
+    def test_public_validators_reject_coherently_rebound_unapproved_policy(self):
+        policy, question, runs, results, comparison, loader = self._coherently_rebound_forged_policy_context()
+        diagnostic = "validation requires the approved SimulationPolicy"
+        self.assertEqual([diagnostic], validate_simulation_question(
+            question, policy=policy, question_contract=self.contracts["simulation_question.contract.json"],
+            project_id="the-myr-singularity", load_reference=loader, fingerprint_for_version=self.fingerprint,
+            question_path="workshop/projects/the-myr-singularity/simulation/questions/question-001-mana-color.json",
+        ))
+        self.assertEqual([diagnostic], validate_simulation_run(
+            runs[1], question=question, policy=policy, question_contract=self.contracts["simulation_question.contract.json"],
+            run_contract=self.contracts["simulation_run.contract.json"], project_id="the-myr-singularity",
+            load_reference=loader, fingerprint_for_version=self.fingerprint, lifecycle_mode="creation",
+        ))
+        self.assertEqual([diagnostic], validate_simulation_result(
+            results[1], run=runs[1], policy=policy, question=question,
+            question_contract=self.contracts["simulation_question.contract.json"],
+            result_contract=self.contracts["simulation_result.contract.json"], taxonomy_ids=self.taxonomy,
+            load_reference=loader, project_id="the-myr-singularity", fingerprint_for_version=self.fingerprint,
+            lifecycle_mode="creation",
+        ))
+        self.assertEqual([diagnostic], validate_comparison_result(
+            comparison, baseline_run=runs[0], candidate_run=runs[1], baseline_result=results[0], candidate_result=results[1],
+            policy=policy, question=question, question_contract=self.contracts["simulation_question.contract.json"],
+            comparison_contract=self.contracts["comparison_result.contract.json"], run_contract=self.contracts["simulation_run.contract.json"],
+            result_contract=self.contracts["simulation_result.contract.json"], project_id="the-myr-singularity", taxonomy_ids=self.taxonomy,
+            load_reference=loader, fingerprint_for_version=self.fingerprint, lifecycle_mode="creation",
+        ))
+        self.assertEqual([diagnostic], validate_simulation_question_lifecycle(
+            self.lifecycle, question=question, lifecycle_contract=self.contracts["simulation_question_lifecycle.contract.json"],
+            project_id="the-myr-singularity", load_reference=loader, policy=policy,
+            question_contract=self.contracts["simulation_question.contract.json"], fingerprint_for_version=self.fingerprint,
+        ))
+
+    def test_approved_policy_authentication_detaches_exact_plain_json_snapshot(self):
+        diagnostic = ["validation requires the approved SimulationPolicy"]
+
+        class NestedPolicy(dict):
+            def get(self, key, default=None):
+                if key == "minimum_saved_iterations":
+                    return 1
+                return super().get(key, default)
+
+        class NestedInt(int):
+            def __lt__(self, other):
+                return False
+
+        class NestedList(list):
+            pass
+
+        class NestedString(str):
+            pass
+
+        attacks = []
+        nested_mapping = copy.deepcopy(self.policy)
+        nested_mapping["iteration_policy"] = NestedPolicy(nested_mapping["iteration_policy"])
+        attacks.append(nested_mapping)
+        nested_integer = copy.deepcopy(self.policy)
+        nested_integer["iteration_policy"]["minimum_saved_iterations"] = NestedInt(10000)
+        attacks.append(nested_integer)
+        nested_list = copy.deepcopy(self.policy)
+        nested_list["level_2_sequencing"]["payment_priority"] = NestedList(
+            nested_list["level_2_sequencing"]["payment_priority"]
+        )
+        attacks.append(nested_list)
+        nested_string = copy.deepcopy(self.policy)
+        nested_string["policy_id"] = NestedString(nested_string["policy_id"])
+        attacks.append(nested_string)
+        self.assertEqual([], validate_approved_simulation_policy(self.policy))
+        for policy in attacks:
+            with self.subTest(policy_type=type(next(
+                value for value in (
+                    policy["iteration_policy"],
+                    policy["iteration_policy"]["minimum_saved_iterations"],
+                    policy["level_2_sequencing"]["payment_priority"],
+                    policy["policy_id"],
+                ) if type(value) not in {dict, list, str, int}
+            )).__name__):
+                self.assertEqual(diagnostic, validate_approved_simulation_policy(policy))
+        self.assertEqual(diagnostic, validate_simulation_run(
+            self.run, question=self.question, policy=nested_mapping,
+            question_contract=self.contracts["simulation_question.contract.json"],
+            run_contract=self.contracts["simulation_run.contract.json"], project_id="the-myr-singularity",
+            load_reference=self.loader, fingerprint_for_version=self.fingerprint, lifecycle_mode="creation",
+        ))
+
+    def test_policy_snapshot_survives_callback_mutation(self):
+        policy = copy.deepcopy(self.policy)
+        run = copy.deepcopy(self.run)
+        run["iteration_count"] = 1
+
+        def mutating_loader(path):
+            policy["iteration_policy"]["minimum_saved_iterations"] = 1
+            return self.loader(path)
+
+        errors = validate_simulation_run(
+            run, question=self.question, policy=policy,
+            question_contract=self.contracts["simulation_question.contract.json"],
+            run_contract=self.contracts["simulation_run.contract.json"], project_id="the-myr-singularity",
+            load_reference=mutating_loader, fingerprint_for_version=self.fingerprint, lifecycle_mode="creation",
+        )
+        self.assertIn("run iteration_count is below policy minimum", errors)
+
+    def test_policy_boundary_is_cycle_safe_and_never_escapes_to_reference_callbacks(self):
+        circular = copy.deepcopy(self.policy)
+        circular["cycle"] = circular
+        diagnostic = ["validation requires the approved SimulationPolicy"]
+        self.assertEqual(diagnostic, validate_approved_simulation_policy(circular))
+        self.assertEqual(diagnostic, validate_simulation_run(
+            self.run, question=self.question, policy=circular,
+            question_contract=self.contracts["simulation_question.contract.json"],
+            run_contract=self.contracts["simulation_run.contract.json"], project_id="the-myr-singularity",
+            load_reference=self.loader, fingerprint_for_version=self.fingerprint, lifecycle_mode="creation",
+        ))
+
+        captured = []
+
+        class SnapshotStealer(dict):
+            def __ne__(self, other):
+                captured.append(other)
+                other["iteration_policy"]["minimum_saved_iterations"] = 1
+                return False
+
+        run = copy.deepcopy(self.run)
+        run["iteration_count"] = 1
+
+        def hostile_loader(path):
+            if path == "workshop/projects/the-myr-singularity/simulation/simulation_policy.json":
+                return SnapshotStealer(self.policy)
+            return self.loader(path)
+
+        errors = validate_simulation_run(
+            run, question=self.question, policy=self.policy,
+            question_contract=self.contracts["simulation_question.contract.json"],
+            run_contract=self.contracts["simulation_run.contract.json"], project_id="the-myr-singularity",
+            load_reference=hostile_loader, fingerprint_for_version=self.fingerprint, lifecycle_mode="creation",
+        )
+        self.assertEqual([], captured)
+        self.assertIn("semantic_dependencies.policy does not resolve to an exact plain-JSON artifact", errors)
+        self.assertIn("run iteration_count is below policy minimum", errors)
+
+    def test_policy_pinned_contracts_and_taxonomy_reject_callback_authority(self):
+        captured = []
+
+        class HostileContract(dict):
+            def __ne__(self, resolved):
+                captured.append(resolved)
+                resolved["required_fields"]["status"]["allowed_values"].append("forged")
+                return False
+
+        forged_run = copy.deepcopy(self.run)
+        forged_run["status"] = "forged"
+        errors = self.check_run(forged_run, run_contract=HostileContract(self.contracts["simulation_run.contract.json"]))
+        self.assertEqual([], captured)
+        self.assertTrue(any("supplied run_contract does not match" in error for error in errors))
+        self.assertIn("run status is not allowed by the contract", self.check_run(forged_run))
+
+        variants = (
+            ("question", lambda: self.check_question(question_contract=HostileContract(self.contracts["simulation_question.contract.json"]))),
+            ("result", lambda: self.check_result(result_contract=HostileContract(self.contracts["simulation_result.contract.json"]))),
+            ("comparison", lambda: self.check_comparison(comparison_contract=HostileContract(self.contracts["comparison_result.contract.json"]))),
+        )
+        for label, invoke in variants:
+            with self.subTest(contract=label):
+                captured.clear()
+                self.assertTrue(invoke())
+                self.assertEqual([], captured)
+
+        class HostileTaxonomy(dict):
+            def get(self, key, default=None):
+                if key == "emission_contract":
+                    return {"categories": {}}
+                return super().get(key, default)
+
+        hostile_taxonomy = HostileTaxonomy(self.taxonomy)
+        missing_pattern = copy.deepcopy(self.result["failure_patterns"][:-1])
+        self.assertEqual(
+            ["failure taxonomy must be the resolved taxonomy artifact"],
+            validate_failure_pattern_taxonomy(hostile_taxonomy, policy=self.policy, question=self.question),
+        )
+        taxonomy_errors = validate_result_failure_patterns(
+            missing_pattern, self.run["iteration_count"], hostile_taxonomy, self.question,
+        )
+        self.assertIn("failure patterns require the resolved failure taxonomy artifact", taxonomy_errors)
+        self.assertEqual([], validate_failure_pattern_taxonomy(self.taxonomy, policy=self.policy, question=self.question))
+
+    def test_runtime_registry_detaches_before_validation_and_sealing(self):
+        calls = []
+
+        class TwoViewRegistry(dict):
+            def items(self):
+                calls.append("items")
+                return super().items()
+
+            def get(self, key, default=None):
+                calls.append(key)
+                return super().get(key, default)
+
+        authority, errors = build_simulation_runtime_context(
+            TwoViewRegistry(self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]),
+            policy=self.policy, card_facts=self.cards, versions=self.versions,
+        )
+        self.assertIsNone(authority)
+        self.assertIn("runtime context requires exact plain-JSON mana source semantics", errors)
+        self.assertEqual([], calls)
+        authority, errors = build_simulation_runtime_context(
+            self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"],
+            policy=self.policy, card_facts=self.cards, versions=self.versions,
+        )
+        self.assertEqual([], errors)
+        self.assertIsNotNone(authority)
+
+    def test_categorical_bins_require_exact_integer_values(self):
+        result = copy.deepcopy(self.result)
+        colors = next(metric for metric in result["metrics"] if metric["metric_id"] == "distinct_commander_colors_by_turn")
+        colors["bins"][0]["value"] = False
+        colors["bins"][1]["value"] = True
+        self.assertIn("categorical metric bins must contain values 0..5 exactly once", self.check_result(result))
+
+    def test_public_primary_artifacts_reject_behavioral_subclasses_before_reads(self):
+        class HostileRun(dict):
+            def get(self, key, default=None):
+                return 10000 if key == "iteration_count" else super().get(key, default)
+
+            def __getitem__(self, key):
+                return 10000 if key == "iteration_count" else super().__getitem__(key)
+
+        run = copy.deepcopy(self.run)
+        run["iteration_count"] = 1
+        self.assertEqual(["run must be exact plain JSON"], self.check_run(HostileRun(run)))
+
+        class HostileArtifact(dict):
+            def get(self, key, default=None):
+                return "forged" if key in {"question_id", "result_id", "comparison_id"} else super().get(key, default)
+
+        self.assertEqual(["question must be exact plain JSON"], self.check_question(HostileArtifact(self.question)))
+        self.assertEqual(["result must be exact plain JSON"], self.check_result(HostileArtifact(self.result)))
+        self.assertEqual(["comparison must be exact plain JSON"], self.check_comparison(HostileArtifact(self.comparison)))
+        self.assertEqual(["lifecycle must be exact plain JSON"], self.check_lifecycle(HostileArtifact(self.lifecycle)))
+
+    def test_callback_artifacts_are_detached_before_question_and_version_consumption(self):
+        captured = []
+
+        class HostileCanonicalQuestion(dict):
+            def __ne__(self, supplied):
+                captured.append(supplied)
+                supplied["question_id"] = "forged"
+                return False
+
+        def hostile_question_loader(path):
+            if path == canonical_question_path(self.question["question_id"]):
+                return HostileCanonicalQuestion(self.question)
+            return self.loader(path)
+
+        errors = validate_simulation_question(
+            self.question, policy=self.policy, question_contract=self.contracts["simulation_question.contract.json"],
+            project_id="the-myr-singularity", load_reference=hostile_question_loader,
+            fingerprint_for_version=self.fingerprint, question_path=canonical_question_path(self.question["question_id"]),
+        )
+        self.assertEqual([], captured)
+        self.assertIn("canonical Question does not resolve to an exact plain-JSON artifact", errors)
+
+        class HostileVersion(dict):
+            def get(self, key, default=None):
+                return "forged" if key == "version_id" else super().get(key, default)
+
+        version_path = self.question["compared_versions"][0]["path"]
+        errors = validate_simulation_question(
+            self.question, policy=self.policy, question_contract=self.contracts["simulation_question.contract.json"],
+            project_id="the-myr-singularity",
+            load_reference=lambda path: HostileVersion(self.loader(path)) if path == version_path else self.loader(path),
+            fingerprint_for_version=self.fingerprint, question_path=canonical_question_path(self.question["question_id"]),
+        )
+        self.assertIn("question compared_versions[0] DeckVersion does not resolve to an exact plain-JSON artifact", errors)
+
+        run_errors = validate_simulation_run(
+            self.run, question=self.question, policy=self.policy,
+            question_contract=self.contracts["simulation_question.contract.json"], run_contract=self.contracts["simulation_run.contract.json"],
+            project_id="the-myr-singularity",
+            load_reference=lambda path: HostileVersion(self.loader(path)) if path == self.run["deck_version_path"] else self.loader(path),
+            fingerprint_for_version=self.fingerprint, lifecycle_mode="creation",
+        )
+        self.assertIn("run deck_version_path does not resolve to an exact plain-JSON artifact", run_errors)
+
+    def test_registry_limitations_and_fingerprint_callbacks_use_disposable_snapshots(self):
+        class HostileRegistry(dict):
+            def items(self):
+                raise AssertionError("behavioral registry items() must not run")
+
+            def get(self, key, default=None):
+                raise AssertionError("behavioral registry get() must not run")
+
+        registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+        self.assertEqual(
+            ["mana source semantics must be exact plain JSON"],
+            validate_mana_source_semantics(HostileRegistry(registry), policy=self.policy, cards=self.cards["cards"], versions=self.versions),
+        )
+        self.assertEqual([], self.check_registry(registry))
+
+        registry_path = self.run["semantic_dependencies"]["mana_source_semantics"]["path"]
+        errors = validate_simulation_run(
+            self.run, question=self.question, policy=self.policy,
+            question_contract=self.contracts["simulation_question.contract.json"], run_contract=self.contracts["simulation_run.contract.json"],
+            project_id="the-myr-singularity",
+            load_reference=lambda path: HostileRegistry(registry) if path == registry_path else self.loader(path),
+            fingerprint_for_version=self.fingerprint, lifecycle_mode="creation",
+        )
+        self.assertIn("unable to resolve evidence for unsupported-behavior limitations", errors)
+
+        observed = []
+
+        def mutating_fingerprint(version):
+            observed.append(version)
+            fingerprint = self.fingerprint(version)
+            version["version_id"] = "forged"
+            return fingerprint
+
+        self.assertEqual([], validate_simulation_question(
+            self.question, policy=self.policy, question_contract=self.contracts["simulation_question.contract.json"],
+            project_id="the-myr-singularity", load_reference=self.loader,
+            fingerprint_for_version=mutating_fingerprint, question_path=canonical_question_path(self.question["question_id"]),
+        ))
+        self.assertTrue(observed)
+        self.assertEqual("v1.0", self.documents[self.question["compared_versions"][0]["path"]]["version_id"])
+
+    def test_deep_acyclic_public_json_fails_closed_without_recursion_error(self):
+        deeply_nested = []
+        for _ in range(sys.getrecursionlimit() + 32):
+            deeply_nested = [deeply_nested]
+
+        self.assertIsNone(_detach_exact_plain_json(deeply_nested))
+        self.assertEqual(
+            ["question must be exact plain JSON"],
+            validate_simulation_question(
+                deeply_nested, policy=self.policy,
+                question_contract=self.contracts["simulation_question.contract.json"],
+                project_id="the-myr-singularity", load_reference=self.loader,
+                fingerprint_for_version=self.fingerprint,
+                question_path=canonical_question_path(self.question["question_id"]),
+            ),
+        )
+        with patch("workshop.simulation.instance_validation.json.dumps", side_effect=RecursionError):
+            self.assertIsNone(_detach_exact_plain_json({"ordinary": ["JSON"]}))
+        with patch("workshop.simulation.instance_validation.load_strict_json_bytes", side_effect=RecursionError):
+            self.assertIsNone(_detach_exact_plain_json({"ordinary": ["JSON"]}))
+
+    def test_exact_json_comparison_is_iterative_and_preserves_exact_types(self):
+        identical_left, identical_right = [], []
+        for _ in range(700):
+            identical_left = [identical_left]
+            identical_right = [identical_right]
+        self.assertTrue(_exact_json_equal(identical_left, identical_right))
+
+        differing = ["different"]
+        for _ in range(700):
+            differing = [differing]
+        self.assertFalse(_exact_json_equal(identical_left, differing))
+
+        mixed_left, mixed_right = {"root": []}, {"root": []}
+        for _ in range(700):
+            mixed_left = {"next": [mixed_left]}
+            mixed_right = {"next": [mixed_right]}
+        self.assertTrue(_exact_json_equal(mixed_left, mixed_right))
+        self.assertFalse(_exact_json_equal(False, 0))
+        self.assertFalse(_exact_json_equal(True, 1))
+        self.assertFalse(_exact_json_equal(1, 1.0))
+
+    def test_question_deep_unregistered_field_reaches_iterative_exact_comparison(self):
+        deeply_nested = []
+        for _ in range(700):
+            deeply_nested = [deeply_nested]
+        question = copy.deepcopy(self.question)
+        question["r10_unregistered_deep_field"] = deeply_nested
+        canonical = copy.deepcopy(self.question)
+        canonical_deeply_nested = []
+        for _ in range(700):
+            canonical_deeply_nested = [canonical_deeply_nested]
+        canonical["r10_unregistered_deep_field"] = canonical_deeply_nested
+
+        def deep_question_loader(path):
+            if path == canonical_question_path(question["question_id"]):
+                return canonical
+            return self.loader(path)
+
+        errors = validate_simulation_question(
+            question, policy=self.policy,
+            question_contract=self.contracts["simulation_question.contract.json"],
+            project_id="the-myr-singularity", load_reference=deep_question_loader,
+            fingerprint_for_version=self.fingerprint,
+            question_path=canonical_question_path(question["question_id"]),
+        )
+        self.assertIn("question has unregistered top-level fields: r10_unregistered_deep_field", errors)
+        self.assertNotIn("supplied Question does not match the canonical Question resolved from question_id", errors)
+
+    def test_lifecycle_contract_failure_paths_never_consume_caller_owned_contract(self):
+        calls = []
+
+        class HostileLifecycleContract(dict):
+            def get(self, key, default=None):
+                calls.append(("get", key))
+                raise AssertionError("hostile lifecycle contract get() must not run")
+
+            def __eq__(self, other):
+                calls.append(("eq", other))
+                raise AssertionError("hostile lifecycle contract equality must not run")
+
+            def __ne__(self, other):
+                calls.append(("ne", other))
+                raise AssertionError("hostile lifecycle contract inequality must not run")
+
+        errors = validate_simulation_question_lifecycle(
+            self.lifecycle, question=self.question,
+            lifecycle_contract=HostileLifecycleContract(self.contracts["simulation_question_lifecycle.contract.json"]),
+            project_id="the-myr-singularity", load_reference=self.loader,
+            policy=self.policy, question_contract=self.contracts["simulation_question.contract.json"],
+            fingerprint_for_version=self.fingerprint,
+        )
+        self.assertEqual(["supplied lifecycle_contract must be exact plain JSON"], errors)
+        self.assertEqual([], calls)
+
+        def unavailable_lifecycle_contract(path):
+            if path.endswith("simulation_question_lifecycle.contract.json"):
+                raise OSError("canonical lifecycle unavailable")
+            return self.loader(path)
+
+        errors = validate_simulation_question_lifecycle(
+            self.lifecycle, question=self.question,
+            lifecycle_contract=self.contracts["simulation_question_lifecycle.contract.json"],
+            project_id="the-myr-singularity", load_reference=unavailable_lifecycle_contract,
+            policy=self.policy, question_contract=self.contracts["simulation_question.contract.json"],
+            fingerprint_for_version=self.fingerprint,
+        )
+        self.assertEqual(
+            ["canonical lifecycle contract does not resolve: canonical lifecycle unavailable"],
+            errors,
+        )
+
+    def test_card_semantics_registry_parity_rejects_behavioral_artifacts_before_reads(self):
+        calls = []
+        canonical_cards = self.documents["workshop/projects/the-myr-singularity/simulation/card_semantics.json"]
+        canonical_registry = self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]
+
+        class HostileCardSemantics(dict):
+            def get(self, key, default=None):
+                calls.append(("card", key))
+                return canonical_cards.get(key, default)
+
+        class HostileRegistry(dict):
+            def get(self, key, default=None):
+                calls.append(("registry", key))
+                return canonical_registry.get(key, default)
+
+        self.assertEqual(
+            ["card semantics must be exact plain JSON"],
+            validate_card_semantics_registry_parity(HostileCardSemantics({"entries": []}), canonical_registry),
+        )
+        self.assertEqual([], calls)
+        self.assertEqual(
+            ["mana source semantics must be exact plain JSON"],
+            validate_card_semantics_registry_parity(canonical_cards, HostileRegistry({"records": []})),
+        )
+        self.assertEqual([], calls)
+        self.assertEqual([], validate_card_semantics_registry_parity(canonical_cards, canonical_registry))
+
+    def test_full_policy_validators_reject_behavioral_policy_before_reads(self):
+        calls = []
+
+        class HostilePolicy(dict):
+            def get(self, key, default=None):
+                calls.append(key)
+                raise AssertionError("hostile Policy get() must not run")
+
+        hostile = HostilePolicy(self.policy)
+        self.assertEqual(["policy must be exact plain JSON"], validate_policy_metric_contracts(hostile))
+        self.assertEqual(["policy must be exact plain JSON"], validate_policy_payment_priority_semantics(hostile))
+        self.assertEqual([], calls)
+
+    def _complete_tie_allocation(self, label, floating_mana_after):
+        return {
+            "arbitrary_label": label,
+            "flexible_generic_spend": 0,
+            "tapped_source_count": 1,
+            "source_outputs": (("00000000-0000-0000-0000-000000000001", 1, "C"),),
+            "floating_mana_after": floating_mana_after,
+            "tapped_source_instance_ids": ("source#1",),
+            "activated_sources": ({
+                "instance_id": "source#1", "oracle_id": "00000000-0000-0000-0000-000000000001",
+                "ordinal": 1, "profile_id": "fixed-c", "produced_symbols": ("C",),
+            },),
+            "consumed_mana": {"C": 1},
+            "external_payment_requirements": (),
+            "life_payment": (),
+        }
+
+    def test_payment_complete_tie_uses_canonical_allocation_effect_order(self):
+        first = self._complete_tie_allocation("A", {"U": 1, "R": 1})
+        second = self._complete_tie_allocation("B", {"W": 1, "R": 1})
+        self.assertEqual("A", choose_payment([first, second])["arbitrary_label"])
+        self.assertEqual("A", choose_payment([second, first])["arbitrary_label"])
+
+    def _frozen_task32h_r2_allocation(self, label, floating_mana_after, instance_id="sol-ring#1"):
+        return MappingProxyType({
+            "arbitrary_label": label,
+            "flexible_generic_spend": 0,
+            "tapped_source_count": 1,
+            "source_outputs": (("00000000-0000-0000-0000-000000000001", 1, "C"),),
+            "floating_mana_after": MappingProxyType(floating_mana_after),
+            "tapped_source_instance_ids": (instance_id,),
+            "activated_sources": (MappingProxyType({
+                "instance_id": instance_id, "oracle_id": "00000000-0000-0000-0000-000000000001",
+                "ordinal": 1, "profile_id": "sol-ring-c-c", "produced_symbols": ("C", "C"),
+            }),),
+            "consumed_mana": MappingProxyType({"C": 1}),
+            "external_payment_requirements": (MappingProxyType({"generic": 0, "colored": []}),),
+            "life_payment": (MappingProxyType({"amount": 0, "treatment": "none"}),),
+        })
+
+    def test_payment_complete_tie_accepts_frozen_task32h_r2_allocation_shape(self):
+        first = self._frozen_task32h_r2_allocation("A", {"U": 1, "R": 1})
+        second = self._frozen_task32h_r2_allocation("B", {"W": 1, "R": 1})
+        self.assertIs(first, choose_payment([first, second]))
+        self.assertIs(first, choose_payment([second, first]))
+
+    def test_payment_complete_tie_uses_policy_field_order_before_activated_sources(self):
+        first = self._frozen_task32h_r2_allocation("A", {"U": 1}, instance_id="z#1")
+        second = self._frozen_task32h_r2_allocation("B", {"W": 1}, instance_id="a#1")
+        self.assertIs(first, choose_payment([first, second]))
+        self.assertIs(first, choose_payment([second, first]))
+
+    def test_payment_complete_tie_ignores_arbitrary_nonsemantic_metadata(self):
+        first = self._complete_tie_allocation("first-label", {"W": 1, "R": 1})
+        second = self._complete_tie_allocation("second-label", {"W": 1, "R": 1})
+        self.assertIs(first, choose_payment([first, second]))
+        first["arbitrary_label"], second["arbitrary_label"] = "changed-first", "changed-second"
+        self.assertIs(first, choose_payment([first, second]))
+
+    def test_payment_priority_semantics_aliases_fail_closed(self):
+        aliases = (
+            "payment_priority_semantics_alias",
+            "alternate_payment_priority_semantics",
+            "second_payment_priority_authority",
+        )
+        for alias in aliases:
+            with self.subTest(alias=alias):
+                policy = copy.deepcopy(self.policy)
+                policy["level_2_sequencing"][alias] = {"contract_id": "forged"}
+                self.assertIn(
+                    "policy Level 2 sequencing has unregistered or missing semantic authority fields",
+                    validate_policy_metric_contracts(policy),
+                )
+
+    def test_payment_priority_semantics_render_as_a_complete_json_subtree(self):
+        from workshop.scripts.render_simulation_policy import render_policy
+
+        rendered = render_policy(self.policy)
+        section = rendered.split("## Payment Priority Semantics\n", 1)[1].split("\n## ", 1)[0]
+        payload = section.split("```json\n", 1)[1].split("\n```", 1)[0]
+        self.assertEqual(
+            self.policy["level_2_sequencing"]["payment_priority_semantics"],
+            json.loads(payload),
+        )
+
+    def test_payment_priority_renderer_round_trip_detects_subtree_omission(self):
+        from workshop.scripts.render_simulation_policy import render_policy
+
+        rendered = render_policy(self.policy)
+        section = rendered.split("## Payment Priority Semantics\n", 1)[1].split("\n## ", 1)[0]
+        payload = section.split("```json\n", 1)[1].split("\n```", 1)[0]
+        omitted = json.loads(payload)
+        omitted.pop("complete_tie_resolution")
+        self.assertNotEqual(
+            self.policy["level_2_sequencing"]["payment_priority_semantics"],
+            omitted,
+        )
 
     def test_question_validation_is_fail_closed_through_downstream_evidence(self):
         cases = (
@@ -501,7 +1155,7 @@ class SimulationContractV7Tests(unittest.TestCase):
         cases.append((self.policy, changed_identity, "supplied question_contract does not match"))
         stale_policy = copy.deepcopy(self.policy)
         stale_policy["references"]["simulation_question_contract"]["content_fingerprint"] = "artifact-content-sha256-v1:wrong"
-        cases.append((stale_policy, self.contracts["simulation_question.contract.json"], "policy simulation_question_contract reference content fingerprint does not match resolved artifact"))
+        cases.append((stale_policy, self.contracts["simulation_question.contract.json"], "validation requires the approved SimulationPolicy"))
         for policy, contract, expected in cases:
             with self.subTest(expected=expected):
                 for errors in all_evidence_errors(policy, contract):
@@ -902,11 +1556,11 @@ class SimulationContractV7Tests(unittest.TestCase):
                 self.assertTrue(any("content fingerprint" in error or "expected artifact" in error for error in self.check_run()))
                 self.documents[path] = original
 
-    def test_v7_seed_and_iteration_vectors(self):
+    def test_v8_seed_and_iteration_vectors(self):
         seed = derive_run_seed(self.run["semantic_dependencies"]["question"]["content_fingerprint"], self.run["semantic_dependencies"]["policy"]["content_fingerprint"], self.run["deck_content_fingerprint"], self.run["run_role"])
         self.assertEqual(seed, self.run["seed"])
-        self.assertEqual(derive_iteration_seed(seed, 1), 15617334600725155670)
-        self.assertEqual(derive_iteration_seed(seed, 2), 11388546552586038854)
+        self.assertEqual(derive_iteration_seed(seed, 1), 17287000121687366137)
+        self.assertEqual(derive_iteration_seed(seed, 2), 4361418255990365363)
 
     def test_trace_kat_freezes_canonical_expansion_and_opening_shuffle(self):
         kat = load(REPO_ROOT / "workshop" / "tests" / "fixtures" / "simulation" / "simulation_iteration_trace.v1.json")
