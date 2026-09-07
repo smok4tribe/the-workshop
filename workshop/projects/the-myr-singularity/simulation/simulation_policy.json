@@ -2,7 +2,7 @@
   "schema_version": "4.0",
   "artifact_type": "simulation_policy",
   "policy_id": "the-myr-singularity-simulation-policy",
-  "policy_version": "sim-policy-v7",
+  "policy_version": "sim-policy-v8",
   "project_id": "the-myr-singularity",
   "generated_at": "2026-07-13T00:00:00Z",
   "generated_by": "Terra",
@@ -36,11 +36,11 @@
   "references": {
     "card_semantics": {
       "path": "workshop/projects/the-myr-singularity/simulation/card_semantics.json",
-      "content_fingerprint": "artifact-content-sha256-v1:4275bec64ee0fd3f770e0307b6b32ea5717490dffe1304d24716bc19fccf7d3b"
+      "content_fingerprint": "artifact-content-sha256-v1:e6061348643b5b5796522b9659e571898400a7c2f261d290badecfa1993464fc"
     },
     "mana_source_semantics": {
       "path": "workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json",
-      "content_fingerprint": "artifact-content-sha256-v1:831f22fe529c6fdf08c5207e90e477efd4410667c297899803164610326b1180"
+      "content_fingerprint": "artifact-content-sha256-v1:27b32917646e812031a1632a8f4cc476981240493944d2d89bc54e9ed3400c42"
     },
     "canonical_card_facts": {
       "path": "workshop/card-data/cards.json",
@@ -48,23 +48,23 @@
     },
     "failure_pattern_taxonomy": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/failure_pattern_taxonomy.json",
-      "content_fingerprint": "artifact-content-sha256-v1:acac794cfdc18e851800ef81a640af82c71c39e6371ea555697b8b0d02afd285"
+      "content_fingerprint": "artifact-content-sha256-v1:0fbeb7c8d3a232f9ecdbbe244b1d11a56e9b8feb0ba3fd7b774a2a4c2910ea77"
     },
     "simulation_question_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_question.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:fccd06686f0bb242a202a9a32b8fc4cb9415d76f3ca320b9b7a71d09af7ad6bd"
+      "content_fingerprint": "artifact-content-sha256-v1:4f7845848fcce92bc053da49af2895ea88e632903a03be312e05c5967d9030d0"
     },
     "simulation_run_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_run.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:639392d0da4c35b9d25d3de89356ae530fbe9bf51a51b725c62f9158d30176c6"
+      "content_fingerprint": "artifact-content-sha256-v1:669318d4c9370ff31dbc188e0b0fe6ebcf7885446fb62a1fc3449bcd34cbb427"
     },
     "simulation_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/simulation_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:23da91d990527e246a937ad010c51e83d80c04ab8ecf771032254d773f00033a"
+      "content_fingerprint": "artifact-content-sha256-v1:dad29f02aae3f313cb26636859b57f482fbe2ab27767b2e8c3aa76cf0a91673c"
     },
     "comparison_result_contract": {
       "path": "workshop/projects/the-myr-singularity/simulation/contracts/comparison_result.contract.json",
-      "content_fingerprint": "artifact-content-sha256-v1:7f4f93cd6cc7082c5fbcf01fcadbc56f3a7c2a5b77c24986af01b202dbad1c65"
+      "content_fingerprint": "artifact-content-sha256-v1:d3403de1dffdd49c4ef92c136541b99454a7cfb6cb3609af44bc4880a664f100"
     }
   },
   "commander_scenario": {
@@ -995,6 +995,66 @@
       "tapped_source_count_asc",
       "oracle_id_ordinal_output_lexicographic"
     ],
+    "payment_priority_semantics": {
+      "contract_id": "payment-priority-semantics-v1",
+      "priority_order": [
+        "flexible_source_mana_spent_on_generic_asc",
+        "tapped_source_count_asc",
+        "oracle_id_ordinal_output_lexicographic"
+      ],
+      "source_flexibility": {
+        "evaluation_point": "physical_source_instance_activation_decision",
+        "alternative_domain": "distinct_exact_legal_mana_output_alternatives_across_currently_legal_supported_activation_profiles",
+        "flexible_when_distinct_alternative_count": "greater_than_one",
+        "non_flexible_when_distinct_alternative_count": [0, 1],
+        "classification_must_not_use": [
+          "produced_mana_symbol",
+          "output_capabilities_cardinality",
+          "card_name",
+          "source_kind"
+        ]
+      },
+      "flexible_source_mana_spent_on_generic": {
+        "counted_entity": "mana_units",
+        "production_scope": "units_produced_by_selected_source_activations_during_current_payment_allocation",
+        "consumption_scope": "generic_cost_requirements_only",
+        "exact_colored_cost_contribution": 0,
+        "pre_existing_floating_mana_contribution": 0,
+        "requires_ephemeral_current_allocation_provenance": true,
+        "forbids_persistent_floating_mana_provenance": true
+      },
+      "same_symbol_provenance": "same_symbol_units_with_distinct_ephemeral_provenance_remain_distinct_when_their_consumption_can_affect_legality_or_frozen_payment_ranking",
+      "generic_payment_alternative_preservation": {
+        "generic_cost_requirement": "may_be_satisfied_by_any_currently_legal_mana_resources",
+        "distinct_choices_retained_when": ["subsequent_activation_legality", "final_target_cost_legality", "frozen_payment_ranking"],
+        "legality_precedes_payment_ranking": true,
+        "forbidden_shortcut": "deterministic_single_symbol_or_fixed_order_generic_consumption_that_erases_an_otherwise_legal_allocation",
+        "choose_payment_role": "rank_only_over_legal_allocations",
+        "equivalent_choices_may_be_collapsed_only_when": "provably_equivalent_for_downstream_legality_and_every_frozen_ranking_key",
+        "known_answer_test": {"source": "The Mycosynth Gardens", "entry_floating_mana": {"W": 1, "U": 1}, "target_cost": {"generic": 0, "colored": ["W", "R"]}, "legal_path": ["consume_U_for_generic_activation_cost", "produce_R", "retain_W", "pay_W_and_R_target"]}
+      },
+      "complete_tie_resolution": {
+        "trigger": "all_three_frozen_priority_keys_equal",
+        "caller_order_dependence": "forbidden",
+        "search_enumeration_order_dependence": "forbidden",
+        "hash_iteration_order_dependence": "forbidden",
+        "lookahead": "forbidden",
+        "comparison": "canonical_lexicographic_ascending",
+        "compared_value": "canonical_json_serialization_of_allocation_effect_projection",
+        "allocation_effect_field_order": ["floating_mana_after", "tapped_source_instance_ids", "activated_sources", "consumed_mana", "external_payment_requirements", "life_payment"],
+        "unordered_mapping_key_order": "unicode_codepoint_ascending",
+        "allocation_effect_projection": {
+          "floating_mana_after": {"representation": "exact_full_mana_symbol_quantity_map", "symbol_order": ["W", "U", "B", "R", "G", "C"]},
+          "tapped_source_instance_ids": {"representation": "canonical_sorted_physical_instance_id_array"},
+          "activated_sources": {"canonicalization": "physical_instance_id_unicode_codepoint_ascending", "fields": ["instance_id", "oracle_id", "ordinal", "profile_id", "produced_symbols"], "produced_symbols": {"representation": "exact_selected_activation_output_symbol_sequence", "symbol_order": ["W", "U", "B", "R", "G", "C"]}},
+          "consumed_mana": {"representation": "exact_full_mana_symbol_quantity_map", "symbol_order": ["W", "U", "B", "R", "G", "C"]},
+          "external_payment_requirements": {"representation": "canonicalized_exact_registered_payment_requirements", "array_order": "canonical_json_item_lexicographic_ascending", "item_unordered_mapping_key_order": "unicode_codepoint_ascending"},
+          "life_payment": {"representation": "canonicalized_exact_registered_life_payment_effects", "array_order": "canonical_json_item_lexicographic_ascending", "item_unordered_mapping_key_order": "unicode_codepoint_ascending"}
+        },
+        "equivalence": "byte_identical_canonical_allocation_effect_projections_are_equivalent_for_this_bounded_model"
+      },
+      "generic_cost_boundary": "generic_is_a_cost_requirement_and_never_a_produced_mana_pool_symbol"
+    },
     "observation_projections": {
       "source_capability": "surviving online source color capabilities, irrespective of earlier tapping",
       "spendable_mana": "actual remaining untapped payable sources after deterministic development"

@@ -1,4 +1,4 @@
-# Simulation Policy sim-policy-v7
+# Simulation Policy sim-policy-v8
 
 Policy id: `the-myr-singularity-simulation-policy` — project `the-myr-singularity`
 
@@ -629,6 +629,154 @@ Within the bounded Level-2 development model, this is phase-scoped resource stat
   "residual_spendability_relation": "the_pool_and_current_untapped_legal_source_outputs_are_distinct_inputs_to_residual_spendability",
   "burst_vs_sustained_invariant": "produced_floating_mana_is_phase_scoped_and_never_becomes_persistent_source_capacity",
   "unsupported_retention_effect_boundary": "only_an_explicitly_registered_executable_semantic_may_override_phase_boundary_clearing"
+}
+```
+
+## Payment Priority Semantics
+
+```json
+{
+  "contract_id": "payment-priority-semantics-v1",
+  "priority_order": [
+    "flexible_source_mana_spent_on_generic_asc",
+    "tapped_source_count_asc",
+    "oracle_id_ordinal_output_lexicographic"
+  ],
+  "source_flexibility": {
+    "evaluation_point": "physical_source_instance_activation_decision",
+    "alternative_domain": "distinct_exact_legal_mana_output_alternatives_across_currently_legal_supported_activation_profiles",
+    "flexible_when_distinct_alternative_count": "greater_than_one",
+    "non_flexible_when_distinct_alternative_count": [
+      0,
+      1
+    ],
+    "classification_must_not_use": [
+      "produced_mana_symbol",
+      "output_capabilities_cardinality",
+      "card_name",
+      "source_kind"
+    ]
+  },
+  "flexible_source_mana_spent_on_generic": {
+    "counted_entity": "mana_units",
+    "production_scope": "units_produced_by_selected_source_activations_during_current_payment_allocation",
+    "consumption_scope": "generic_cost_requirements_only",
+    "exact_colored_cost_contribution": 0,
+    "pre_existing_floating_mana_contribution": 0,
+    "requires_ephemeral_current_allocation_provenance": true,
+    "forbids_persistent_floating_mana_provenance": true
+  },
+  "same_symbol_provenance": "same_symbol_units_with_distinct_ephemeral_provenance_remain_distinct_when_their_consumption_can_affect_legality_or_frozen_payment_ranking",
+  "generic_payment_alternative_preservation": {
+    "generic_cost_requirement": "may_be_satisfied_by_any_currently_legal_mana_resources",
+    "distinct_choices_retained_when": [
+      "subsequent_activation_legality",
+      "final_target_cost_legality",
+      "frozen_payment_ranking"
+    ],
+    "legality_precedes_payment_ranking": true,
+    "forbidden_shortcut": "deterministic_single_symbol_or_fixed_order_generic_consumption_that_erases_an_otherwise_legal_allocation",
+    "choose_payment_role": "rank_only_over_legal_allocations",
+    "equivalent_choices_may_be_collapsed_only_when": "provably_equivalent_for_downstream_legality_and_every_frozen_ranking_key",
+    "known_answer_test": {
+      "source": "The Mycosynth Gardens",
+      "entry_floating_mana": {
+        "W": 1,
+        "U": 1
+      },
+      "target_cost": {
+        "generic": 0,
+        "colored": [
+          "W",
+          "R"
+        ]
+      },
+      "legal_path": [
+        "consume_U_for_generic_activation_cost",
+        "produce_R",
+        "retain_W",
+        "pay_W_and_R_target"
+      ]
+    }
+  },
+  "complete_tie_resolution": {
+    "trigger": "all_three_frozen_priority_keys_equal",
+    "caller_order_dependence": "forbidden",
+    "search_enumeration_order_dependence": "forbidden",
+    "hash_iteration_order_dependence": "forbidden",
+    "lookahead": "forbidden",
+    "comparison": "canonical_lexicographic_ascending",
+    "compared_value": "canonical_json_serialization_of_allocation_effect_projection",
+    "allocation_effect_field_order": [
+      "floating_mana_after",
+      "tapped_source_instance_ids",
+      "activated_sources",
+      "consumed_mana",
+      "external_payment_requirements",
+      "life_payment"
+    ],
+    "unordered_mapping_key_order": "unicode_codepoint_ascending",
+    "allocation_effect_projection": {
+      "floating_mana_after": {
+        "representation": "exact_full_mana_symbol_quantity_map",
+        "symbol_order": [
+          "W",
+          "U",
+          "B",
+          "R",
+          "G",
+          "C"
+        ]
+      },
+      "tapped_source_instance_ids": {
+        "representation": "canonical_sorted_physical_instance_id_array"
+      },
+      "activated_sources": {
+        "canonicalization": "physical_instance_id_unicode_codepoint_ascending",
+        "fields": [
+          "instance_id",
+          "oracle_id",
+          "ordinal",
+          "profile_id",
+          "produced_symbols"
+        ],
+        "produced_symbols": {
+          "representation": "exact_selected_activation_output_symbol_sequence",
+          "symbol_order": [
+            "W",
+            "U",
+            "B",
+            "R",
+            "G",
+            "C"
+          ]
+        }
+      },
+      "consumed_mana": {
+        "representation": "exact_full_mana_symbol_quantity_map",
+        "symbol_order": [
+          "W",
+          "U",
+          "B",
+          "R",
+          "G",
+          "C"
+        ]
+      },
+      "external_payment_requirements": {
+        "representation": "canonicalized_exact_registered_payment_requirements",
+        "array_order": "canonical_json_item_lexicographic_ascending",
+        "item_unordered_mapping_key_order": "unicode_codepoint_ascending"
+      },
+      "life_payment": {
+        "representation": "canonicalized_exact_registered_life_payment_effects",
+        "array_order": "canonical_json_item_lexicographic_ascending",
+        "item_unordered_mapping_key_order": "unicode_codepoint_ascending"
+      }
+    },
+    "equivalence": "byte_identical_canonical_allocation_effect_projections_are_equivalent_for_this_bounded_model"
+  },
+  "generic_cost_boundary": "generic_is_a_cost_requirement_and_never_a_produced_mana_pool_symbol"
 }
 ```
 

@@ -131,6 +131,105 @@ def select_payable_ramp(candidates):
     return min(payable, key=key) if payable else None
 
 
+_PAYMENT_MANA_SYMBOL_ORDER = ("W", "U", "B", "R", "G", "C")
+_PAYMENT_ALLOCATION_EFFECT_FIELD_ORDER = (
+    "floating_mana_after",
+    "tapped_source_instance_ids",
+    "activated_sources",
+    "consumed_mana",
+    "external_payment_requirements",
+    "life_payment",
+)
+_PAYMENT_ACTIVATED_SOURCE_FIELD_ORDER = (
+    "instance_id",
+    "oracle_id",
+    "ordinal",
+    "profile_id",
+    "produced_symbols",
+)
+
+
+def _unicode_codepoint_key(value):
+    return tuple(ord(character) for character in value)
+
+
+def _canonical_payment_json(value):
+    """Return exact JSON-compatible data with canonical object/list ordering."""
+    if isinstance(value, Mapping):
+        if any(type(key) is not str for key in value):
+            raise ValueError("payment allocation projection keys must be strings")
+        return {
+            key: _canonical_payment_json(value[key])
+            for key in sorted(value, key=_unicode_codepoint_key)
+        }
+    if type(value) in {list, tuple}:
+        values = [_canonical_payment_json(item) for item in value]
+        return sorted(values, key=_canonical_payment_json_text)
+    if value is None or type(value) in {str, int, float, bool}:
+        return value
+    raise ValueError("payment allocation projection must contain exact JSON values")
+
+
+def _canonical_payment_json_text(value):
+    return json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+
+
+def _canonical_mana_symbol_map(value):
+    if value is None:
+        value = {}
+    if not isinstance(value, Mapping) or set(value) - set(_PAYMENT_MANA_SYMBOL_ORDER):
+        raise ValueError("payment allocation mana quantities must use the registered symbol domain")
+    if any(type(quantity) is not int or quantity < 0 for quantity in value.values()):
+        raise ValueError("payment allocation mana quantities must be non-negative integers")
+    return {symbol: value.get(symbol, 0) for symbol in _PAYMENT_MANA_SYMBOL_ORDER}
+
+
+def _canonical_produced_symbol_sequence(value):
+    """Canonicalize Task 32H's selected-output symbol sequence without changing quantity."""
+    if type(value) not in {list, tuple} or any(symbol not in _PAYMENT_MANA_SYMBOL_ORDER for symbol in value):
+        raise ValueError("payment allocation produced_symbols must be a registered symbol sequence")
+    rank = {symbol: index for index, symbol in enumerate(_PAYMENT_MANA_SYMBOL_ORDER)}
+    return sorted(value, key=rank.__getitem__)
+
+
+def _payment_allocation_effect_projection(item):
+    """Project only registered, result-relevant allocation effects for a complete tie."""
+    if not isinstance(item, Mapping):
+        raise ValueError("payment allocation must be a Mapping")
+    activated = item.get("activated_sources", [])
+    if type(activated) not in {list, tuple}:
+        raise ValueError("payment allocation activated_sources must be an array")
+    canonical_activated = []
+    for source in activated:
+        if not isinstance(source, Mapping):
+            raise ValueError("payment allocation activated_sources must contain objects")
+        if type(source.get("instance_id")) is not str:
+            raise ValueError("payment allocation activated_sources require physical identities")
+        source_values = {
+            "instance_id": source.get("instance_id"),
+            "oracle_id": source.get("oracle_id"),
+            "ordinal": source.get("ordinal"),
+            "profile_id": source.get("profile_id"),
+            "produced_symbols": _canonical_produced_symbol_sequence(source.get("produced_symbols")),
+        }
+        canonical_activated.append({
+            field: source_values[field] for field in _PAYMENT_ACTIVATED_SOURCE_FIELD_ORDER
+        })
+    canonical_activated.sort(key=lambda source: _unicode_codepoint_key(source["instance_id"]))
+    tapped = item.get("tapped_source_instance_ids", [])
+    if type(tapped) not in {list, tuple} or any(type(instance_id) is not str for instance_id in tapped):
+        raise ValueError("payment allocation tapped_source_instance_ids must be an array of physical identities")
+    projection_values = {
+        "floating_mana_after": _canonical_mana_symbol_map(item.get("floating_mana_after")),
+        "tapped_source_instance_ids": sorted(tapped, key=_unicode_codepoint_key),
+        "activated_sources": canonical_activated,
+        "consumed_mana": _canonical_mana_symbol_map(item.get("consumed_mana")),
+        "external_payment_requirements": _canonical_payment_json(item.get("external_payment_requirements", [])),
+        "life_payment": _canonical_payment_json(item.get("life_payment", [])),
+    }
+    return {field: projection_values[field] for field in _PAYMENT_ALLOCATION_EFFECT_FIELD_ORDER}
+
+
 def choose_payment(allocations):
     """Choose a legal allocation using the frozen payment tie-break.
 
@@ -139,12 +238,12 @@ def choose_payment(allocations):
     """
     if not allocations:
         return None
-    color_rank = {"C": 0, "W": 1, "U": 2, "B": 3, "R": 4, "G": 5}
     def key(item):
         ordered = tuple(sorted(
-            ((oracle.lower(), ordinal, color_rank[color]) for oracle, ordinal, color in item["source_outputs"]),
+            ((oracle.lower(), ordinal, color) for oracle, ordinal, color in item["source_outputs"]),
         ))
-        return item["flexible_generic_spend"], item["tapped_source_count"], ordered
+        complete_tie = _canonical_payment_json_text(_payment_allocation_effect_projection(item))
+        return item["flexible_generic_spend"], item["tapped_source_count"], ordered, complete_tie
     return min(allocations, key=key)
 
 
@@ -152,7 +251,7 @@ def _is_integer(value):
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-APPROVED_RUNTIME_MANA_SOURCE_SEMANTICS_FINGERPRINT = "artifact-content-sha256-v1:831f22fe529c6fdf08c5207e90e477efd4410667c297899803164610326b1180"
+APPROVED_RUNTIME_MANA_SOURCE_SEMANTICS_FINGERPRINT = "artifact-content-sha256-v1:27b32917646e812031a1632a8f4cc476981240493944d2d89bc54e9ed3400c42"
 _RUNTIME_CONTEXT_CONSTRUCTION_TOKEN = object()
 
 
