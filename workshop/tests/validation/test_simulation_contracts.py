@@ -785,6 +785,31 @@ class SimulationContractV8Tests(unittest.TestCase):
         self.assertEqual("A", choose_payment([first, second])["arbitrary_label"])
         self.assertEqual("A", choose_payment([second, first])["arbitrary_label"])
 
+    def test_payment_output_tie_break_is_lexicographic_after_oracle_and_ordinal(self):
+        def allocation(label, oracle_id, ordinal, output):
+            candidate = self._complete_tie_allocation(label, {"C": 1})
+            candidate["source_outputs"] = ((oracle_id, ordinal, output),)
+            return candidate
+
+        white = allocation("white", "same-oracle", 1, "W")
+        blue = allocation("blue", "same-oracle", 1, "U")
+        black = allocation("black", "same-oracle", 1, "B")
+        colorless = allocation("colorless", "same-oracle", 1, "C")
+        for expected, candidates in (
+            (blue, [white, blue]),
+            (black, [colorless, black]),
+        ):
+            self.assertIs(expected, choose_payment(candidates))
+            self.assertIs(expected, choose_payment(list(reversed(candidates))))
+
+        earlier_oracle = allocation("earlier-oracle", "a-oracle", 1, "W")
+        later_oracle = allocation("later-oracle", "b-oracle", 1, "C")
+        self.assertIs(earlier_oracle, choose_payment([later_oracle, earlier_oracle]))
+
+        earlier_ordinal = allocation("earlier-ordinal", "same-oracle", 1, "W")
+        later_ordinal = allocation("later-ordinal", "same-oracle", 2, "C")
+        self.assertIs(earlier_ordinal, choose_payment([later_ordinal, earlier_ordinal]))
+
     def _frozen_task32h_r2_allocation(self, label, floating_mana_after, instance_id="sol-ring#1"):
         return MappingProxyType({
             "arbitrary_label": label,

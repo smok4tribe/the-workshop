@@ -238,10 +238,9 @@ def choose_payment(allocations):
     """
     if not allocations:
         return None
-    color_rank = {"C": 0, "W": 1, "U": 2, "B": 3, "R": 4, "G": 5}
     def key(item):
         ordered = tuple(sorted(
-            ((oracle.lower(), ordinal, color_rank[color]) for oracle, ordinal, color in item["source_outputs"]),
+            ((oracle.lower(), ordinal, color) for oracle, ordinal, color in item["source_outputs"]),
         ))
         complete_tie = _canonical_payment_json_text(_payment_allocation_effect_projection(item))
         return item["flexible_generic_spend"], item["tapped_source_count"], ordered, complete_tie
