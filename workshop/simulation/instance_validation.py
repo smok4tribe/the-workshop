@@ -1576,7 +1576,7 @@ def build_simulation_runtime_context(registry, *, policy, card_facts, versions):
         errors.extend(validate_mana_source_semantics(registry, policy=policy, cards=cards, versions=versions))
     if errors:
         return None, errors
-    return SimulationRuntimeContext._from_validated_registry(registry), []
+    return SimulationRuntimeContext._from_validated_registry(registry, cards), []
 
 
 def validate_card_semantics_registry_parity(card_semantics, registry):

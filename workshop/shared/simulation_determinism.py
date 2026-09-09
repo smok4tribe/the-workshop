@@ -7,6 +7,7 @@ import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
+from itertools import combinations, combinations_with_replacement
 from types import MappingProxyType
 
 from workshop.shared.identity import artifact_content_fingerprint, load_strict_json_bytes
@@ -230,6 +231,15 @@ def _payment_allocation_effect_projection(item):
     return {field: projection_values[field] for field in _PAYMENT_ALLOCATION_EFFECT_FIELD_ORDER}
 
 
+def _payment_allocation_priority_key(item):
+    """Return the one frozen ordering used for selection and equivalence."""
+    ordered = tuple(sorted(
+        ((oracle.lower(), ordinal, symbol) for oracle, ordinal, symbol in item["source_outputs"]),
+    ))
+    complete_tie = _canonical_payment_json_text(_payment_allocation_effect_projection(item))
+    return item["flexible_generic_spend"], item["tapped_source_count"], ordered, complete_tie
+
+
 def choose_payment(allocations):
     """Choose a legal allocation using the frozen payment tie-break.
 
@@ -238,13 +248,7 @@ def choose_payment(allocations):
     """
     if not allocations:
         return None
-    def key(item):
-        ordered = tuple(sorted(
-            ((oracle.lower(), ordinal, color) for oracle, ordinal, color in item["source_outputs"]),
-        ))
-        complete_tie = _canonical_payment_json_text(_payment_allocation_effect_projection(item))
-        return item["flexible_generic_spend"], item["tapped_source_count"], ordered, complete_tie
-    return min(allocations, key=key)
+    return min(allocations, key=_payment_allocation_priority_key)
 
 
 def _is_integer(value):
@@ -252,6 +256,8 @@ def _is_integer(value):
 
 
 APPROVED_RUNTIME_MANA_SOURCE_SEMANTICS_FINGERPRINT = "artifact-content-sha256-v1:27b32917646e812031a1632a8f4cc476981240493944d2d89bc54e9ed3400c42"
+APPROVED_RUNTIME_CARD_FACTS_FINGERPRINT = "artifact-content-sha256-v1:96f5c19764c889f4be8a36d3eaaa12dacc1f145c53260048511bec23df00e6c5"
+APPROVED_RUNTIME_ARTIFACT_IDENTITY_PROJECTION_FINGERPRINT = "artifact-content-sha256-v1:651cf8d3ee36fd45672bae4bd93f0e049b4f66687902e9f40347a99689459290"
 _RUNTIME_CONTEXT_CONSTRUCTION_TOKEN = object()
 
 
@@ -285,9 +291,12 @@ class SimulationRuntimeContext:
     """Sealed canonical executable semantics for runtime helpers."""
 
     _registry_canonical_bytes: bytes
+    _card_facts_canonical_bytes: bytes
     registry_identity: tuple[str, str, str, str, str]
     registry_content_fingerprint: str
+    card_facts_content_fingerprint: str
     canonical_land_oracle_ids: frozenset[str]
+    canonical_artifact_oracle_ids: frozenset[str]
     canonical_commander_colors: frozenset[str]
     _construction_token: object
 
@@ -295,9 +304,11 @@ class SimulationRuntimeContext:
         raise TypeError("SimulationRuntimeContext instances are created only by validated canonical construction")
 
     @classmethod
-    def _from_validated_registry(cls, registry):
+    def _from_validated_registry(cls, registry, card_facts):
         if type(registry) is not dict:
             raise ValueError("validated runtime semantic registry must be an exact object")
+        if type(card_facts) is not list:
+            raise ValueError("validated canonical Card Facts must be an exact array")
         canonical_bytes = _canonical_json_bytes(registry)
         canonical_registry = load_strict_json_bytes(canonical_bytes)
         if type(canonical_registry) is not dict or type(canonical_registry.get("records")) is not list:
@@ -307,15 +318,37 @@ class SimulationRuntimeContext:
             raise ValueError("validated runtime semantic registry has invalid record identities")
         if len({record["oracle_id"] for record in records}) != len(records):
             raise ValueError("validated runtime semantic registry has duplicate record identities")
+        card_facts_bytes = _canonical_json_bytes(card_facts)
+        canonical_cards = load_strict_json_bytes(card_facts_bytes)
+        if type(canonical_cards) is not list or any(
+            type(card) is not dict or type(card.get("oracle_id")) is not str or not card["oracle_id"]
+            or type(card.get("type_line")) is not str
+            for card in canonical_cards
+        ):
+            raise ValueError("validated canonical Card Facts have invalid identities or types")
+        if len({card["oracle_id"] for card in canonical_cards}) != len(canonical_cards):
+            raise ValueError("validated canonical Card Facts have duplicate identities")
+        card_by_oracle_id = {card["oracle_id"]: card for card in canonical_cards}
+        if not {record["oracle_id"] for record in records} <= set(card_by_oracle_id):
+            raise ValueError("validated canonical Card Facts do not cover executable source identities")
+        if artifact_content_fingerprint(canonical_cards) != APPROVED_RUNTIME_CARD_FACTS_FINGERPRINT:
+            raise ValueError("validated canonical Card Facts do not match the Policy-approved authority")
         instance = object.__new__(cls)
         object.__setattr__(instance, "registry_identity", tuple(
             canonical_registry[field] for field in ("schema_version", "artifact_type", "artifact_id", "project_id", "policy_version")
         ))
         object.__setattr__(instance, "_registry_canonical_bytes", canonical_bytes)
+        object.__setattr__(instance, "_card_facts_canonical_bytes", card_facts_bytes)
         object.__setattr__(instance, "registry_content_fingerprint", artifact_content_fingerprint(canonical_registry))
+        object.__setattr__(instance, "card_facts_content_fingerprint", artifact_content_fingerprint(canonical_cards))
         object.__setattr__(instance, "canonical_land_oracle_ids", frozenset(
             record["oracle_id"] for record in records if record.get("source_kind") == "land"
         ))
+        object.__setattr__(instance, "canonical_artifact_oracle_ids", frozenset(
+            card["oracle_id"] for card in canonical_cards if "Artifact" in card["type_line"].split(" — ", 1)[0].split()
+        ))
+        if artifact_content_fingerprint({"artifact_oracle_ids": sorted(instance.canonical_artifact_oracle_ids)}) != APPROVED_RUNTIME_ARTIFACT_IDENTITY_PROJECTION_FINGERPRINT:
+            raise ValueError("validated Card Facts artifact identity projection does not match the approved authority")
         commander_colors = {
             color
             for record in records
@@ -340,6 +373,7 @@ class AuthenticatedRuntimeSnapshot:
     _frozen_registry: Mapping
     _records_by_oracle_id: Mapping
     canonical_land_oracle_ids: frozenset[str]
+    canonical_artifact_oracle_ids: frozenset[str]
     canonical_commander_colors: frozenset[str]
     registry_content_fingerprint: str
     _construction_token: object
@@ -368,6 +402,9 @@ def _authenticate_runtime_context(runtime_context):
     identity_metadata = runtime_context.registry_identity
     fingerprint_metadata = runtime_context.registry_content_fingerprint
     land_metadata = runtime_context.canonical_land_oracle_ids
+    card_facts_bytes = runtime_context._card_facts_canonical_bytes
+    card_facts_fingerprint_metadata = runtime_context.card_facts_content_fingerprint
+    artifact_metadata = runtime_context.canonical_artifact_oracle_ids
     color_metadata = runtime_context.canonical_commander_colors
     if (
         type(identity_metadata) is not tuple
@@ -378,6 +415,10 @@ def _authenticate_runtime_context(runtime_context):
         or any(type(value) is not str for value in land_metadata)
         or type(color_metadata) is not frozenset
         or any(type(value) is not str for value in color_metadata)
+        or type(card_facts_bytes) is not bytes
+        or type(card_facts_fingerprint_metadata) is not str
+        or type(artifact_metadata) is not frozenset
+        or any(type(value) is not str for value in artifact_metadata)
     ):
         raise ValueError("runtime semantic context metadata has invalid types")
     try:
@@ -412,6 +453,11 @@ def _authenticate_runtime_context(runtime_context):
     )
     if land_metadata != expected_lands or color_metadata != expected_commander_colors:
         raise ValueError("runtime semantic context identity domains do not derive from the approved registry")
+    if (
+        card_facts_fingerprint_metadata != APPROVED_RUNTIME_CARD_FACTS_FINGERPRINT
+        or artifact_content_fingerprint({"artifact_oracle_ids": sorted(artifact_metadata)}) != APPROVED_RUNTIME_ARTIFACT_IDENTITY_PROJECTION_FINGERPRINT
+    ):
+        raise ValueError("runtime semantic context Card Facts identity domains are not authenticated")
     frozen_registry = _freeze_json(registry)
     frozen_records = frozen_registry.get("records")
     if type(frozen_records) is not tuple:
@@ -422,6 +468,7 @@ def _authenticate_runtime_context(runtime_context):
         record["oracle_id"]: record for record in frozen_records
     }))
     object.__setattr__(snapshot, "canonical_land_oracle_ids", expected_lands)
+    object.__setattr__(snapshot, "canonical_artifact_oracle_ids", artifact_metadata)
     object.__setattr__(snapshot, "canonical_commander_colors", expected_commander_colors)
     object.__setattr__(snapshot, "registry_content_fingerprint", fingerprint)
     object.__setattr__(snapshot, "_construction_token", _RUNTIME_SNAPSHOT_CONSTRUCTION_TOKEN)
@@ -844,3 +891,626 @@ def observe_source_capability(*, runtime_context, source_states, candidate_sourc
         "residual_external_payment_capacity": residual_external_capacity,
         "candidate_spendable_output_capabilities": spendable_capabilities,
     }
+# Task 32H deliberately keeps physical observations and executable semantics
+# separate.  A session owns a fresh Task-32F authenticated snapshot and frozen
+# copies of physical observations for exactly one Level-2 development window.
+# Callers apply the returned mutations, then create a fresh session; no result
+# changing source projection is retained across physical state changes.
+_RUNTIME_DEVELOPMENT_SESSION_TOKEN = object()
+_MANA_SYMBOLS = frozenset({"W", "U", "B", "R", "G", "C"})
+_MANA_SYMBOL_ORDER = {symbol: index for index, symbol in enumerate(("C", "W", "U", "B", "R", "G"))}
+
+
+def _freeze_runtime_value(value):
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _freeze_runtime_value(item) for key, item in value.items()})
+    if type(value) in {list, tuple}:
+        return tuple(_freeze_runtime_value(item) for item in value)
+    if value is None or type(value) in {str, int, bool}:
+        return value
+    raise ValueError("runtime development result contains an unsupported value")
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class RuntimeDevelopmentSession:
+    """One sealed, operation-local authenticated development observation."""
+
+    _runtime_context: SimulationRuntimeContext
+    _snapshot: AuthenticatedRuntimeSnapshot | None
+    _sources: tuple
+    _turn_state: Mapping
+    _floating_mana: Mapping
+    _construction_token: object
+
+    def __init__(self, *args, **kwargs):
+        raise TypeError("RuntimeDevelopmentSession instances are created only by begin_runtime_development_session")
+
+
+def _require_runtime_development_session(session):
+    if type(session) is not RuntimeDevelopmentSession:
+        raise ValueError("runtime development operation requires a sealed RuntimeDevelopmentSession")
+    if session._construction_token is not _RUNTIME_DEVELOPMENT_SESSION_TOKEN:
+        raise ValueError("runtime development session construction is not authenticated")
+    if session._snapshot is not None:
+        raise ValueError("runtime development session cannot retain an executable semantic snapshot")
+    snapshot = _authenticate_runtime_context(session._runtime_context)
+    if type(session._sources) is not tuple or any(type(source) is not MappingProxyType for source in session._sources):
+        raise ValueError("runtime development session source observations are not sealed")
+    if type(session._turn_state) is not MappingProxyType:
+        raise ValueError("runtime development session turn observation is not sealed")
+    if type(session._floating_mana) is not MappingProxyType:
+        raise ValueError("runtime development session floating mana observation is not sealed")
+    try:
+        sources, turn_state, floating_mana = _validate_runtime_development_observations(
+            snapshot, [dict(source) for source in session._sources], dict(session._turn_state),
+            dict(session._floating_mana),
+        )
+    except (KeyError, TypeError) as error:
+        raise ValueError("runtime development session physical observations are malformed") from error
+    operation = object.__new__(RuntimeDevelopmentSession)
+    object.__setattr__(operation, "_runtime_context", session._runtime_context)
+    object.__setattr__(operation, "_snapshot", snapshot)
+    object.__setattr__(operation, "_sources", sources)
+    object.__setattr__(operation, "_turn_state", turn_state)
+    object.__setattr__(operation, "_floating_mana", floating_mana)
+    object.__setattr__(operation, "_construction_token", _RUNTIME_DEVELOPMENT_SESSION_TOKEN)
+    return operation
+
+
+def _validate_floating_mana_state(floating_mana_state):
+    if type(floating_mana_state) is not dict:
+        raise ValueError("floating_mana_state must be an exact object")
+    if any(type(symbol) is not str for symbol in floating_mana_state):
+        raise ValueError("floating_mana_state keys must be exact mana-symbol strings")
+    extras = sorted(symbol for symbol in floating_mana_state if symbol not in _MANA_SYMBOLS)
+    if extras:
+        raise ValueError("floating_mana_state has unregistered mana symbols: " + ", ".join(extras))
+    if any(type(quantity) is not int or quantity < 0 for quantity in floating_mana_state.values()):
+        raise ValueError("floating_mana_state quantities must be non-negative integers")
+    return {symbol: quantity for symbol, quantity in floating_mana_state.items() if quantity}
+
+
+def _validate_runtime_development_sources(snapshot, source_states):
+    if type(source_states) is not list:
+        raise ValueError("source_states must be an exact array")
+    required = {"instance_id", "oracle_id", "ordinal", "deployed_controller_turn_offset", "tapped", "removed"}
+    seen = set()
+    sources = []
+    for source in source_states:
+        if type(source) is not dict:
+            raise ValueError("source_states entries must be exact objects")
+        if set(source) != required:
+            raise ValueError("source_states entries must contain exactly physical observation fields")
+        instance_id = source["instance_id"]
+        if type(instance_id) is not str or not instance_id or instance_id in seen:
+            raise ValueError("source_states instance_id values must be unique non-empty strings")
+        seen.add(instance_id)
+        _resolve_runtime_record(snapshot, source["oracle_id"])
+        if type(source["ordinal"]) is not int or source["ordinal"] < 1:
+            raise ValueError("source_states ordinal must be a positive integer")
+        if type(source["deployed_controller_turn_offset"]) is not int or source["deployed_controller_turn_offset"] < 0:
+            raise ValueError("source_states deployed_controller_turn_offset must be a non-negative integer")
+        if type(source["tapped"]) is not bool or type(source["removed"]) is not bool:
+            raise ValueError("source_states tapped and removed must be booleans")
+        sources.append(_freeze_runtime_value(source))
+    return tuple(sources)
+
+
+def _validate_runtime_development_observations(snapshot, source_states, turn_state, floating_mana_state):
+    """Validate the complete physical-session boundary shared by all operations."""
+    sources = _validate_runtime_development_sources(snapshot, source_states)
+    if type(turn_state) is not dict or set(turn_state) != {"controller_turn_offset"}:
+        raise ValueError("turn_state must contain exactly controller_turn_offset")
+    offset = turn_state["controller_turn_offset"]
+    if type(offset) is not int or offset < 0:
+        raise ValueError("turn_state controller_turn_offset must be a non-negative integer")
+    if any(source["deployed_controller_turn_offset"] > offset for source in sources):
+        raise ValueError("source_states deployed_controller_turn_offset cannot exceed controller_turn_offset")
+    return sources, _freeze_runtime_value(turn_state), _freeze_runtime_value(
+        _validate_floating_mana_state(floating_mana_state)
+    )
+
+
+def begin_runtime_development_session(*, runtime_context, source_states, shared_state, turn_state, floating_mana_state):
+    """Authenticate exact physical observations for one bounded development phase.
+
+    ``shared_state`` exists only to make the engine/runtime boundary explicit;
+    semantic conditions are never caller-provided and the only accepted value is
+    an exact empty object.  Artifact count, Tron identities, Commander colors,
+    and external payment capacity are derived below from the authenticated
+    registry plus physical source observations.
+    """
+    snapshot = _authenticate_runtime_context(runtime_context)
+    if type(shared_state) is not dict or shared_state:
+        raise ValueError("shared_state must be an exact empty physical observation object")
+    sources, sealed_turn_state, sealed_floating_mana = _validate_runtime_development_observations(
+        snapshot, source_states, turn_state, floating_mana_state,
+    )
+    instance = object.__new__(RuntimeDevelopmentSession)
+    object.__setattr__(instance, "_runtime_context", runtime_context)
+    object.__setattr__(instance, "_snapshot", None)
+    object.__setattr__(instance, "_sources", sources)
+    object.__setattr__(instance, "_turn_state", sealed_turn_state)
+    object.__setattr__(instance, "_floating_mana", sealed_floating_mana)
+    object.__setattr__(instance, "_construction_token", _RUNTIME_DEVELOPMENT_SESSION_TOKEN)
+    return instance
+
+
+def _profile_output_alternatives(profile):
+    units = profile.get("mana_units")
+    capabilities = profile.get("output_capabilities")
+    if type(units) is not int or units <= 0 or type(capabilities) is not tuple:
+        raise ValueError("authenticated activation profile output is malformed")
+    if any(symbol not in _MANA_SYMBOLS for symbol in capabilities):
+        raise ValueError("authenticated activation profile has an unregistered mana symbol")
+    selection = profile.get("output_selection")
+    ordered = tuple(sorted(capabilities, key=_MANA_SYMBOL_ORDER.__getitem__))
+    if selection == "fixed":
+        if len(ordered) != 1:
+            raise ValueError("authenticated fixed activation output must have exactly one symbol")
+        return (ordered * units,)
+    if selection == "one_choice":
+        return tuple((symbol,) * units for symbol in ordered)
+    if selection == "any_combination":
+        return tuple(combination for combination in combinations_with_replacement(ordered, units))
+    raise ValueError("authenticated activation profile has an unsupported output selection")
+
+
+def _profile_is_currently_online(profile, source, controller_turn_offset):
+    online_model = profile.get("online_model")
+    if online_model == "immediate":
+        return True
+    if online_model == "next_controller_turn":
+        return controller_turn_offset > source["deployed_controller_turn_offset"]
+    if online_model == "bounded_window":
+        return True
+    raise ValueError("authenticated activation profile has an unregistered online model")
+
+
+def _source_relative_controller_turn_offset(session, source):
+    current = session._turn_state["controller_turn_offset"]
+    deployed = source["deployed_controller_turn_offset"]
+    if current < deployed:
+        raise ValueError("source_states current controller turn cannot precede deployed_controller_turn_offset")
+    return current - deployed
+
+
+def _runtime_condition_state(session, *, source=None, external_generic_capacity=0):
+    snapshot = session._snapshot
+    controlled_lands = [
+        source["oracle_id"]
+        for source in session._sources
+        if not source["removed"] and _resolve_runtime_record(snapshot, source["oracle_id"]).get("source_kind") == "land"
+    ]
+    artifact_count = sum(
+        1
+        for source in session._sources
+        if not source["removed"] and source["oracle_id"] in snapshot.canonical_artifact_oracle_ids
+    )
+    return {
+        "controlled_land_oracle_ids": controlled_lands,
+        "artifact_controlled_count": artifact_count,
+        "commander_colors": sorted(snapshot.canonical_commander_colors),
+        "controller_turn_offset": (
+            _source_relative_controller_turn_offset(session, source)
+            if source is not None else session._turn_state["controller_turn_offset"]
+        ),
+        "generic_payment_available_from_other_sources": external_generic_capacity,
+    }
+
+
+def _base_profiles_for_source(session, source):
+    record = _resolve_runtime_record(session._snapshot, source["oracle_id"])
+    profiles, errors = _resolved_profiles(
+        record,
+        _runtime_condition_state(session, source=source),
+        exclude_generic_payment=True,
+        runtime_snapshot=session._snapshot,
+    )
+    if errors:
+        raise ValueError(errors[0])
+    return [
+        profile for profile in profiles
+        if _profile_is_currently_online(profile, source, session._turn_state["controller_turn_offset"])
+    ]
+
+
+def _derive_ledger_entries(session):
+    base = {
+        source["instance_id"]: _base_profiles_for_source(session, source)
+        for source in session._sources if not source["removed"]
+    }
+    entries = []
+    for source in session._sources:
+        record = _resolve_runtime_record(session._snapshot, source["oracle_id"])
+        if source["removed"]:
+            entries.append(_freeze_runtime_value({
+                **dict(source), "source_kind": record["source_kind"], "online": False,
+                "usable": False, "activation_profiles": [], "gross_activation_profiles": [], "output_alternatives": [],
+            }))
+            continue
+        gross_external_capacity = sum(
+            max((profile.get("mana_units", 0) for profile in profiles), default=0)
+            for other in session._sources
+            if other["instance_id"] != source["instance_id"] and not other["removed"]
+            for profiles in (base.get(other["instance_id"], []),)
+        )
+        residual_external_capacity = sum(
+            max((profile.get("mana_units", 0) for profile in profiles), default=0)
+            for other in session._sources
+            if other["instance_id"] != source["instance_id"] and not other["removed"] and not other["tapped"]
+            for profiles in (base.get(other["instance_id"], []),)
+        ) + sum(session._floating_mana.values())
+        profiles, errors = _resolved_profiles(
+            record,
+            _runtime_condition_state(session, source=source, external_generic_capacity=residual_external_capacity),
+            exclude_generic_payment=False,
+            runtime_snapshot=session._snapshot,
+        )
+        if errors:
+            raise ValueError(errors[0])
+        profiles = [
+            profile for profile in profiles
+            if _profile_is_currently_online(profile, source, session._turn_state["controller_turn_offset"])
+        ]
+        gross_profiles, errors = _resolved_profiles(
+            record,
+            _runtime_condition_state(session, source=source, external_generic_capacity=gross_external_capacity),
+            exclude_generic_payment=False, runtime_snapshot=session._snapshot,
+        )
+        if errors:
+            raise ValueError(errors[0])
+        gross_profiles = [profile for profile in gross_profiles if _profile_is_currently_online(profile, source, session._turn_state["controller_turn_offset"])]
+        def projection(profile):
+            return {
+                "profile_id": profile["profile_id"],
+                "mana_units": profile["mana_units"],
+                "output_capabilities": list(profile["output_capabilities"]),
+                "output_selection": profile["output_selection"],
+                "tap_model": profile["tap_model"],
+                "payment_generic": profile["payment"]["generic"],
+                "payment_colored": list(profile["payment"]["colored"]),
+                "life_payment": dict(profile["payment"]["life"]),
+                "natural_untap_model": profile["natural_untap_model"],
+                "output_alternatives": [list(item) for item in _profile_output_alternatives(profile)],
+            }
+        activation_profiles = [projection(profile) for profile in profiles]
+        gross_activation_profiles = [projection(profile) for profile in gross_profiles]
+        entries.append(_freeze_runtime_value({
+            **dict(source), "source_kind": record["source_kind"], "online": bool(activation_profiles),
+            "usable": bool(activation_profiles) and not source["tapped"],
+            "controller_turn_offset": _source_relative_controller_turn_offset(session, source),
+            "activation_profiles": activation_profiles,
+            "gross_activation_profiles": gross_activation_profiles,
+            "output_alternatives": [item["output_alternatives"] for item in activation_profiles],
+        }))
+    return tuple(entries)
+
+
+def _derive_runtime_resource_ledger(session):
+    """Derive a ledger from one already-authenticated operation session."""
+    state = _runtime_condition_state(session)
+    return _freeze_runtime_value({
+        "controller_turn_position": state["controller_turn_offset"],
+        "controlled_land_oracle_ids": state["controlled_land_oracle_ids"],
+        "artifact_controlled_count": state["artifact_controlled_count"],
+        "commander_colors": state["commander_colors"],
+        "floating_mana": dict(session._floating_mana),
+        "sources": _derive_ledger_entries(session),
+    })
+
+
+def derive_runtime_resource_ledger(session):
+    """Return fresh immutable current-source authority for a sealed session."""
+    return _derive_runtime_resource_ledger(_require_runtime_development_session(session))
+
+
+def derive_land_selection_state(session, *, candidate_land_oracle_id=None):
+    """Derive the complete current selector condition state without caller rules."""
+    session = _require_runtime_development_session(session)
+    if candidate_land_oracle_id is not None:
+        _resolve_runtime_record(session._snapshot, candidate_land_oracle_id, required_source_kind={"land"})
+    state = _runtime_condition_state(session)
+    entries = _derive_ledger_entries(session)
+    external = sum(
+        max((profile["mana_units"] for profile in entry["activation_profiles"]), default=0)
+        for entry in entries if entry["usable"]
+    ) + sum(session._floating_mana.values())
+    result = {
+        "commander_colors": state["commander_colors"],
+        "canonical_commander_colors": state["commander_colors"],
+        "current_colors": sorted({
+            symbol
+            for entry in entries if not entry["removed"]
+            for profile in entry["gross_activation_profiles"]
+            for symbol in profile["output_capabilities"]
+            if symbol in {"W", "U", "B", "R", "G"}
+        }),
+        "controlled_land_oracle_ids": state["controlled_land_oracle_ids"],
+        "artifact_controlled_count": state["artifact_controlled_count"],
+        "generic_payment_available_from_other_sources": external,
+        # The candidate is hypothetically played in this selector operation,
+        # so its registered bounded age always starts at zero.
+        "controller_turn_offset": 0,
+    }
+    if candidate_land_oracle_id is not None:
+        result["candidate_land_oracle_id"] = candidate_land_oracle_id
+    return _freeze_runtime_value(result)
+
+
+def _validate_payment_cost(cost):
+    if type(cost) is not dict or set(cost) != {"generic", "colored"}:
+        raise ValueError("payment cost must contain exactly generic and colored")
+    if type(cost["generic"]) is not int or cost["generic"] < 0:
+        raise ValueError("payment cost generic must be a non-negative integer")
+    if type(cost["colored"]) is not list or any(symbol not in _MANA_SYMBOLS for symbol in cost["colored"]):
+        raise ValueError("payment cost colored must be an array of registered mana symbols")
+    return cost
+
+
+def _counts(symbols):
+    result = {}
+    for symbol in symbols:
+        result[symbol] = result.get(symbol, 0) + 1
+    return result
+
+
+def _consume_cost_variants(resources, cost, *, forbidden_instance_id=None):
+    """Enumerate every legal exact/generic payment before any ranking.
+
+    Resource identity, including ephemeral activation provenance, is retained by
+    the caller.  Therefore equal symbols cannot be collapsed before this
+    function has explored their distinct downstream effects.
+    """
+    eligible = tuple(item for item in resources if forbidden_instance_id is None or item["instance_id"] != forbidden_instance_id)
+    by_symbol = {symbol: tuple(item for item in eligible if item["symbol"] == symbol) for symbol in _MANA_SYMBOLS}
+    states = [(frozenset(), frozenset())]
+    for symbol in cost["colored"]:
+        next_states = []
+        for consumed, generic in states:
+            for item in by_symbol[symbol]:
+                if item["index"] not in consumed:
+                    next_states.append((consumed | {item["index"]}, generic))
+        states = next_states
+        if not states:
+            return ()
+    variants = []
+    for consumed, _generic in states:
+        available = [item for item in eligible if item["index"] not in consumed]
+        for selected in combinations(available, cost["generic"]):
+            generic = frozenset(item["index"] for item in selected)
+            variants.append((consumed | generic, generic))
+    return tuple(sorted(set(variants), key=lambda item: (tuple(sorted(item[0])), tuple(sorted(item[1])))))
+
+
+def _activation_choices_for_source(entry, resources):
+    """Enumerate one source's payable choices with decision-time flexibility.
+
+    Flexibility belongs to the physical source decision, so it is derived from
+    every distinct exact output presently reachable through every payable
+    registered profile, rather than from the selected output or profile.
+    """
+    choices = []
+    for profile in sorted(entry["activation_profiles"], key=lambda item: item["profile_id"]):
+        activation_cost = {"generic": profile["payment_generic"], "colored": list(profile["payment_colored"])}
+        for payment_indexes, payment_generic in _consume_cost_variants(
+            resources, activation_cost, forbidden_instance_id=entry["instance_id"],
+        ):
+            for output in profile["output_alternatives"]:
+                choices.append((profile, payment_indexes, payment_generic, output))
+    distinct_exact_outputs = frozenset(output for _profile, _indexes, _generic, output in choices)
+    source_is_flexible = len(distinct_exact_outputs) > 1
+    return tuple(
+        (profile, payment_indexes, payment_generic, output, source_is_flexible)
+        for profile, payment_indexes, payment_generic, output in choices
+    )
+
+
+def _flexible_generic_spend_for_consumption(consumed_resources, generic_indexes):
+    """Count only allocation-ephemeral flexible units consumed as generic."""
+    return sum(
+        1 for item in consumed_resources
+        if item["index"] in generic_indexes and item["ephemeral_flexible"]
+    )
+
+
+def _payment_allocation_from_transition(session, cost, activated_sources, activation_consumed, activation_generic, target_consumed, target_generic, remaining):
+    """Freeze one causally-derived payment allocation for the public boundary."""
+    consumed_resources = activation_consumed + target_consumed
+    produced_symbols = [symbol for _entry, _profile, output in activated_sources for symbol in output]
+    consumed_symbols = [item["symbol"] for item in consumed_resources]
+    source_outputs = [
+        (entry["oracle_id"], entry["ordinal"], symbol)
+        for entry, _profile, output in activated_sources for symbol in output
+    ]
+    activation_colored_costs = sum(len(profile["payment_colored"]) for _entry, profile, _output in activated_sources)
+    return _freeze_runtime_value({
+        "source_outputs": source_outputs,
+        "flexible_generic_spend": _flexible_generic_spend_for_consumption(
+            consumed_resources, activation_generic | target_generic,
+        ),
+        "tapped_source_count": len(activated_sources),
+        "tapped_source_instance_ids": [entry["instance_id"] for entry, _profile, _output in activated_sources],
+        "activated_sources": [
+            {"instance_id": entry["instance_id"], "oracle_id": entry["oracle_id"], "ordinal": entry["ordinal"],
+             "profile_id": profile["profile_id"], "produced_symbols": list(output)}
+            for entry, profile, output in activated_sources
+        ],
+        "produced_mana": _counts(produced_symbols),
+        "consumed_mana": _counts(consumed_symbols),
+        "floating_mana_before": dict(session._floating_mana),
+        "floating_mana_after": _counts(item["symbol"] for item in remaining),
+        "colored_satisfaction": _counts(cost["colored"]),
+        "generic_satisfaction": cost["generic"],
+        "external_payment_requirements": [
+            {"instance_id": entry["instance_id"], "generic": profile["payment_generic"]}
+            for entry, profile, _output in activated_sources if profile["payment_generic"]
+        ],
+        "life_payment": [
+            {"instance_id": entry["instance_id"], **dict(profile["life_payment"])}
+            for entry, profile, _output in activated_sources
+            if profile["life_payment"]["amount"]
+        ],
+    })
+
+
+_MAX_RUNTIME_PAYMENT_SEARCH_STATES = 65_536
+
+
+def _payment_search_state_key(remaining, resources, activated, activation_consumed, activation_generic):
+    """Canonical semantic state for deterministic causal-payment memoization."""
+    resource_counts = {}
+    for item in resources:
+        key = (item["instance_id"], item["oracle_id"], item["ordinal"], item["symbol"], item["ephemeral_flexible"])
+        resource_counts[key] = resource_counts.get(key, 0) + 1
+    return (
+        tuple(entry["instance_id"] for entry in remaining),
+        tuple(sorted(
+            ((key, quantity) for key, quantity in resource_counts.items()),
+            key=lambda item: (
+                item[0][0] is not None, item[0][0] or "", item[0][1] is not None,
+                item[0][1] or "", item[0][2], _MANA_SYMBOL_ORDER[item[0][3]], item[0][4],
+            ),
+        )),
+        tuple(sorted(
+            (entry["instance_id"], profile["profile_id"], tuple(output))
+            for entry, profile, output in activated
+        )),
+        tuple(sorted(_counts(item["symbol"] for item in activation_consumed).items())),
+        _flexible_generic_spend_for_consumption(activation_consumed, activation_generic),
+    )
+
+
+def _derive_legal_payment_allocations_with_statistics(session, cost):
+    """Explore only causally reachable activation states under a fixed bound.
+
+    A source is activated at most once.  The search evaluates the target cost
+    at every reachable state, then expands one immediately payable registered
+    activation.  It never materializes a Cartesian source-option product and
+    memoizes semantically identical resource states, so activation-order
+    permutations cannot grow the frontier.  Exceeding the policy-owned bound
+    is a fail-closed runtime error rather than a silently truncated result.
+    """
+    ledger = _derive_runtime_resource_ledger(session)
+    remaining = tuple(sorted(
+        (entry for entry in ledger["sources"] if entry["usable"]),
+        key=lambda entry: entry["instance_id"],
+    ))
+    resources = []
+    next_index = 0
+    for symbol, quantity in session._floating_mana.items():
+        for _ in range(quantity):
+            resources.append({"index": next_index, "instance_id": None, "symbol": symbol, "oracle_id": None, "ordinal": 0, "ephemeral_flexible": False})
+            next_index += 1
+
+    statistics = {"explored_states": 0, "memoized_states": 0, "pruned_equivalent_states": 0, "expanded_activations": 0}
+    seen = set()
+    allocations = {}
+
+    def add_allocation(activated, activation_consumed, activation_generic, current_resources):
+        for target_indexes, target_generic in _consume_cost_variants(current_resources, cost):
+            target_consumed = [item for item in current_resources if item["index"] in target_indexes]
+            allocation = _payment_allocation_from_transition(
+                session, cost, activated, activation_consumed, activation_generic, target_consumed, target_generic,
+                [item for item in current_resources if item["index"] not in target_indexes],
+            )
+            allocation_key = _payment_allocation_priority_key(allocation)
+            allocations[allocation_key] = allocation
+
+    def explore(current_remaining, current_resources, activated, activation_consumed, activation_generic, next_resource_index):
+        state_key = _payment_search_state_key(
+            current_remaining, current_resources, activated, activation_consumed, activation_generic,
+        )
+        if state_key in seen:
+            statistics["pruned_equivalent_states"] += 1
+            return
+        seen.add(state_key)
+        statistics["explored_states"] += 1
+        if statistics["explored_states"] > _MAX_RUNTIME_PAYMENT_SEARCH_STATES:
+            raise ValueError("runtime payment allocation search exceeded its deterministic state bound")
+        add_allocation(activated, activation_consumed, activation_generic, current_resources)
+        for choice_index, entry in enumerate(current_remaining):
+            for profile, payment_indexes, payment_generic, output, source_is_flexible in _activation_choices_for_source(entry, current_resources):
+                paid = [item for item in current_resources if item["index"] in payment_indexes]
+                after_payment = [item for item in current_resources if item["index"] not in payment_indexes]
+                produced = [
+                    {
+                        "index": next_resource_index + output_index, "instance_id": entry["instance_id"],
+                        "symbol": symbol, "oracle_id": entry["oracle_id"], "ordinal": entry["ordinal"],
+                        "ephemeral_flexible": source_is_flexible,
+                    }
+                    for output_index, symbol in enumerate(output)
+                ]
+                statistics["expanded_activations"] += 1
+                explore(
+                    current_remaining[:choice_index] + current_remaining[choice_index + 1:],
+                    after_payment + produced,
+                    activated + [(entry, profile, output)], activation_consumed + paid, activation_generic | payment_generic,
+                    next_resource_index + len(produced),
+                )
+
+    explore(remaining, resources, [], [], frozenset(), next_index)
+    statistics["memoized_states"] = len(seen)
+    statistics["legal_allocations"] = len(allocations)
+    ordered = tuple(allocations[key] for key in sorted(allocations))
+    return ordered, _freeze_runtime_value(statistics)
+
+
+def derive_legal_payment_allocations(session, *, cost):
+    """Derive legal full-output transitions with bounded causal state search."""
+    session = _require_runtime_development_session(session)
+    cost = _validate_payment_cost(cost)
+    return _derive_legal_payment_allocations_with_statistics(session, cost)[0]
+
+
+def derive_legal_payment_allocation_search_statistics(session, *, cost):
+    """Return deterministic bounded-search evidence for KATs and audit output."""
+    session = _require_runtime_development_session(session)
+    cost = _validate_payment_cost(cost)
+    return _derive_legal_payment_allocations_with_statistics(session, cost)[1]
+
+
+def resolve_turn_start_state(session):
+    """Derive exact natural-untap physical mutations; zeroing is defensive only."""
+    session = _require_runtime_development_session(session)
+    mutations = []
+    for entry in _derive_ledger_entries(session):
+        if entry["removed"] or not entry["tapped"]:
+            continue
+        models = {profile["natural_untap_model"] for profile in entry["activation_profiles"]}
+        if models == {"normal"}:
+            mutations.append({"instance_id": entry["instance_id"], "tapped": False})
+    return _freeze_runtime_value({
+        "controller_turn_offset": session._turn_state["controller_turn_offset"] + 1,
+        "tapped_state_mutations": mutations,
+        "floating_mana_defensive_invariant": {},
+    })
+
+
+def resolve_post_development_removals(session):
+    """Derive exact Saga/conditional source removals after development ends."""
+    session = _require_runtime_development_session(session)
+    removals = []
+    for source in session._sources:
+        if source["removed"]:
+            continue
+        record = _resolve_runtime_record(session._snapshot, source["oracle_id"])
+        state = _runtime_condition_state(session, source=source)
+        transition, errors = _evaluate_end_step_state_transitions(
+            session._snapshot, record,
+            _condition_state_for_conditions(state, [
+                item.get("condition") for item in (record.get("state_transitions") or []) if isinstance(item, Mapping)
+            ]),
+        )
+        if errors:
+            raise ValueError(errors[0])
+        bounded_removal = _expired_bounded_source(record, state, runtime_snapshot=session._snapshot)
+        if transition["removed"] or bounded_removal:
+            removals.append({"instance_id": source["instance_id"], "removed": True})
+    return _freeze_runtime_value({"removed_source_mutations": removals})
+
+
+def end_level_2_development_phase(session):
+    """The sole result-changing floating-mana lifetime boundary in sim-policy-v7."""
+    _require_runtime_development_session(session)
+    return _freeze_runtime_value({"floating_mana": {}})

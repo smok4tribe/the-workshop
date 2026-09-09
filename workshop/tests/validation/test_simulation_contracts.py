@@ -22,7 +22,11 @@ from workshop.shared.identity import (  # noqa: E402
     resolve_card_fact,
 )
 from workshop.shared.simulation_determinism import (  # noqa: E402
-    PCG32, SimulationRuntimeContext, _authenticate_runtime_context, _condition_is_satisfied, _resolve_activation_profiles, choose_payment, derive_iteration_seed, derive_run_seed,
+    PCG32, SimulationRuntimeContext, _authenticate_runtime_context, _condition_is_satisfied, _resolve_activation_profiles, _activation_choices_for_source, _flexible_generic_spend_for_consumption, _payment_allocation_effect_projection, _payment_allocation_from_transition, choose_payment, derive_iteration_seed, derive_run_seed,
+    begin_runtime_development_session, derive_land_selection_state,
+    derive_legal_payment_allocation_search_statistics, derive_legal_payment_allocations, derive_runtime_resource_ledger,
+    end_level_2_development_phase, resolve_post_development_removals,
+    resolve_turn_start_state,
     evaluate_end_step_state_transitions as _evaluate_end_step_state_transitions,
     observe_source_capability as _observe_source_capability, select_bottom_tokens, select_land,
     select_payable_ramp,
@@ -2260,7 +2264,10 @@ class SimulationContractV8Tests(unittest.TestCase):
 
         def assert_forged(mutator, oracle_id=sol_id):
             changed = copy.deepcopy(registry); mutator(changed["records"])
-            forged = SimulationRuntimeContext._from_validated_registry(changed)
+            try:
+                forged = SimulationRuntimeContext._from_validated_registry(changed, self.cards["cards"])
+            except ValueError:
+                return
             with self.assertRaisesRegex(ValueError, "does not authenticate"):
                 _observe_source_capability(
                     runtime_context=forged,
@@ -2760,6 +2767,478 @@ class SimulationContractV8Tests(unittest.TestCase):
         self.assertEqual([], errors); self.assertTrue(end_step["remains_available"])
         removed, errors = evaluate_end_step_state_transitions(glimmervoid, post_development_state={"artifact_controlled_count": 0})
         self.assertEqual([], errors); self.assertTrue(removed["removed"])
+
+    def test_authenticated_runtime_development_session_kats_and_fail_closed_boundary(self):
+        records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
+
+        def source(card_name, instance_id, *, ordinal=1, deployed=0, tapped=False, removed=False):
+            return {
+                "instance_id": instance_id, "oracle_id": records[card_name]["oracle_id"], "ordinal": ordinal,
+                "deployed_controller_turn_offset": deployed, "tapped": tapped, "removed": removed,
+            }
+
+        def session(sources, *, offset=0, floating=None):
+            return begin_runtime_development_session(
+                runtime_context=self.runtime_authority, source_states=sources, shared_state={},
+                turn_state={"controller_turn_offset": offset}, floating_mana_state=floating or {},
+            )
+
+        # All three physically surviving Tron pieces are re-derived together;
+        # a removed piece invalidates every enhanced profile on the next session.
+        tron_sources = [source("Urza's Mine", "mine"), source("Urza's Power Plant", "plant"), source("Urza's Tower", "tower")]
+        tron_ledger = derive_runtime_resource_ledger(session(tron_sources))
+        with self.assertRaises(TypeError):
+            tron_ledger["floating_mana"] = {"C": 99}
+        self.assertEqual({"mine": 2, "plant": 2, "tower": 3}, {
+            entry["instance_id"]: entry["activation_profiles"][0]["mana_units"] for entry in tron_ledger["sources"]
+        })
+        invalidated = derive_runtime_resource_ledger(session([source("Urza's Mine", "mine", removed=True), *tron_sources[1:]]))
+        self.assertEqual({"plant": 1, "tower": 1}, {
+            entry["instance_id"]: entry["activation_profiles"][0]["mana_units"]
+            for entry in invalidated["sources"] if not entry["removed"]
+        })
+        duplicate = derive_runtime_resource_ledger(session([*tron_sources, source("Urza's Tower", "tower-2", ordinal=2)]))
+        self.assertEqual(3, next(entry for entry in duplicate["sources"] if entry["instance_id"] == "tower-2")["activation_profiles"][0]["mana_units"])
+        land_state = derive_land_selection_state(session(tron_sources), candidate_land_oracle_id=records["Urza's Saga"]["oracle_id"])
+        self.assertEqual(set("WUBRG"), set(land_state["commander_colors"]))
+        self.assertEqual(records["Urza's Saga"]["oracle_id"], land_state["candidate_land_oracle_id"])
+        hypothetical = derive_land_selection_state(session(tron_sources[:2]), candidate_land_oracle_id=records["Urza's Tower"]["oracle_id"])
+        self.assertEqual([records["Urza's Mine"]["oracle_id"], records["Urza's Power Plant"]["oracle_id"]], list(hypothetical["controlled_land_oracle_ids"]))
+
+        # Full authenticated Sol Ring output is produced before the generic
+        # payment consumes one unit; the C remainder is reusable this phase.
+        ring_session = session([source("Sol Ring", "ring")])
+        allocations = derive_legal_payment_allocations(ring_session, cost={"generic": 1, "colored": []})
+        ring_payment = next(item for item in allocations if item["tapped_source_instance_ids"] == ("ring",))
+        self.assertEqual({"C": 2}, dict(ring_payment["produced_mana"]))
+        self.assertEqual({"C": 1}, dict(ring_payment["consumed_mana"]))
+        self.assertEqual({"C": 1}, dict(ring_payment["floating_mana_after"]))
+        self.assertEqual(("ring",), ring_payment["tapped_source_instance_ids"])
+        reused = derive_legal_payment_allocations(session([source("Sol Ring", "ring", tapped=True)], floating={"C": 1}), cost={"generic": 1, "colored": []})
+        self.assertEqual({}, dict(choose_payment(reused)["floating_mana_after"]))
+        self.assertEqual({}, dict(end_level_2_development_phase(session([], floating={"C": 1}))["floating_mana"]))
+        with self.assertRaisesRegex(ValueError, "unregistered mana symbols"):
+            session([], floating={"generic": 1})
+        with self.assertRaisesRegex(ValueError, "exact empty physical"):
+            begin_runtime_development_session(
+                runtime_context=self.runtime_authority, source_states=[], shared_state={"artifact_controlled_count": 99},
+                turn_state={"controller_turn_offset": 0}, floating_mana_state={},
+            )
+
+        # The conditional filter can be selected only when other sources can
+        # fund it; its own full output cannot self-fund its external payment.
+        no_external = derive_runtime_resource_ledger(session([source("Cascading Cataracts", "cataracts")]))
+        self.assertEqual(["c"], [profile["profile_id"] for profile in no_external["sources"][0]["activation_profiles"]])
+        external_sources = [source("Cascading Cataracts", "cataracts")] + [source("Island", f"island-{index}", ordinal=index) for index in range(1, 6)]
+        cataracts_allocations = derive_legal_payment_allocations(session(external_sources), cost={"generic": 0, "colored": []})
+        cataracts = next(item for item in cataracts_allocations if any(source_item["profile_id"] == "filter-five" for source_item in item["activated_sources"]))
+        self.assertEqual(({"instance_id": "cataracts", "generic": 5},), cataracts["external_payment_requirements"])
+        cataracts_output = next(item["produced_symbols"] for item in cataracts["activated_sources"] if item["profile_id"] == "filter-five")
+        self.assertEqual(5, len(cataracts_output))
+        self.assertTrue(set(cataracts_output) <= set("WUBRG"))
+
+        # Registry-owned life treatment and next-turn online status are carried
+        # in the legal allocation rather than recreated by the engine.
+        convert_allocations = derive_legal_payment_allocations(session([source("Myr Convert", "convert")], offset=1), cost={"generic": 0, "colored": []})
+        convert = next(item for item in convert_allocations if item["tapped_source_instance_ids"] == ("convert",))
+        self.assertEqual(({"instance_id": "convert", "amount": 2, "treatment": "ignored"},), convert["life_payment"])
+
+        # Saga is usable throughout offset 2 development, then becomes an
+        # authoritative physical removal; Glimmervoid derives its actual
+        # post-development artifact condition from current physical sources.
+        saga = source("Urza's Saga", "saga")
+        for offset in (0, 1, 2):
+            self.assertTrue(derive_runtime_resource_ledger(session([saga], offset=offset))["sources"][0]["usable"])
+        self.assertEqual(({"instance_id": "saga", "removed": True},), resolve_post_development_removals(session([saga], offset=2))["removed_source_mutations"])
+        self.assertTrue(derive_runtime_resource_ledger(session([source("Urza's Saga", "saga", removed=True)], offset=3))["sources"][0]["removed"])
+        self.assertEqual(({"instance_id": "glimmer", "removed": True},), resolve_post_development_removals(session([source("Glimmervoid", "glimmer")]))["removed_source_mutations"])
+        self.assertEqual((), resolve_post_development_removals(session([source("Glimmervoid", "glimmer"), source("Sol Ring", "ring")]))["removed_source_mutations"])
+
+        untap = resolve_turn_start_state(session([source("Island", "island", tapped=True), source("Basalt Monolith", "basalt", tapped=True)]))
+        self.assertEqual(({"instance_id": "island", "tapped": False},), untap["tapped_state_mutations"])
+        self.assertEqual({}, dict(untap["floating_mana_defensive_invariant"]))
+        with self.assertRaises(ValueError):
+            begin_runtime_development_session(
+                runtime_context=self.runtime_authority, source_states=UserDict([("forged", source("Sol Ring", "ring"))]),
+                shared_state={}, turn_state={"controller_turn_offset": 0}, floating_mana_state={},
+            )
+        with self.assertRaises(ValueError):
+            session([{**source("Sol Ring", "ring"), "profile": {"mana_units": 99}}])
+        with self.assertRaises(ValueError):
+            session([{**source("Sol Ring", "ring"), "oracle_id": "forged-oracle"}])
+        observed = [source("Sol Ring", "ring")]
+        sealed = session(observed)
+        observed[0]["tapped"] = True
+        self.assertTrue(derive_runtime_resource_ledger(sealed)["sources"][0]["usable"])
+
+    def test_runtime_session_r1_current_colors_artifact_identity_age_and_causal_payment_kats(self):
+        records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
+
+        def source(card_name, instance_id, *, ordinal=1, deployed=0, tapped=False, removed=False):
+            return {
+                "instance_id": instance_id, "oracle_id": records[card_name]["oracle_id"], "ordinal": ordinal,
+                "deployed_controller_turn_offset": deployed, "tapped": tapped, "removed": removed,
+            }
+
+        def session(sources, *, position=0, floating=None):
+            return begin_runtime_development_session(
+                runtime_context=self.runtime_authority, source_states=sources, shared_state={},
+                turn_state={"controller_turn_offset": position}, floating_mana_state=floating or {},
+            )
+
+        # Canonical Commander identity is static, while current color capability
+        # is re-derived from surviving authenticated current source profiles.
+        colorless = derive_land_selection_state(session([source("Cascading Cataracts", "cataracts")]))
+        self.assertEqual([], list(colorless["current_colors"]))
+        self.assertEqual(set("WUBRG"), set(colorless["canonical_commander_colors"]))
+        island = derive_land_selection_state(session([source("Island", "island")]))
+        self.assertEqual(["U"], list(island["current_colors"]))
+        tower = derive_land_selection_state(session([source("Command Tower", "tower")]))
+        self.assertEqual(set("WUBRG"), set(tower["current_colors"]))
+        self.assertEqual(set("WUBRG"), set(tower["commander_colors"]))
+
+        # Artifact type is derived from authenticated canonical Card Facts, not
+        # the executable source_kind.  Artifact lands therefore protect
+        # Glimmervoid while ordinary lands do not.
+        ancient_den = source("Ancient Den", "den")
+        self.assertEqual(1, derive_runtime_resource_ledger(session([ancient_den]))["artifact_controlled_count"])
+        self.assertEqual(0, derive_runtime_resource_ledger(session([source("Island", "island")]))["artifact_controlled_count"])
+        glimmer = source("Glimmervoid", "glimmer")
+        self.assertEqual(({"instance_id": "glimmer", "removed": True},), resolve_post_development_removals(session([glimmer]))["removed_source_mutations"])
+        self.assertEqual((), resolve_post_development_removals(session([glimmer, source("Sol Ring", "ring")]))["removed_source_mutations"])
+        self.assertEqual((), resolve_post_development_removals(session([glimmer, ancient_den]))["removed_source_mutations"])
+
+        # Bounded windows are source-relative controller turns from play, not
+        # absolute simulation turns.  Saga remains usable through local age 2.
+        for position, age in ((4, 0), (5, 1), (6, 2)):
+            ledger = derive_runtime_resource_ledger(session([source("Urza's Saga", "saga", deployed=4)], position=position))
+            self.assertTrue(ledger["sources"][0]["usable"])
+            self.assertEqual(age, ledger["sources"][0]["controller_turn_offset"])
+        self.assertEqual(({"instance_id": "saga", "removed": True},), resolve_post_development_removals(session([source("Urza's Saga", "saga", deployed=4)], position=6))["removed_source_mutations"])
+        later = derive_runtime_resource_ledger(session([source("Urza's Saga", "saga", deployed=4, removed=True)], position=7))
+        self.assertTrue(later["sources"][0]["removed"])
+        with self.assertRaisesRegex(ValueError, "cannot exceed controller_turn_offset"):
+            derive_runtime_resource_ledger(session([source("Urza's Saga", "saga", deployed=4)], position=3))
+
+        # Both Gardens have a currently visible external base output, but their
+        # filter profiles cannot bootstrap each other's future output: an
+        # all-filter selection has no causal first legal activation.
+        gardens = [source("The Mycosynth Gardens", "garden-a"), source("The Mycosynth Gardens", "garden-b", ordinal=2)]
+        allocations = derive_legal_payment_allocations(session(gardens), cost={"generic": 0, "colored": []})
+        self.assertFalse(any(
+            len(allocation["activated_sources"]) == 2
+            and all(item["profile_id"] == "filter" for item in allocation["activated_sources"])
+            for allocation in allocations
+        ))
+        search_statistics = derive_legal_payment_allocation_search_statistics(
+            session([source("Sol Ring", "ring")]), cost={"generic": 1, "colored": []},
+        )
+        self.assertLessEqual(search_statistics["explored_states"], 65_536)
+        self.assertEqual(search_statistics["explored_states"], search_statistics["memoized_states"])
+        self.assertGreater(search_statistics["expanded_activations"], 0)
+        self.assertGreater(search_statistics["legal_allocations"], 0)
+
+        # Gross capability ignores tapping and floating mana; residual profiles
+        # are separately constrained by untapped resources plus actual pool.
+        untapped_islands = [source("Cascading Cataracts", "cataracts")] + [source("Island", f"untapped-island-{index}", ordinal=index) for index in range(1, 6)]
+        untapped_cata = derive_runtime_resource_ledger(session(untapped_islands))["sources"][0]
+        self.assertIn("filter-five", [profile["profile_id"] for profile in untapped_cata["gross_activation_profiles"]])
+        self.assertIn("filter-five", [profile["profile_id"] for profile in untapped_cata["activation_profiles"]])
+        self.assertTrue(any(
+            item["profile_id"] == "filter-five"
+            for allocation in derive_legal_payment_allocations(session(untapped_islands), cost={"generic": 0, "colored": []})
+            for item in allocation["activated_sources"]
+        ))
+        cataracts_search = derive_legal_payment_allocation_search_statistics(
+            session(untapped_islands), cost={"generic": 0, "colored": []},
+        )
+        self.assertLessEqual(cataracts_search["explored_states"], 65_536)
+        self.assertEqual(cataracts_search["explored_states"], cataracts_search["memoized_states"])
+        self.assertGreater(cataracts_search["pruned_equivalent_states"], 0)
+        tapped_islands = [source("Cascading Cataracts", "cataracts")] + [source("Island", f"island-{index}", ordinal=index, tapped=True) for index in range(1, 6)]
+        cata = derive_runtime_resource_ledger(session(tapped_islands))["sources"][0]
+        self.assertIn("filter-five", [profile["profile_id"] for profile in cata["gross_activation_profiles"]])
+        self.assertNotIn("filter-five", [profile["profile_id"] for profile in cata["activation_profiles"]])
+        self.assertFalse(any(
+            item["instance_id"] == "cataracts" and item["profile_id"] == "filter-five"
+            for allocation in derive_legal_payment_allocations(session(tapped_islands), cost={"generic": 0, "colored": []})
+            for item in allocation["activated_sources"]
+        ))
+        floating_ledger = derive_runtime_resource_ledger(session([source("Cascading Cataracts", "cataracts")], floating={"C": 5}))
+        floating_cata = floating_ledger["sources"][0]
+        self.assertNotIn("filter-five", [profile["profile_id"] for profile in floating_cata["gross_activation_profiles"]])
+        self.assertIn("filter-five", [profile["profile_id"] for profile in floating_cata["activation_profiles"]])
+        self.assertEqual({"C": 5}, dict(floating_ledger["floating_mana"]))
+        self.assertTrue(any(
+            item["profile_id"] == "filter-five"
+            for allocation in derive_legal_payment_allocations(
+                session([source("Cascading Cataracts", "cataracts")], floating={"C": 5}),
+                cost={"generic": 0, "colored": []},
+            )
+            for item in allocation["activated_sources"]
+        ))
+
+        # The approved compact Card Facts artifact projection cannot be
+        # self-authenticated by coherently forged type identities.
+        forged_cards = copy.deepcopy(self.cards["cards"])
+        next(card for card in forged_cards if card["name"] == "Ancient Den")["type_line"] = "Land"
+        with self.assertRaisesRegex(ValueError, "Policy-approved"):
+            SimulationRuntimeContext._from_validated_registry(self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"], forged_cards)
+
+        # Even a coherently altered context object cannot substitute its own
+        # artifact projection for the policy-pinned compact Card Facts root.
+        forged_context = object.__new__(SimulationRuntimeContext)
+        for field in (
+            "_registry_canonical_bytes", "_card_facts_canonical_bytes", "registry_identity",
+            "registry_content_fingerprint", "card_facts_content_fingerprint",
+            "canonical_land_oracle_ids", "canonical_commander_colors", "_construction_token",
+        ):
+            object.__setattr__(forged_context, field, getattr(self.runtime_authority, field))
+        object.__setattr__(
+            forged_context, "canonical_artifact_oracle_ids",
+            frozenset((*self.runtime_authority.canonical_artifact_oracle_ids, records["Island"]["oracle_id"])),
+        )
+        with self.assertRaisesRegex(ValueError, "Card Facts identity domains"):
+            begin_runtime_development_session(
+                runtime_context=forged_context, source_states=[], shared_state={},
+                turn_state={"controller_turn_offset": 0}, floating_mana_state={},
+            )
+        forged_cards = copy.deepcopy(self.cards["cards"])
+        next(card for card in forged_cards if card["name"] == "Island")["type_line"] = "Artifact Land"
+        with self.assertRaisesRegex(ValueError, "Policy-approved"):
+            SimulationRuntimeContext._from_validated_registry(self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"], forged_cards)
+
+    def test_runtime_payment_complete_search_and_flexible_provenance_kats(self):
+        records = {record["card_name"]: record for record in self.documents["workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
+
+        def source(name, instance_id, ordinal=1, tapped=False):
+            return {"instance_id": instance_id, "oracle_id": records[name]["oracle_id"], "ordinal": ordinal,
+                    "deployed_controller_turn_offset": 0, "tapped": tapped, "removed": False}
+
+        def session(sources, floating):
+            return begin_runtime_development_session(runtime_context=self.runtime_authority, source_states=sources,
+                shared_state={}, turn_state={"controller_turn_offset": 0}, floating_mana_state=floating)
+
+        gardens = session([source("The Mycosynth Gardens", "gardens")], {"W": 1, "U": 1})
+        legal = derive_legal_payment_allocations(gardens, cost={"generic": 0, "colored": ["W", "R"]})
+        path = next(item for item in legal if item["tapped_source_instance_ids"] == ("gardens",))
+        self.assertEqual({}, dict(path["floating_mana_after"]))
+        self.assertEqual(0, path["flexible_generic_spend"])
+        reversed_sources = session(list(reversed([source("The Mycosynth Gardens", "gardens")])), {"U": 1, "W": 1})
+        self.assertTrue(derive_legal_payment_allocations(reversed_sources, cost={"generic": 0, "colored": ["W", "R"]}))
+
+        self.assertEqual(0, choose_payment(derive_legal_payment_allocations(session([], {"C": 1}), cost={"generic": 1, "colored": []}))["flexible_generic_spend"])
+        self.assertEqual(0, choose_payment(derive_legal_payment_allocations(session([source("Sol Ring", "ring")], {}), cost={"generic": 1, "colored": []}))["flexible_generic_spend"])
+        tower = session([source("Command Tower", "tower")], {})
+        self.assertEqual(1, choose_payment(derive_legal_payment_allocations(tower, cost={"generic": 1, "colored": []}))["flexible_generic_spend"])
+        self.assertEqual(0, choose_payment(derive_legal_payment_allocations(tower, cost={"generic": 0, "colored": ["W"]}))["flexible_generic_spend"])
+
+        # The same visible effect can arise from consuming pre-existing W or
+        # Tower-produced W.  They remain rank-distinct until the frozen key
+        # selects the pre-existing payment (flexible spend zero).
+        tower_sources = [source("Command Tower", "tower"), source("Island", "tapped-island", ordinal=2, tapped=True)]
+        def tower_w_paths(sources):
+            return tuple(item for item in derive_legal_payment_allocations(
+                session(sources, {"W": 1}), cost={"generic": 1, "colored": []},
+            ) if item["tapped_source_instance_ids"] == ("tower",)
+               and item["activated_sources"][0]["produced_symbols"] == ("W",))
+        same_symbol_paths = tower_w_paths(tower_sources)
+        self.assertEqual(2, len(same_symbol_paths))
+        self.assertEqual([0, 1], sorted(item["flexible_generic_spend"] for item in same_symbol_paths))
+        self.assertEqual(
+            _payment_allocation_effect_projection(same_symbol_paths[0]),
+            _payment_allocation_effect_projection(same_symbol_paths[1]),
+        )
+        self.assertEqual(0, choose_payment(same_symbol_paths)["flexible_generic_spend"])
+        reversed_same_symbol_paths = tower_w_paths(list(reversed(tower_sources)))
+        self.assertEqual(same_symbol_paths, reversed_same_symbol_paths)
+        self.assertEqual(0, choose_payment(reversed_same_symbol_paths)["flexible_generic_spend"])
+
+        # The classifier sees all currently payable profiles of one physical
+        # source.  Fixed C and fixed W alternatives are both flexible even
+        # when C is selected; duplicate C alternatives and a non-payable W
+        # alternative are not.
+        def classifier_profile(profile_id, output, generic=0):
+            return {"profile_id": profile_id, "payment_generic": generic,
+                    "payment_colored": (), "output_alternatives": (output,)}
+        classifier_entry = {"instance_id": "test-flex-c#1", "activation_profiles": [
+            classifier_profile("fixed-c", ("C",)), classifier_profile("fixed-w", ("W",)),
+        ]}
+        classifier_choices = _activation_choices_for_source(classifier_entry, [])
+        selected_c = next(choice for choice in classifier_choices if choice[3] == ("C",))
+        selected_w = next(choice for choice in classifier_choices if choice[3] == ("W",))
+        self.assertTrue(selected_c[4]); self.assertTrue(selected_w[4])
+        duplicate_c_choices = _activation_choices_for_source({"instance_id": "duplicate-c", "activation_profiles": [
+            classifier_profile("c-one", ("C",)), classifier_profile("c-two", ("C",)),
+        ]}, [])
+        self.assertTrue(duplicate_c_choices); self.assertFalse(any(choice[4] for choice in duplicate_c_choices))
+        unavailable_w_choices = _activation_choices_for_source({"instance_id": "unpayable-w", "activation_profiles": [
+            classifier_profile("c", ("C",)), classifier_profile("w-needs-c", ("W",), generic=1),
+        ]}, [])
+        self.assertEqual(1, len(unavailable_w_choices)); self.assertFalse(unavailable_w_choices[0][4])
+        fixed_c = {"index": 0, "symbol": "C", "ephemeral_flexible": False}
+        flexible_w = {"index": 1, "symbol": "W", "ephemeral_flexible": True}
+        flexible_c = {"index": 2, "symbol": "C", "ephemeral_flexible": True}
+        self.assertEqual(0, _flexible_generic_spend_for_consumption([fixed_c], {0}))
+        self.assertEqual(1, _flexible_generic_spend_for_consumption([flexible_w], {1}))
+        self.assertEqual(1, _flexible_generic_spend_for_consumption([flexible_c], {2}))
+
+        # A test-only physical C/W decision proves that provenance attaches to
+        # the source decision, never to the selected symbol.  Full registered
+        # C,C output enters the ephemeral pool before one generic payment
+        # consumes C and leaves the other C available in this development
+        # phase.  Only the resulting symbol quantity is persisted afterward.
+        synthetic_entry = {"instance_id": "test-flex-c#1", "oracle_id": "test-flex-c", "ordinal": 1}
+        synthetic_profile = {"profile_id": "test-c-or-w", "payment_colored": (), "payment_generic": 0,
+                             "life_payment": {"amount": 0, "treatment": "ignored"}}
+        synthetic_c = [
+            {"index": 10, "instance_id": "test-flex-c#1", "oracle_id": "test-flex-c", "ordinal": 1, "symbol": "C", "ephemeral_flexible": selected_c[4]},
+            {"index": 11, "instance_id": "test-flex-c#1", "oracle_id": "test-flex-c", "ordinal": 1, "symbol": "C", "ephemeral_flexible": selected_c[4]},
+        ]
+        synthetic = _payment_allocation_from_transition(
+            session([], {}), {"generic": 1, "colored": []}, [(synthetic_entry, synthetic_profile, ("C", "C"))],
+            [], frozenset(), [synthetic_c[0]], frozenset({10}), [synthetic_c[1]],
+        )
+        self.assertEqual({"C": 2}, dict(synthetic["produced_mana"]))
+        self.assertEqual({"C": 1}, dict(synthetic["consumed_mana"]))
+        self.assertEqual({"C": 1}, dict(synthetic["floating_mana_after"]))
+        self.assertEqual(1, synthetic["flexible_generic_spend"])
+        self.assertEqual(0, _flexible_generic_spend_for_consumption([flexible_w], set()))
+        self.assertEqual(0, _flexible_generic_spend_for_consumption([{**fixed_c, "instance_id": None}], {0}))
+
+    def test_runtime_session_reauthenticates_each_operation_and_rejects_tampering(self):
+        import workshop.shared.simulation_determinism as determinism
+
+        records = {record["card_name"]: record for record in self.documents[
+            "workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
+
+        def source(name, instance_id, ordinal=1, tapped=False):
+            return {"instance_id": instance_id, "oracle_id": records[name]["oracle_id"], "ordinal": ordinal,
+                    "deployed_controller_turn_offset": 0, "tapped": tapped, "removed": False}
+
+        def session(sources, floating=None):
+            return begin_runtime_development_session(
+                runtime_context=self.runtime_authority, source_states=sources, shared_state={},
+                turn_state={"controller_turn_offset": 0}, floating_mana_state=floating or {},
+            )
+
+        glimmer_and_island = [source("Glimmervoid", "glimmer"), source("Island", "island", 2)]
+        valid = session(glimmer_and_island)
+        self.assertIsNone(valid._snapshot)
+        self.assertEqual(({"instance_id": "glimmer", "removed": True},),
+                         resolve_post_development_removals(valid)["removed_source_mutations"])
+
+        # A snapshot that crossed the caller-visible session boundary is never
+        # reused: even a token-bearing forged artifact projection is rejected.
+        forged_projection = _authenticate_runtime_context(self.runtime_authority)
+        object.__setattr__(
+            forged_projection, "canonical_artifact_oracle_ids",
+            forged_projection.canonical_artifact_oracle_ids | {records["Island"]["oracle_id"]},
+        )
+        tampered_projection = session(glimmer_and_island)
+        object.__setattr__(tampered_projection, "_snapshot", forged_projection)
+        with self.assertRaisesRegex(ValueError, "cannot retain an executable semantic snapshot"):
+            resolve_post_development_removals(tampered_projection)
+
+        # Executable-record substitution cannot become a retained authority.
+        forged_records = _authenticate_runtime_context(self.runtime_authority)
+        object.__setattr__(forged_records, "_records_by_oracle_id", MappingProxyType({}))
+        tampered_records = session([source("Sol Ring", "ring")])
+        object.__setattr__(tampered_records, "_snapshot", forged_records)
+        with self.assertRaisesRegex(ValueError, "cannot retain an executable semantic snapshot"):
+            derive_runtime_resource_ledger(tampered_records)
+
+        malformed_floating = session([source("Sol Ring", "ring")])
+        object.__setattr__(malformed_floating, "_floating_mana", {"generic": 1})
+        with self.assertRaisesRegex(ValueError, "floating mana observation is not sealed"):
+            derive_legal_payment_allocations(malformed_floating, cost={"generic": 1, "colored": []})
+
+        malformed_sources = session([source("Sol Ring", "ring")])
+        object.__setattr__(malformed_sources, "_sources", ({"forged": True},))
+        with self.assertRaisesRegex(ValueError, "source observations are not sealed"):
+            derive_runtime_resource_ledger(malformed_sources)
+
+        malformed_turn = session([source("Sol Ring", "ring")])
+        object.__setattr__(malformed_turn, "_turn_state", MappingProxyType({"controller_turn_offset": -1}))
+        with self.assertRaisesRegex(ValueError, "turn_state controller_turn_offset"):
+            resolve_turn_start_state(malformed_turn)
+
+        # Each public Task32H operation receives a new operation-local snapshot.
+        calls = []
+        authenticate = determinism._authenticate_runtime_context
+
+        def counted(context):
+            calls.append(context)
+            return authenticate(context)
+
+        with patch.object(determinism, "_authenticate_runtime_context", side_effect=counted):
+            sealed = session([source("Sol Ring", "ring")])
+            self.assertEqual(1, len(calls)); calls.clear()
+            derive_runtime_resource_ledger(sealed); self.assertEqual(1, len(calls)); calls.clear()
+            derive_land_selection_state(sealed); self.assertEqual(1, len(calls)); calls.clear()
+            derive_legal_payment_allocations(sealed, cost={"generic": 1, "colored": []}); self.assertEqual(1, len(calls)); calls.clear()
+            derive_legal_payment_allocation_search_statistics(sealed, cost={"generic": 1, "colored": []}); self.assertEqual(1, len(calls)); calls.clear()
+            resolve_turn_start_state(sealed); self.assertEqual(1, len(calls)); calls.clear()
+            resolve_post_development_removals(sealed); self.assertEqual(1, len(calls)); calls.clear()
+            end_level_2_development_phase(sealed); self.assertEqual(1, len(calls))
+
+    def test_runtime_session_common_boundary_rejects_malformed_floating_and_future_sources(self):
+        records = {record["card_name"]: record for record in self.documents[
+            "workshop/projects/the-myr-singularity/simulation/mana_source_semantics.json"]["records"]}
+
+        def source(name, instance_id, *, deployed=0, removed=False):
+            return {"instance_id": instance_id, "oracle_id": records[name]["oracle_id"], "ordinal": 1,
+                    "deployed_controller_turn_offset": deployed, "tapped": False, "removed": removed}
+
+        def session(sources):
+            return begin_runtime_development_session(
+                runtime_context=self.runtime_authority, source_states=sources, shared_state={},
+                turn_state={"controller_turn_offset": 0}, floating_mana_state={},
+            )
+
+        def assert_rejected_at_every_public_operation(value):
+            operations = (
+                ("ledger", lambda: derive_runtime_resource_ledger(value)),
+                ("land", lambda: derive_land_selection_state(value)),
+                ("allocations", lambda: derive_legal_payment_allocations(value, cost={"generic": 1, "colored": []})),
+                ("statistics", lambda: derive_legal_payment_allocation_search_statistics(value, cost={"generic": 1, "colored": []})),
+                ("turn-start", lambda: resolve_turn_start_state(value)),
+                ("removals", lambda: resolve_post_development_removals(value)),
+                ("phase-end", lambda: end_level_2_development_phase(value)),
+            )
+            for operation, invoke in operations:
+                with self.subTest(operation=operation):
+                    with self.assertRaises(ValueError):
+                        invoke()
+
+        # All malformed sealed mappings reach the common validator as ValueError
+        # before sorting, joining, or any operation-specific semantic work.
+        for label, floating in (
+            ("integer-key", {1: 1}),
+            ("mixed-key", {"W": 1, 1: 1}),
+            ("boolean-key", {True: 1}),
+            ("generic-key", {"generic": 1}),
+        ):
+            with self.subTest(floating=label):
+                malformed = session([source("Sol Ring", "ring")])
+                object.__setattr__(malformed, "_floating_mana", MappingProxyType(floating))
+                assert_rejected_at_every_public_operation(malformed)
+
+        # The deployment-time invariant is enforced at construction for active
+        # and removed sources alike.
+        for removed in (False, True):
+            with self.subTest(construction_removed=removed):
+                with self.assertRaisesRegex(ValueError, "cannot exceed controller_turn_offset"):
+                    session([source("Sol Ring", "future", deployed=1, removed=removed)])
+
+        # It is also enforced after post-construction sealed-observation
+        # replacement, including phase end, which otherwise has no age query.
+        for removed in (False, True):
+            with self.subTest(replacement_removed=removed):
+                malformed = session([source("Sol Ring", "ring")])
+                future = source("Sol Ring", "future", deployed=1, removed=removed)
+                object.__setattr__(malformed, "_sources", (MappingProxyType(future),))
+                assert_rejected_at_every_public_operation(malformed)
 
     def test_run_recording_and_nested_boundaries_are_exact_closed(self):
         for field in ("execution_digest", "engine_generated_at", "wall_clock_timestamp", "created_at", "runtime_override", "arbitrary_unknown_field"):
